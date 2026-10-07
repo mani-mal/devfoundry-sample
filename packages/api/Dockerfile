@@ -2,7 +2,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies including devDependencies for build
 COPY packages/api/package.json packages/api/tsconfig.json ./
 COPY package.json package-lock.json ./
 RUN npm ci
