@@ -21,16 +21,16 @@ RUN npm install
 RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid @types/pg
 
 # Install integrations dependencies
-COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/
 WORKDIR /app/packages/integrations/routeforge
+COPY package.json tsconfig.json ./
 RUN npm install
 
-COPY packages/integrations/opencode/package.json packages/integrations/opencode/tsconfig.json ./packages/integrations/opencode/
 WORKDIR /app/packages/integrations/opencode
+COPY package.json tsconfig.json ./
 RUN npm install
 
-COPY packages/integrations/context-forge/package.json packages/integrations/context-forge/tsconfig.json ./packages/integrations/context-forge/
 WORKDIR /app/packages/integrations/context-forge
+COPY package.json tsconfig.json ./
 RUN npm install
 
 # Copy all source files
