@@ -5,7 +5,7 @@ WORKDIR /app
 # Install dependencies including devDependencies for build
 COPY packages/worker/package.json packages/worker/tsconfig.json ./
 COPY package.json package-lock.json ./
-RUN npm install --only=production
+RUN npm install
 
 # Copy source
 COPY packages/worker/src ./src
@@ -15,7 +15,7 @@ COPY packages/integrations/opencode/src ./packages/integrations/opencode/src
 COPY packages/integrations/context-forge/src ./packages/integrations/context-forge/src
 
 # Build typescript directly
-RUN npx -p typescript tsc --build
+RUN ./node_modules/.bin/tsc --build
 
 FROM node:20-alpine
 
