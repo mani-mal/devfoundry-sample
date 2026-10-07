@@ -110,7 +110,12 @@ export class OutcomeLedger {
       ]
     );
 
-    this.logger.info('Recorded task attempt', { attemptId, taskId, phase, success });
+    this.logger.info('Recorded task attempt', { 
+      attemptId, 
+      taskId, 
+      phase, 
+      success: String(success) 
+    });
     
     return record;
   }
@@ -171,7 +176,11 @@ export class OutcomeLedger {
       ]
     );
 
-    this.logger.info('Recorded task outcome', { taskId, attemptId, success });
+    this.logger.info('Recorded task outcome', { 
+      taskId, 
+      attemptId, 
+      success: String(success) 
+    });
   }
 
   /**
