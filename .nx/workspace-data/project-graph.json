@@ -344,13 +344,13 @@
         "implicitDependencies": []
       }
     },
-    "core": {
-      "name": "core",
+    "@dev-foundry/core": {
+      "name": "@dev-foundry/core",
       "type": "lib",
       "data": {
         "root": "packages/core",
         "sourceRoot": "packages/core",
-        "name": "core",
+        "name": "@dev-foundry/core",
         "tags": [
           "npm:public"
         ],
@@ -5011,6 +5011,11 @@
       },
       {
         "source": "worker",
+        "target": "@dev-foundry/core",
+        "type": "static"
+      },
+      {
+        "source": "worker",
         "target": "@dev-foundry/integrations-routeforge",
         "type": "static"
       },
@@ -5025,44 +5030,44 @@
         "type": "static"
       }
     ],
-    "core": [
+    "@dev-foundry/core": [
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:@types/jest",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:@types/node",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:@types/pg",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:@types/uuid",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:jest",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:typescript",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:pg",
         "type": "static"
       },
       {
-        "source": "core",
+        "source": "@dev-foundry/core",
         "target": "npm:uuid",
         "type": "static"
       }
@@ -5101,6 +5106,11 @@
       {
         "source": "@dev-foundry/api",
         "target": "npm:uuid",
+        "type": "static"
+      },
+      {
+        "source": "@dev-foundry/api",
+        "target": "@dev-foundry/core",
         "type": "static"
       }
     ],
@@ -5148,6 +5158,11 @@
       {
         "source": "cli",
         "target": "npm:axios",
+        "type": "static"
+      },
+      {
+        "source": "cli",
+        "target": "@dev-foundry/core",
         "type": "static"
       },
       {
