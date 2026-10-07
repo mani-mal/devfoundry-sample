@@ -25,6 +25,7 @@ COPY packages/integrations/routeforge/package.json ./packages/integrations/route
 COPY packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/tsconfig.json
 WORKDIR /app/packages/integrations/routeforge
 RUN npm install
+RUN ls -la /app/packages/integrations/routeforge/
 
 COPY packages/integrations/opencode/package.json ./packages/integrations/opencode/package.json
 COPY packages/integrations/opencode/tsconfig.json ./packages/integrations/opencode/tsconfig.json
