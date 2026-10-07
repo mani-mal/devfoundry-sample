@@ -181,7 +181,6 @@ export class OutcomeLedger {
     const filePath = `${this.evidenceStorage.storagePath}/${outcomeId}/${item.type}-${uuidv4()}.json`;
     
     // Create directory if it doesn't exist
-    
     const dir = path.dirname(filePath);
     await fs.mkdir(dir, { recursive: true });
     
@@ -343,7 +342,6 @@ export class OutcomeLedger {
    * Get evidence storage stats
    */
   async getEvidenceStats(): Promise<Record<string, unknown>> {
-
     let totalSize = 0;
     let totalFiles = 0;
 
@@ -381,6 +379,8 @@ export class OutcomeLedger {
       [cutoffDate]
     );
 
+    // Delete old evidence files
+    try {
       const files = await fs.readdir(this.evidenceStorage.storagePath, { recursive: true });
       for (const file of files) {
         const filePath = path.join(this.evidenceStorage.storagePath, file);
