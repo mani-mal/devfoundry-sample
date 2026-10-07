@@ -5,7 +5,7 @@ WORKDIR /app
 # Install dependencies including devDependencies for build
 COPY packages/api/package.json packages/api/tsconfig.json ./
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install --only=production
 
 # Copy source
 COPY packages/api/src ./src
