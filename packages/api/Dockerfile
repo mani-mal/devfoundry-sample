@@ -25,6 +25,7 @@ RUN mkdir -p /app/packages/integrations/routeforge
 COPY packages/integrations/routeforge/package.json ./packages/integrations/routeforge/package.json
 COPY packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/tsconfig.json
 WORKDIR /app/packages/integrations/routeforge
+RUN ls -la /app/packages/integrations/routeforge/
 RUN npm install
 
 RUN mkdir -p /app/packages/integrations/opencode
