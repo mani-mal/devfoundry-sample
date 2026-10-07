@@ -17,21 +17,21 @@ COPY packages/integrations/context-forge/src ./packages/integrations/context-for
 
 # Build core first
 WORKDIR /app/packages/core
-RUN ../node_modules/.bin/tsc --build
+RUN /app/node_modules/.bin/tsc --build
 
 # Build integrations
 WORKDIR /app/packages/integrations/routeforge
-RUN ../../node_modules/.bin/tsc --build
+RUN /app/node_modules/.bin/tsc --build
 
 WORKDIR /app/packages/integrations/opencode
-RUN ../../node_modules/.bin/tsc --build
+RUN /app/node_modules/.bin/tsc --build
 
 WORKDIR /app/packages/integrations/context-forge
-RUN ../../node_modules/.bin/tsc --build
+RUN /app/node_modules/.bin/tsc --build
 
 # Build api
 WORKDIR /app/packages/api
-RUN ../../node_modules/.bin/tsc --build
+RUN /app/node_modules/.bin/tsc --build
 
 FROM node:20-alpine
 
