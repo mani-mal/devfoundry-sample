@@ -6,6 +6,7 @@ WORKDIR /app
 COPY packages/api/package.json packages/api/tsconfig.json ./
 COPY package.json package-lock.json ./
 RUN npm install
+RUN ls -la node_modules/@types/ | head -10
 
 # Copy source
 COPY packages/api/src ./src
