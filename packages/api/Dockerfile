@@ -5,9 +5,8 @@ WORKDIR /app
 # Install dependencies including devDependencies for build
 COPY packages/api/package.json packages/api/tsconfig.json ./
 COPY package.json package-lock.json ./
-RUN cat package.json
 RUN npm install
-RUN ls -la
+RUN ls -la node_modules/@types/ | head -10
 
 # Copy source
 COPY packages/api/src ./src
