@@ -1,16 +1,30 @@
-import { DevFoundryApi } from './api';
+import express, { Request, Response } from 'express';
+import { DevFoundryCore } from '@dev-foundry/core';
 
-const API_PORT = process.env.API_PORT ? parseInt(process.env.API_PORT, 10) : 3000;
+export class ApiServer {
+  private app: express.Express;
+  private core: DevFoundryCore;
 
-const coreOptions = {
-  databaseUrl: process.env.DATABASE_URL || 'postgres://devfoundry:devfoundry@localhost:5432/devfoundry',
-  routeForgeUrl: process.env.ROUTEFORGE_URL || 'http://localhost:8000',
-};
+  constructor(core: DevFoundryCore, port: number = 8000) {
+    this.app = express();
+    this.core = core;
+    this.setupRoutes();
+  }
 
-const apiOptions = {
-  port: API_PORT,
-  core: undefined as any,
-};
+  private setupRoutes(): void {
+    this.app.use(express.json());
+    
+    this.app.get('/health', (req: Request, res: Response) => {
+      res.json({ status: 'ok' });
+    });
+  }
 
-const api = new DevFoundryApi(apiOptions);
-api.start();
+  public start(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.app.listen(8000, () => {
+        console.log('API server started on port 8000');
+        resolve();
+      });
+    });
+  }
+}

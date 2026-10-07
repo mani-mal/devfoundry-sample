@@ -1,9 +1,10 @@
-/**
- * DevFoundry Core Library
- * Core types, database models, and utilities for DevFoundry
- */
-
+export { Database, createSchema, DatabaseConfig } from './database';
+export { DevFoundryCore, CoreOptions } from './core';
 export * from './types';
-export * from './database';
+export { ValidationPipeline, ValidationOptions } from './validation';
+export { ReviewPacketGenerator, ReviewPacketOptions } from './review-packet';
+export { OutcomeLedger, OutcomeLedgerConfig, AttemptRecord, EvidenceStorage } from './outcome-ledger';
+export { SecurityService, PermissionCheck, ServiceToken, SPIFFEConfig } from './security';
+export { CapacityAdmissionService, CapacityConfig, AdmissionDecision } from './capacity';
+export { createLogger, ConsoleLogger, Logger, LogEntry } from './logging';
 export * from './errors';
-export * from './logging';

@@ -1,5 +1,16 @@
+/**
+ * RouteForge Integration Client
+ * 
+ * This client integrates with the RouteForge model routing service,
+ * which is a Python application providing model routing and Langfuse integration.
+ * 
+ * RouteForge provides: Model routing, serving-endpoint connections,
+ * gateway authentication/configuration, and existing Langfuse collection.
+ * 
+ * DevFoundry communicates with RouteForge via REST API endpoints.
+ */
+
 import axios, { AxiosInstance } from 'axios';
-import { v4 as uuidv4 } from 'uuid';
 
 export interface RouteForgeConfig {
   baseUrl: string;
@@ -7,12 +18,24 @@ export interface RouteForgeConfig {
   timeout?: number;
 }
 
+export interface RouteForgeMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+  tool_calls?: RouteForgeToolCall[];
+}
+
+export interface RouteForgeToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+}
+
 export interface RouteForgeRequest {
   model: string;
-  messages: Array<{
-    role: 'system' | 'user' | 'assistant';
-    content: string;
-  }>;
+  messages: RouteForgeMessage[];
   tools?: Array<{
     type: 'function';
     function: {
@@ -35,14 +58,7 @@ export interface RouteForgeResponse {
     message: {
       role: 'assistant';
       content?: string;
-      tool_calls?: Array<{
-        id: string;
-        type: 'function';
-        function: {
-          name: string;
-          arguments: string;
-        };
-      }>;
+      tool_calls?: RouteForgeToolCall[];
     };
     finish_reason?: string;
   }>;
@@ -53,16 +69,11 @@ export interface RouteForgeResponse {
   };
 }
 
-export interface LangfuseTrace {
-  traceId: string;
-  spanId?: string;
-  name: string;
-  type: 'llm' | 'span' | 'event';
-  metadata?: Record<string, unknown>;
-  startTime: number;
-  endTime?: number;
-  input?: Record<string, unknown>;
-  output?: Record<string, unknown>;
+export interface RouteForgeModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
 }
 
 export class RouteForgeClient {
@@ -78,6 +89,21 @@ export class RouteForgeClient {
     });
   }
 
+  /**
+   * Health check - verify RouteForge is running
+   */
+  async healthCheck(): Promise<boolean> {
+    try {
+      const response = await this.client.get('/health');
+      return response.status === 200;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get model completions from RouteForge
+   */
   async generate(request: RouteForgeRequest): Promise<RouteForgeResponse> {
     try {
       const response = await this.client.post<RouteForgeResponse>(
@@ -90,6 +116,9 @@ export class RouteForgeClient {
     }
   }
 
+  /**
+   * Stream completions from RouteForge
+   */
   async stream(request: RouteForgeRequest): Promise<NodeJS.ReadableStream> {
     try {
       const response = await this.client.post(
@@ -103,25 +132,85 @@ export class RouteForgeClient {
     }
   }
 
-  public createTrace(name: string): LangfuseTrace {
+  /**
+   * List available models from RouteForge
+   */
+  async listModels(): Promise<RouteForgeModel[]> {
+    try {
+      const response = await this.client.get<{ data: RouteForgeModel[] }>('/v1/models');
+      return response.data.data;
+    } catch (error) {
+      throw new Error(`RouteForge list models error: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Get a specific model by ID
+   */
+  async getModel(modelId: string): Promise<RouteForgeModel | null> {
+    try {
+      const response = await this.client.get<{ data: RouteForgeModel }>(`/v1/models/${modelId}`);
+      return response.data.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      throw new Error(`RouteForge get model error: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Create a Langfuse trace for task correlation
+   */
+  createTrace(taskId: string, name: string): { traceId: string; spanId: string } {
     return {
-      traceId: uuidv4(),
-      name,
-      type: 'llm',
-      startTime: Date.now(),
+      traceId: taskId,
+      spanId: `span-${Date.now()}`,
     };
   }
 
-  public async logTrace(trace: LangfuseTrace): Promise<void> {
-    // TODO: Send trace to Langfuse
+  /**
+   * Log evaluation results to RouteForge/Langfuse
+   */
+  async logEvaluation(
+    traceId: string,
+    evaluation: {
+      name: string;
+      score: number;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<void> {
+    try {
+      await this.client.post('/evaluations', {
+        trace_id: traceId,
+        ...evaluation,
+      });
+    } catch (error) {
+      throw new Error(`RouteForge log evaluation error: ${(error as Error).message}`);
+    }
   }
 
-  public async healthCheck(): Promise<boolean> {
+  /**
+   * Get gateway configuration
+   */
+  async getConfiguration(): Promise<Record<string, unknown>> {
     try {
-      const response = await this.client.get('/health');
-      return response.status === 200;
-    } catch {
-      return false;
+      const response = await this.client.get('/config');
+      return response.data;
+    } catch (error) {
+      throw new Error(`RouteForge get configuration error: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Get supported routes
+   */
+  async getRoutes(): Promise<Array<{ name: string; model: string; conditions: Record<string, unknown> }>> {
+    try {
+      const response = await this.client.get<{ routes: Array<{ name: string; model: string; conditions: Record<string, unknown> }> }>('/routes');
+      return response.data.routes;
+    } catch (error) {
+      throw new Error(`RouteForge get routes error: ${(error as Error).message}`);
     }
   }
 }

@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: devfoundry-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devfoundry
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devfoundry}
+      POSTGRES_DB: devfoundry
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgresql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devfoundry -d devfoundry"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - devfoundry-network
+
+  # DevFoundry API Service
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: devfoundry-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://devfoundry:${POSTGRES_PASSWORD:-devfoundry}@postgres:5432/devfoundry
+      - ROUTEFORGE_URL=${ROUTEFORGE_URL:-http://routeforge:8080}
+      - CONTEXTFORGE_URL=${CONTEXTFORGE_URL:-http://context-forge:3001}
+      - LANGFUSE_URL=${LANGFUSE_URL:-http://langfuse:3000}
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devfoundry-network
+
+  # DevFoundry Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+    container_name: devfoundry-worker
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgres://devfoundry:${POSTGRES_PASSWORD:-devfoundry}@postgres:5432/devfoundry
+      - ROUTEFORGE_URL=${ROUTEFORGE_URL:-http://routeforge:8080}
+      - CONTEXTFORGE_URL=${CONTEXTFORGE_URL:-http://context-forge:3001}
+      - WORKER_ID=${WORKER_ID:-worker-1}
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devfoundry-network
+
+  # RouteForge Gateway
+  routeforge:
+    image: ghcr.io/mani-mal/routeforge:latest
+    container_name: devfoundry-routeforge
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LANGFUSE_URL=${LANGFUSE_URL:-http://langfuse:3000}
+    volumes:
+      - ./docker/routeforge/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devfoundry-network
+
+  # ContextForge MCP Gateway
+  context-forge:
+    image: ibm/mcp-context-forge:latest
+    container_name: devfoundry-context-forge
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ./docker/context-forge/config.yaml:/app/config.yaml:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - devfoundry-network
+
+  # Langfuse (Basic OSS Setup)
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: devfoundry-langfuse
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://devfoundry:${POSTGRES_PASSWORD:-devfoundry}@langfuse-postgres:5432/langfuse
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-langfuse-secret}
+      - SALT=${SALT:-langfuse-salt}
+      - PORT=3000
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - devfoundry-network
+
+  # Langfuse PostgreSQL (dedicated for Langfuse)
+  langfuse-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: devfoundry-langfuse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devfoundry
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devfoundry}
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devfoundry -d langfuse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - devfoundry-network
+
+networks:
+  devfoundry-network:
+    driver: bridge
+    name: devfoundry-network
+
+volumes:
+  postgres_data:
+    name: devfoundry-postgres-data
+  langfuse_postgres_data:
+    name: devfoundry-langfuse-postgres-data

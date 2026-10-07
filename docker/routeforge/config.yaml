@@ -1,0 +1,26 @@
+# RouteForge Configuration
+
+# Model Routes
+routes:
+  - name: default
+    provider: openai
+    models:
+      - gpt-4
+      - gpt-3.5-turbo
+
+# API Configuration
+api:
+  port: 8080
+  timeout: 30000
+
+# Logging
+log:
+  level: info
+  format: json
+
+# Langfuse Integration
+langfuse:
+  enabled: true
+  url: http://langfuse:3000
+  public_key: demo
+  secret_key: demo

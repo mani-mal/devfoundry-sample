@@ -1,0 +1,109 @@
+
+> cli@0.1.0 build
+> tsc --build
+
+../../node_modules/@dev-foundry/core/src/capacity.ts(144,5): error TS2322: Type 'number | boolean' is not assignable to type 'boolean'.
+  Type 'number' is not assignable to type 'boolean'.
+../../node_modules/@dev-foundry/core/src/database.ts(1,30): error TS7016: Could not find a declaration file for module 'pg'. '/home/manimal/projects/dev-foundry/node_modules/pg/lib/index.js' implicitly has an 'any' type.
+  Try `npm i --save-dev @types/pg` if it exists or add a new declaration (.d.ts) file containing `declare module 'pg';`
+../../node_modules/@dev-foundry/core/src/review-packet.ts(2,30): error TS2724: '"./validation"' has no exported member named 'ValidationPipelineResult'. Did you mean 'ValidationPipeline'?
+../../node_modules/@dev-foundry/core/src/review-packet.ts(3,34): error TS2307: Cannot find module '@dev-foundry/worker' or its corresponding type declarations.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(76,7): error TS2322: Type 'boolean' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(117,11): error TS2322: Type 'Promise<string>' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(118,11): error TS2322: Type 'Promise<number>' is not assignable to type 'number'.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(122,61): error TS2322: Type 'unknown' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(181,28): error TS7006: Parameter 'test' implicitly has an 'any' type.
+../../node_modules/@dev-foundry/core/src/review-packet.ts(246,47): error TS7006: Parameter 't' implicitly has an 'any' type.
+../../node_modules/@dev-foundry/core/src/security.ts(63,39): error TS2339: Property 'includes' does not exist on type '{}'.
+../../node_modules/@dev-foundry/core/src/security.ts(65,22): error TS2339: Property 'includes' does not exist on type '{}'.
+../../node_modules/@dev-foundry/core/src/security.ts(70,7): error TS2322: Type '{}' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/security.ts(72,7): error TS2322: Type '{}' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/security.ts(73,7): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+../../node_modules/@dev-foundry/core/src/security.ts(74,7): error TS2740: Type '{}' is missing the following properties from type 'string[]': length, pop, push, concat, and 29 more.
+../../node_modules/@dev-foundry/core/src/security.ts(77,9): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+../../node_modules/@dev-foundry/core/src/security.ts(78,9): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+../../node_modules/@dev-foundry/core/src/validation.ts(49,7): error TS2322: Type 'boolean' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(57,54): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(64,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(68,43): error TS2322: Type 'unknown' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(79,53): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(87,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(91,42): error TS2322: Type 'unknown' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(103,41): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(109,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(124,43): error TS2322: Type 'unknown' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(137,49): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(144,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(159,51): error TS2322: Type 'unknown' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(171,44): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(176,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+../../node_modules/@dev-foundry/core/src/validation.ts(192,46): error TS2322: Type 'unknown' is not assignable to type 'string'.
+src/commands/__tests__/task.test.ts(4,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(7,3): error TS2304: Cannot find name 'beforeEach'.
+src/commands/__tests__/task.test.ts(14,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(15,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(16,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(19,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/task.test.ts(25,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(26,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(29,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/task.test.ts(36,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(37,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(38,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(44,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/task.test.ts(51,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(52,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(53,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(59,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/task.test.ts(65,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(66,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(72,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/task.test.ts(79,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(80,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/task.test.ts(81,47): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/__tests__/task.test.ts(87,9): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(4,1): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(7,3): error TS2304: Cannot find name 'beforeEach'.
+src/commands/__tests__/tools.test.ts(11,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(12,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(13,32): error TS2304: Cannot find name 'jest'.
+src/commands/__tests__/tools.test.ts(21,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(24,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(25,32): error TS2304: Cannot find name 'jest'.
+src/commands/__tests__/tools.test.ts(33,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(34,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(38,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(39,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(40,30): error TS2304: Cannot find name 'jest'.
+src/commands/__tests__/tools.test.ts(50,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(51,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(54,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(55,30): error TS2304: Cannot find name 'jest'.
+src/commands/__tests__/tools.test.ts(58,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(62,3): error TS2593: Cannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(63,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(64,31): error TS2304: Cannot find name 'jest'.
+src/commands/__tests__/tools.test.ts(67,7): error TS2304: Cannot find name 'expect'.
+src/commands/__tests__/tools.test.ts(70,5): error TS2593: Cannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+src/commands/__tests__/tools.test.ts(71,7): error TS2304: Cannot find name 'expect'.
+src/commands/task.ts(14,49): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/task.ts(37,27): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/commands/task.ts(60,49): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/task.ts(93,49): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/task.ts(139,49): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+src/commands/tools.ts(4,21): error TS2304: Cannot find name 'Command'.
+src/index.ts(43,49): error TS2341: Property 'pool' is private and only accessible within class 'Database'.
+npm ERR! Lifecycle script `build` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: cli@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/cli 

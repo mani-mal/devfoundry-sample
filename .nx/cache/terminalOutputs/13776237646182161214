@@ -1,0 +1,4 @@
+
+> @dev-foundry/api@0.1.0 build
+> tsc --build
+

@@ -244,3 +244,151 @@ export interface CapacityAdmission {
   priority: number;
   queueTime: number;
 }
+
+export interface WorkerAdapter {
+  name: string;
+  version: string;
+  capabilities: string[];
+  healthCheck(): Promise<boolean>;
+}
+
+export interface ValidationPipelineResult {
+  build: BuildResult;
+  lint: LintResult;
+  tests: TestResult[];
+  security: SecurityResult;
+  ui: UIResult[];
+}
+
+export interface BuildResult {
+  success: boolean;
+  output?: string;
+  duration: number;
+  artifacts?: string[];
+}
+
+export interface LintResult {
+  success: boolean;
+  errors: LintError[];
+  warnings: LintWarning[];
+  duration: number;
+}
+
+export interface LintError {
+  file: string;
+  line: number;
+  column: number;
+  message: string;
+  rule: string;
+}
+
+export interface LintWarning {
+  file: string;
+  line: number;
+  column: number;
+  message: string;
+  rule: string;
+}
+
+export interface TestResult {
+  name: string;
+  path: string;
+  status: 'passed' | 'failed' | 'skipped';
+  duration: number;
+  output?: string;
+  coverage?: CoverageReport;
+}
+
+export interface CoverageReport {
+  lines: number;
+  linesTotal: number;
+  functions: number;
+  functionsTotal: number;
+  branches: number;
+  branchesTotal: number;
+  percentage: number;
+}
+
+export interface SecurityResult {
+  success: boolean;
+  scanner: string;
+  findings: SecurityFinding[];
+  duration: number;
+}
+
+export interface SecurityFinding {
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  type: string;
+  file: string;
+  line: number;
+  column: number;
+  message: string;
+  recommendation?: string;
+}
+
+export interface UIResult {
+  test: string;
+  status: 'passed' | 'failed';
+  screenshot?: string;
+  duration: number;
+}
+
+export interface ReviewPacket {
+  taskId: string;
+  taskDescription: string;
+  taskStatus: TaskStatus;
+  taskPhase: TaskPhase;
+  baseCommit: string;
+  targetBranch: string;
+  patchDigest: string;
+  baseDigest: string;
+  changedFiles: ChangedFile[];
+  installedSkills: InstalledSkill[];
+  modelConfig: ModelConfig;
+  toolPermissions: ToolPermission[];
+  validationResults: ValidationPipelineResult;
+  environmentInfo: EnvironmentInfo;
+  evidence: EvidenceItem[];
+  knownGaps: string[];
+  failedAttempts: FailedAttempt[];
+  createdAt: Date;
+}
+
+export interface ChangedFile {
+  path: string;
+  status: 'added' | 'modified' | 'deleted';
+  diffSummary: string | Promise<string>;
+  linesChanged: number | Promise<number>;
+}
+
+export interface InstalledSkill {
+  id: string;
+  version: string;
+  digest: string;
+  path: string;
+}
+
+export interface ModelConfig {
+  route: string;
+  provider: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+}
+
+export interface EnvironmentInfo {
+  os: string;
+  architecture: string;
+  nodeVersion: string;
+  containerImage?: string;
+  containerTag?: string;
+  dockerVersion?: string;
+}
+
+export interface FailedAttempt {
+  attemptId: string;
+  phase: TaskPhase;
+  error: string;
+  timestamp: Date;
+  duration: number;
+}

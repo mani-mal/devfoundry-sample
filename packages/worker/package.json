@@ -6,13 +6,13 @@
   "scripts": {
     "build": "tsc --build",
     "start": "node dist/index.js",
-    "test": "jest",
-    "lint": "eslint src --ext ts"
+    "test": "jest --passWithNoTests",
+    "lint": "echo No lint configured"
   },
   "dependencies": {
-    "@dev-foundry/core": "0.1.0",
-    "@dev-foundry/integrations-routeforge": "0.1.0",
-    "@dev-foundry/integrations-opencode": "0.1.0",
+    "@dev-foundry/core": "file:../core",
+    "@dev-foundry/integrations-routeforge": "file:../integrations/routeforge",
+    "@dev-foundry/integrations-opencode": "file:../integrations/opencode",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

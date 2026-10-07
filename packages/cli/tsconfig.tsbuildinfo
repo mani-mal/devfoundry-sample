@@ -1,0 +1,1 @@
+{"root":["./src/index.ts","./src/commands/config.ts","./src/commands/skill.ts","./src/commands/task.ts","./src/commands/tools.ts"],"version":"5.9.3"}

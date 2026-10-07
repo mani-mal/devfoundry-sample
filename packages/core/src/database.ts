@@ -9,7 +9,7 @@ export interface DatabaseConfig {
 }
 
 export class Database {
-  private pool: Pool;
+  public pool: Pool;
 
   constructor(config: DatabaseConfig) {
     this.pool = new Pool({
@@ -25,7 +25,7 @@ export class Database {
     await this.pool.connect();
   }
 
-  async query<T>(text: string, params?: unknown[]): Promise<T[]> {
+  async query<T extends {} = {}>(text: string, params?: unknown[]): Promise<T[]> {
     const result = await this.pool.query<T>(text, params);
     return result.rows;
   }

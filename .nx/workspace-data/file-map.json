@@ -1,0 +1,390 @@
+{
+  "version": "6.0",
+  "nxVersion": "19.8.14",
+  "deps": {
+    "nx": "^19.0.0",
+    "@nx/devkit": "^19.0.0",
+    "typescript": "^5.5.0"
+  },
+  "pathMappings": {},
+  "nxJsonPlugins": [],
+  "fileMap": {
+    "nonProjectFiles": [
+      {
+        "file": ".env.example",
+        "hash": "9143151798943912761"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "14816009773745078389"
+      },
+      {
+        "file": "DEVFOUNDRY_ARCHITECTURE.md",
+        "hash": "10263747829429344507"
+      },
+      {
+        "file": "IMPLEMENTATION.md",
+        "hash": "84236437947428450"
+      },
+      {
+        "file": "INTEGRATION_STRATEGY.md",
+        "hash": "7594583357835173969"
+      },
+      {
+        "file": "PYTHON_SERVICES_INTEGRATION.md",
+        "hash": "17683074519612297742"
+      },
+      {
+        "file": "docker-compose compact.yml",
+        "hash": "80068754088803804"
+      },
+      {
+        "file": "docker-compose.yml",
+        "hash": "18217542432093066731"
+      },
+      {
+        "file": "docker/README.md",
+        "hash": "10585010400766584957"
+      },
+      {
+        "file": "docker/context-forge/config.yaml",
+        "hash": "16958929377563982851"
+      },
+      {
+        "file": "docker/postgresql/init.sql",
+        "hash": "4257739198890266383"
+      },
+      {
+        "file": "docker/routeforge/config.yaml",
+        "hash": "8054259230556953171"
+      },
+      {
+        "file": "nx.json",
+        "hash": "2245973893835860531"
+      },
+      {
+        "file": "package-lock.json",
+        "hash": "7673956587603879129"
+      },
+      {
+        "file": "package.json",
+        "hash": "2665225270744782128"
+      },
+      {
+        "file": "packages/web-console/package.json",
+        "hash": "3183841135964664034"
+      },
+      {
+        "file": "packages/web-console/public/app.js",
+        "hash": "14126358949587956392"
+      },
+      {
+        "file": "packages/web-console/public/index.html",
+        "hash": "17235046520529722076"
+      },
+      {
+        "file": "packages/web-console/public/styles.css",
+        "hash": "13262810237262448411"
+      },
+      {
+        "file": "packages/web-console/src/server.ts",
+        "hash": "13233689296634149561"
+      },
+      {
+        "file": "packages/web-console/tsconfig.json",
+        "hash": "268147510797806982"
+      },
+      {
+        "file": "scripts/verify-deployment.sh",
+        "hash": "10614616494532473042"
+      }
+    ],
+    "projectFileMap": {
+      "@dev-foundry/integrations-context-forge": [
+        {
+          "file": "packages/integrations/context-forge/package.json",
+          "hash": "4035353357311273436",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:axios",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/integrations/context-forge/src/context-forge.ts",
+          "hash": "15338623306533930707"
+        },
+        {
+          "file": "packages/integrations/context-forge/src/index.ts",
+          "hash": "13531601996568757523"
+        },
+        {
+          "file": "packages/integrations/context-forge/tsconfig.json",
+          "hash": "10321483776515864080"
+        },
+        {
+          "file": "packages/integrations/context-forge/tsconfig.tsbuildinfo",
+          "hash": "3326254692143878804"
+        }
+      ],
+      "@dev-foundry/integrations-opencode": [
+        {
+          "file": "packages/integrations/opencode/package.json",
+          "hash": "11751187330204693969",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:axios",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/integrations/opencode/src/index.ts",
+          "hash": "11908994420854241699"
+        },
+        {
+          "file": "packages/integrations/opencode/src/opencode.ts",
+          "hash": "12108751857801344357"
+        },
+        {
+          "file": "packages/integrations/opencode/tsconfig.json",
+          "hash": "10321483776515864080"
+        },
+        {
+          "file": "packages/integrations/opencode/tsconfig.tsbuildinfo",
+          "hash": "4075347728494444811"
+        }
+      ],
+      "core": [
+        {
+          "file": "packages/core/jest.config.ts",
+          "hash": "2037511244963515446"
+        },
+        {
+          "file": "packages/core/package.json",
+          "hash": "12989043511680500122",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:@types/pg",
+            "npm:@types/uuid",
+            "npm:jest",
+            "npm:typescript",
+            "npm:pg",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/core/src/__tests__/integration.test.ts",
+          "hash": "10267666158468576909"
+        },
+        {
+          "file": "packages/core/src/capacity.ts",
+          "hash": "11105619157253761279"
+        },
+        {
+          "file": "packages/core/src/core.ts",
+          "hash": "4926165365302505004"
+        },
+        {
+          "file": "packages/core/src/database.ts",
+          "hash": "5884727913745980923"
+        },
+        {
+          "file": "packages/core/src/errors.ts",
+          "hash": "12608617991308220651"
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "hash": "9517527069649792505"
+        },
+        {
+          "file": "packages/core/src/logging.ts",
+          "hash": "2576784144287198494"
+        },
+        {
+          "file": "packages/core/src/outcome-ledger.ts",
+          "hash": "14939616146451704853"
+        },
+        {
+          "file": "packages/core/src/review-packet.ts",
+          "hash": "6507165093591666746"
+        },
+        {
+          "file": "packages/core/src/security.ts",
+          "hash": "10110745614720471375"
+        },
+        {
+          "file": "packages/core/src/types.ts",
+          "hash": "15497206888993627169"
+        },
+        {
+          "file": "packages/core/src/validation.ts",
+          "hash": "2590269509798808644"
+        },
+        {
+          "file": "packages/core/tsconfig.json",
+          "hash": "9904127866734140008"
+        },
+        {
+          "file": "packages/core/tsconfig.tsbuildinfo",
+          "hash": "385213799688965855"
+        }
+      ],
+      "cli": [
+        {
+          "file": "packages/cli/jest.config.ts",
+          "hash": "4205178006528961521"
+        },
+        {
+          "file": "packages/cli/package.json",
+          "hash": "12510231331611835059",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/commander",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:ts-jest",
+            "npm:ts-node",
+            "npm:commander",
+            "npm:axios",
+            "@dev-foundry/integrations-context-forge"
+          ]
+        },
+        {
+          "file": "packages/cli/src/commands/config.ts",
+          "hash": "1290342578869862499"
+        },
+        {
+          "file": "packages/cli/src/commands/skill.ts",
+          "hash": "4756386649872713003"
+        },
+        {
+          "file": "packages/cli/src/commands/task.ts",
+          "hash": "7956013514522893918"
+        },
+        {
+          "file": "packages/cli/src/commands/tools.ts",
+          "hash": "4679441054859360565"
+        },
+        {
+          "file": "packages/cli/src/index.ts",
+          "hash": "15165838468466589073"
+        },
+        {
+          "file": "packages/cli/tsconfig.json",
+          "hash": "12614222510298457290"
+        },
+        {
+          "file": "packages/cli/tsconfig.tsbuildinfo",
+          "hash": "4423618682330374634"
+        }
+      ],
+      "@dev-foundry/integrations-routeforge": [
+        {
+          "file": "packages/integrations/routeforge/package.json",
+          "hash": "431597116419194979",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:axios",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/integrations/routeforge/src/index.ts",
+          "hash": "6175930663667395123"
+        },
+        {
+          "file": "packages/integrations/routeforge/src/routeforge.ts",
+          "hash": "11562017596209398978"
+        },
+        {
+          "file": "packages/integrations/routeforge/tsconfig.json",
+          "hash": "10321483776515864080"
+        },
+        {
+          "file": "packages/integrations/routeforge/tsconfig.tsbuildinfo",
+          "hash": "8308186062924609756"
+        }
+      ],
+      "@dev-foundry/api": [
+        {
+          "file": "packages/api/Dockerfile",
+          "hash": "4131846036310879103"
+        },
+        {
+          "file": "packages/api/package.json",
+          "hash": "12547764490905195154",
+          "deps": [
+            "npm:@types/express",
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:express",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/api/src/index.ts",
+          "hash": "7354728626457226084"
+        },
+        {
+          "file": "packages/api/tsconfig.json",
+          "hash": "9904127866734140008"
+        },
+        {
+          "file": "packages/api/tsconfig.tsbuildinfo",
+          "hash": "4907354470170717927"
+        }
+      ],
+      "worker": [
+        {
+          "file": "packages/worker/Dockerfile",
+          "hash": "12034198430206385974"
+        },
+        {
+          "file": "packages/worker/package.json",
+          "hash": "17813446479670155600",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "@dev-foundry/integrations-routeforge",
+            "@dev-foundry/integrations-opencode",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/worker/src/index.ts",
+          "hash": "3560460402340170074"
+        },
+        {
+          "file": "packages/worker/src/worker.ts",
+          "hash": "9115342218743212552"
+        },
+        {
+          "file": "packages/worker/tsconfig.json",
+          "hash": "10321483776515864080"
+        },
+        {
+          "file": "packages/worker/tsconfig.tsbuildinfo",
+          "hash": "5414768749795207934"
+        }
+      ]
+    }
+  }
+}

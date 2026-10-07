@@ -1,0 +1,9 @@
+
+> @dev-foundry/api@0.1.0 build
+> tsc --build
+
+error TS18003: No inputs were found in config file '/home/manimal/projects/dev-foundry/packages/api/tsconfig.json'. Specified 'include' paths were '["src/**/*"]' and 'exclude' paths were '["node_modules","dist","src/**/*.test.ts"]'.
+npm ERR! Lifecycle script `build` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: @dev-foundry/api@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/api 
