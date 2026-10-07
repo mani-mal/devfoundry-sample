@@ -5,17 +5,20 @@ WORKDIR /app
 # Install root dependencies
 COPY package.json package-lock.json ./
 RUN npm install
+RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid @types/pg
 
 # Install core dependencies
 COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
 WORKDIR /app/packages/core
 RUN npm install
+RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/pg @types/uuid
 
 # Install api dependencies  
 WORKDIR /app
 COPY packages/api/package.json packages/api/tsconfig.json ./packages/api/
 WORKDIR /app/packages/api
 RUN npm install
+RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid @types/pg
 
 # Install integrations dependencies
 COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/
