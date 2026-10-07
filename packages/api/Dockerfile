@@ -15,7 +15,7 @@ COPY packages/integrations/opencode/src ./packages/integrations/opencode/src
 COPY packages/integrations/context-forge/src ./packages/integrations/context-forge/src
 
 # Build typescript directly
-RUN npx tsc --build
+RUN npx -p typescript tsc --build
 
 FROM node:20-alpine
 
