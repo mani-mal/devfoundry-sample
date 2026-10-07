@@ -2,23 +2,41 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies including devDependencies for build
-COPY packages/api/package.json packages/api/tsconfig.json ./
+# Install root dependencies
 COPY package.json package-lock.json ./
 RUN npm install
-RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid @types/pg
 
-# Copy source
+# Install core dependencies
+COPY packages/core/package.json packages/core/tsconfig.json ./packages/core/
+WORKDIR /app/packages/core
+RUN npm install
+
+# Install api dependencies  
+WORKDIR /app
+COPY packages/api/package.json packages/api/tsconfig.json ./packages/api/
+WORKDIR /app/packages/api
+RUN npm install
+
+# Install integrations dependencies
+COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/
+WORKDIR /app/packages/integrations/routeforge
+RUN npm install
+
+COPY packages/integrations/opencode/package.json packages/integrations/opencode/tsconfig.json ./packages/integrations/opencode/
+WORKDIR /app/packages/integrations/opencode
+RUN npm install
+
+COPY packages/integrations/context-forge/package.json packages/integrations/context-forge/tsconfig.json ./packages/integrations/context-forge/
+WORKDIR /app/packages/integrations/context-forge
+RUN npm install
+
+# Copy all source files
+WORKDIR /app
 COPY packages/api/src ./packages/api/src
-COPY packages/api/tsconfig.json ./packages/api/
 COPY packages/core/src ./packages/core/src
-COPY packages/core/tsconfig.json ./packages/core/
 COPY packages/integrations/routeforge/src ./packages/integrations/routeforge/src
-COPY packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/
 COPY packages/integrations/opencode/src ./packages/integrations/opencode/src
-COPY packages/integrations/opencode/tsconfig.json ./packages/integrations/opencode/
 COPY packages/integrations/context-forge/src ./packages/integrations/context-forge/src
-COPY packages/integrations/context-forge/tsconfig.json ./packages/integrations/context-forge/
 
 # Build core first
 WORKDIR /app/packages/core
