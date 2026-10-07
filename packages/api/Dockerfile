@@ -10,10 +10,15 @@ RUN npm install --save-dev --save-exact typescript @types/node @types/jest @type
 
 # Copy source
 COPY packages/api/src ./packages/api/src
+COPY packages/api/tsconfig.json ./packages/api/
 COPY packages/core/src ./packages/core/src
+COPY packages/core/tsconfig.json ./packages/core/
 COPY packages/integrations/routeforge/src ./packages/integrations/routeforge/src
+COPY packages/integrations/routeforge/tsconfig.json ./packages/integrations/routeforge/
 COPY packages/integrations/opencode/src ./packages/integrations/opencode/src
+COPY packages/integrations/opencode/tsconfig.json ./packages/integrations/opencode/
 COPY packages/integrations/context-forge/src ./packages/integrations/context-forge/src
+COPY packages/integrations/context-forge/tsconfig.json ./packages/integrations/context-forge/
 
 # Build core first
 WORKDIR /app/packages/core
