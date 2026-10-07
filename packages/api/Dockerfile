@@ -6,7 +6,7 @@ WORKDIR /app
 COPY packages/api/package.json packages/api/tsconfig.json ./
 COPY package.json package-lock.json ./
 RUN npm install
-RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid
+RUN npm install --save-dev --save-exact typescript @types/node @types/jest @types/express @types/uuid @types/pg
 
 # Copy source
 COPY packages/api/src ./packages/api/src
