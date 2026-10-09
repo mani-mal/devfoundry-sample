@@ -24,7 +24,7 @@ export default function Navigation() {
               <div className="h-10 w-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/20">
                 <span className="text-white font-bold text-xl">D</span>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-dashboard-text to-dashboard-muted bg-clip-text text-transparent hidden sm:block">
+              <span className="text-xl font-bold text-dashboard-text hidden sm:block">
                 DevFoundry
               </span>
             </Link>

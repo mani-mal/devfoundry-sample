@@ -768,7 +768,7 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-web
-          image: ghcr.io/mani-mal/dev-foundry-web:latest
+          image: ghcr.io/mani-mal/dev-foundry-web:v1.1.0
           ports:
             - name: http
               containerPort: 3000

@@ -134,10 +134,6 @@
 }
 
 @layer utilities {
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary-400 to-primary-200;
-  }
-
   .animate-fade-in {
     animation: fadeIn 0.3s ease-in-out;
   }

@@ -243,7 +243,7 @@ export default function Dashboard() {
 
         {/* System Status Bar */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-l-4 border-l-emerald-500">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -254,7 +254,7 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-primary-500">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-primary-500"></div>
@@ -265,7 +265,7 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-          <Card className="border-l-4 border-l-amber-500">
+          <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-amber-500"></div>
