@@ -1,10 +1,7 @@
 /**
  * OpenCode Worker Implementation
- * 
+ *
  * This worker uses OpenCode as the managed harness/agent execution environment.
- * OpenCode provides: Context-aware agent execution, tool calling,
- * workspace management, and session persistence.
- * 
  * DevFoundry Worker → OpenCode API → Agent execution
  */
 
@@ -91,12 +88,12 @@ export class DevFoundryWorker {
     try {
       const result = await client.query<Task>(
         `
-        SELECT * FROM tasks 
-        WHERE status = $1 AND phase = $2
+        SELECT * FROM tasks
+        WHERE status = $1 AND phase IN ($2, $3, $4, $5)
         ORDER BY created_at ASC
         LIMIT 10
         `,
-        ['Pending', 'Qualified']
+        ['Pending', 'Qualified', 'Running', 'Validating', 'AwaitingReview']
       );
       return result.rows;
     } finally {
@@ -126,6 +123,9 @@ export class DevFoundryWorker {
     this.logger.info('Executing task', { taskId: task.id });
 
     switch (task.phase) {
+      case 'Qualified':
+        await this.handleQualifiedPhase(task);
+        break;
       case 'Running':
         await this.handleRunningPhase(task);
         break;
@@ -143,8 +143,8 @@ export class DevFoundryWorker {
     }
   }
 
-  private async handleRunningPhase(task: Task): Promise<void> {
-    this.logger.info('Running task phase', { taskId: task.id });
+  private async handleQualifiedPhase(task: Task): Promise<void> {
+    this.logger.info('Starting task execution', { taskId: task.id });
 
     // 1. Create OpenCode workspace
     const workspace = await this.openCode.createWorkspace({
@@ -164,14 +164,34 @@ export class DevFoundryWorker {
     });
 
     // 3. Execute task with OpenCode
-    const events = await this.openCode.sendInput(session.id, task.description);
+    await this.openCode.sendInput(session.id, task.description);
 
-    // 4. Collect patch from workspace
-    const patch = await this.collectPatch(workspace.id);
+    // 4. Store checkpoint and move to validation
+    const checkpoint = await this.openCode.createCheckpoint(session.id);
 
+    await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
+      checkpoint: {
+        snapshotId: checkpoint.snapshotId,
+        workspaceState: checkpoint.workspaceState,
+        sessionState: checkpoint.sessionState,
+        timestamp: new Date(),
+      },
+      workspace_id: workspace.id,
+    });
+  }
 
+  private async handleRunningPhase(task: Task): Promise<void> {
+    this.logger.info('Running task phase', { taskId: task.id });
 
-    // 6. Store checkpoint
+    // Resume agent execution if the session was interrupted
+    const session = await this.openCode.createSession({
+      task: task.description,
+      tools: task.skills,
+      workspaceId: task.workspaceId,
+    });
+
+    await this.openCode.sendInput(session.id, task.description);
+
     const checkpoint = await this.openCode.createCheckpoint(session.id);
 
     await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
@@ -216,10 +236,12 @@ export class DevFoundryWorker {
     // 2. Store review packet
     await this.storeReviewPacket(task.id, reviewPacket);
 
-    this.routeForge.createTrace('task-execution');
+    // 3. Record trace reference for trace correlation
+    const trace = this.routeForge.createTrace(task.id);
+    await this.storeTraceReference(task.id, trace.traceId, trace.spanId);
 
-    // 4. Update task status
-    await this.updateTaskStatus(task.id, 'Pending', 'Completed', undefined);
+    // Terminal outcome stays AwaitingReview until human disposition.
+    // Per the task lifecycle, the human disposition moves it to Completed.
   }
 
   private async collectPatch(workspaceId: string): Promise<string> {
@@ -243,11 +265,28 @@ export class DevFoundryWorker {
   }
 
   private async storeEvidence(taskId: string, evidence: any[]): Promise<void> {
-    // Store evidence in database
+    if (evidence.length === 0) return;
+
+    const item = evidence.map((e) => ({
+      type: e.type || 'command',
+      content: e.content || JSON.stringify(e),
+      timestamp: new Date().toISOString(),
+      provenance: e.provenance || { phase: 'Validating' },
+    }));
+
+    const client = await this.database.pool.connect();
+    try {
+      await client.query(
+        `INSERT INTO task_outcomes (id, task_id, attempt_id, success, evidence, trace_references)
+         VALUES ($1, $2, $3, true, $4, $5)`,
+        [uuidv4(), taskId, uuidv4(), JSON.stringify(item), JSON.stringify([])]
+      );
+    } finally {
+      client.release();
+    }
   }
 
   private async generateReviewPacket(task: Task): Promise<any> {
-    // Generate review packet with all artifacts
     return {
       taskId: task.id,
       requirements: task.description,
@@ -266,7 +305,39 @@ export class DevFoundryWorker {
   }
 
   private async storeReviewPacket(taskId: string, packet: any): Promise<void> {
-    // Store review packet in database
+    const client = await this.database.pool.connect();
+    try {
+      await client.query(
+        `INSERT INTO event_log (event_type, entity_type, entity_id, payload)
+         VALUES ($1, $2, $3, $4)`,
+        ['review_packet_generated', 'task', taskId, JSON.stringify(packet)]
+      );
+    } catch (error) {
+      this.logger.warn('Could not store review packet', { error });
+    } finally {
+      client.release();
+    }
+  }
+
+  private async storeTraceReference(taskId: string, traceId: string, spanId: string): Promise<void> {
+    const client = await this.database.pool.connect();
+    try {
+      await client.query(
+        `INSERT INTO task_outcomes (id, task_id, attempt_id, success, evidence, trace_references)
+         VALUES ($1, $2, $3, true, $4, $5)`,
+        [
+          uuidv4(),
+          taskId,
+          uuidv4(),
+          JSON.stringify([]),
+          JSON.stringify([{ traceId, spanId, gateway: 'routeforge', taskId, phase: 'AwaitingReview' }]),
+        ]
+      );
+    } catch (error) {
+      this.logger.warn('Could not store trace reference', { error });
+    } finally {
+      client.release();
+    }
   }
 
   private async updateTaskStatus(
@@ -278,32 +349,28 @@ export class DevFoundryWorker {
   ): Promise<void> {
     const client = await this.database.pool.connect();
     try {
+      const updates: string[] = ['status = $1', 'phase = $2', 'updated_at = NOW()'];
+      const params: unknown[] = [status, phase];
+
+      if (error) {
+        updates.push('outcome = $3');
+        params.push(JSON.stringify({ success: false, reason: error.message }));
+      }
+
+      let paramIdx = params.length;
+      for (const [key, value] of Object.entries(extraFields || {})) {
+        paramIdx++;
+        updates.push(`${key} = $${paramIdx}`);
+        params.push(typeof value === 'object' ? JSON.stringify(value) : value);
+      }
+
+      params.push(taskId);
       await client.query(
-        `
-        UPDATE tasks 
-        SET status = $1, 
-            phase = $2, 
-            updated_at = NOW(),
-            ${error ? 'outcome = $3,' : ''}
-            ${extraFields ? this.buildExtraFieldsQuery(extraFields) : ''}
-        WHERE id = $4
-        `,
-        [
-          status,
-          phase,
-          error ? JSON.stringify({ success: false, reason: error.message }) : null,
-          taskId,
-          ...Object.values(extraFields || {}),
-        ]
+        `UPDATE tasks SET ${updates.join(', ')} WHERE id = $${params.length}`,
+        params
       );
     } finally {
       client.release();
     }
-  }
-
-  private buildExtraFieldsQuery(fields: Record<string, unknown>): string {
-    return Object.keys(fields)
-      .map((key) => `${key} = $${Object.keys(fields).length + 1}`)
-      .join(', ');
   }
 }

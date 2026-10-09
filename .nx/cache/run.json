@@ -1,21 +1,87 @@
 {
   "run": {
-    "command": "nx run @dev-foundry/core:build",
-    "startTime": "2026-10-08T00:11:40.250Z",
-    "endTime": "2026-10-08T00:11:43.745Z",
+    "command": "nx run-many --target=test",
+    "startTime": "2026-10-09T16:06:48.785Z",
+    "endTime": "2026-10-09T16:06:48.882Z",
     "inner": false
   },
   "tasks": [
     {
-      "taskId": "@dev-foundry/core:build",
-      "target": "build",
+      "taskId": "@dev-foundry/core:test",
+      "target": "test",
       "projectName": "@dev-foundry/core",
-      "hash": "2603624593240764064",
-      "startTime": "2026-10-08T00:11:40.261Z",
-      "endTime": "2026-10-08T00:11:43.744Z",
+      "hash": "4063277052068096313",
+      "startTime": "2026-10-09T16:06:48.816Z",
+      "endTime": "2026-10-09T16:06:48.842Z",
       "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 1
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@dev-foundry/integrations-context-forge:test",
+      "target": "test",
+      "projectName": "@dev-foundry/integrations-context-forge",
+      "hash": "2990651703352459511",
+      "startTime": "2026-10-09T16:06:48.817Z",
+      "endTime": "2026-10-09T16:06:48.845Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@dev-foundry/integrations-opencode:test",
+      "target": "test",
+      "projectName": "@dev-foundry/integrations-opencode",
+      "hash": "3712273117523133660",
+      "startTime": "2026-10-09T16:06:48.817Z",
+      "endTime": "2026-10-09T16:06:48.846Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@dev-foundry/integrations-routeforge:test",
+      "target": "test",
+      "projectName": "@dev-foundry/integrations-routeforge",
+      "hash": "2372408914013970939",
+      "startTime": "2026-10-09T16:06:48.851Z",
+      "endTime": "2026-10-09T16:06:48.866Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "cli:test",
+      "target": "test",
+      "projectName": "cli",
+      "hash": "10347682966345058899",
+      "startTime": "2026-10-09T16:06:48.857Z",
+      "endTime": "2026-10-09T16:06:48.868Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "worker:test",
+      "target": "test",
+      "projectName": "worker",
+      "hash": "12365867333758648620",
+      "startTime": "2026-10-09T16:06:48.862Z",
+      "endTime": "2026-10-09T16:06:48.868Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@dev-foundry/api:test",
+      "target": "test",
+      "projectName": "@dev-foundry/api",
+      "hash": "18006624812527945185",
+      "startTime": "2026-10-09T16:06:48.870Z",
+      "endTime": "2026-10-09T16:06:48.876Z",
+      "params": "",
+      "cacheStatus": "local-cache-hit",
+      "status": 0
     }
   ]
 }

@@ -1347,6 +1347,15 @@
         "hash": "sha512-RxiPlBWPcGSf9TzIIy62iKRdRhokXMDUsPub9DL2VdVyTMXPZQR25aY/PJeasJN1EQU74hg097LK2wSHi+vzOQ=="
       }
     },
+    "npm:@playwright/test": {
+      "type": "npm",
+      "name": "npm:@playwright/test",
+      "data": {
+        "version": "1.64.0",
+        "packageName": "@playwright/test",
+        "hash": "sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g=="
+      }
+    },
     "npm:@puppeteer/browsers": {
       "type": "npm",
       "name": "npm:@puppeteer/browsers",
@@ -1759,6 +1768,15 @@
         "version": "20.19.43",
         "packageName": "@types/node",
         "hash": "sha512-6oYBAi5ikg4Pl+kGsoYtawUMBT2zZMCvPNF7pVLnHZfd1zf38DRiWn/gT01RYCdUqkv7Fhr+C9ot4/tb+2sVvA=="
+      }
+    },
+    "npm:@types/pg": {
+      "type": "npm",
+      "name": "npm:@types/pg",
+      "data": {
+        "version": "8.23.1",
+        "packageName": "@types/pg",
+        "hash": "sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A=="
       }
     },
     "npm:@types/qs": {
@@ -4272,6 +4290,24 @@
         "hash": "sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ=="
       }
     },
+    "npm:playwright": {
+      "type": "npm",
+      "name": "npm:playwright",
+      "data": {
+        "version": "1.64.0",
+        "packageName": "playwright",
+        "hash": "sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg=="
+      }
+    },
+    "npm:playwright-core": {
+      "type": "npm",
+      "name": "npm:playwright-core",
+      "data": {
+        "version": "1.64.0",
+        "packageName": "playwright-core",
+        "hash": "sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg=="
+      }
+    },
     "npm:postgres-array": {
       "type": "npm",
       "name": "npm:postgres-array",
@@ -5241,6 +5277,11 @@
       },
       {
         "source": "@dev-foundry/core",
+        "target": "npm:@types/pg",
+        "type": "static"
+      },
+      {
+        "source": "@dev-foundry/core",
         "target": "npm:@types/uuid",
         "type": "static"
       },
@@ -5278,6 +5319,11 @@
       },
       {
         "source": "@dev-foundry/api",
+        "target": "npm:@types/pg",
+        "type": "static"
+      },
+      {
+        "source": "@dev-foundry/api",
         "target": "npm:@types/uuid",
         "type": "static"
       },
@@ -5298,12 +5344,12 @@
       },
       {
         "source": "@dev-foundry/api",
-        "target": "npm:uuid",
+        "target": "npm:pg",
         "type": "static"
       },
       {
         "source": "@dev-foundry/api",
-        "target": "@dev-foundry/core",
+        "target": "npm:uuid",
         "type": "static"
       }
     ],
@@ -6647,6 +6693,13 @@
         "type": "static"
       }
     ],
+    "npm:@playwright/test": [
+      {
+        "source": "npm:@playwright/test",
+        "target": "npm:playwright",
+        "type": "static"
+      }
+    ],
     "npm:@puppeteer/browsers": [
       {
         "source": "npm:@puppeteer/browsers",
@@ -6942,6 +6995,23 @@
       {
         "source": "npm:@types/node",
         "target": "npm:undici-types",
+        "type": "static"
+      }
+    ],
+    "npm:@types/pg": [
+      {
+        "source": "npm:@types/pg",
+        "target": "npm:@types/node",
+        "type": "static"
+      },
+      {
+        "source": "npm:@types/pg",
+        "target": "npm:pg-protocol",
+        "type": "static"
+      },
+      {
+        "source": "npm:@types/pg",
+        "target": "npm:pg-types",
         "type": "static"
       }
     ],
@@ -9981,6 +10051,13 @@
       {
         "source": "npm:pkg-dir",
         "target": "npm:find-up",
+        "type": "static"
+      }
+    ],
+    "npm:playwright": [
+      {
+        "source": "npm:playwright",
+        "target": "npm:playwright-core",
         "type": "static"
       }
     ],

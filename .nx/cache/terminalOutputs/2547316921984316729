@@ -1,0 +1,16 @@
+
+> @dev-foundry/integrations-routeforge@0.1.0 test
+> jest
+
+[1mNo tests found, exiting with code 1[22m
+Run with `--passWithNoTests` to exit with code 0
+In [1m/home/manimal/projects/dev-foundry/packages/integrations/routeforge[22m
+  8 files checked.
+  testMatch: [33m**/__tests__/**/*.[jt]s?(x), **/?(*.)+(spec|test).[tj]s?(x)[39m - 0 matches
+  testPathIgnorePatterns: [33m/node_modules/[39m - 8 matches
+  testRegex:  - 0 matches
+Pattern:  - 0 matches
+npm ERR! Lifecycle script `test` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: @dev-foundry/integrations-routeforge@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/integrations/routeforge 

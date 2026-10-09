@@ -1,0 +1,50 @@
+
+> @dev-foundry/integrations-opencode@0.1.0 test
+> jest
+
+ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated. Please do
+transform: {
+    <transform_regex>: ['ts-jest', { /* ts-jest config goes here in Jest */ }],
+},
+See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/presets#advanced
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [2m__tests__/[22m[1mopencode.test.ts[22m
+  OpenCodeAdapter
+    createSession
+      [32m✓[39m [2mshould POST /sessions with task, tools and context (13 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (18 ms)[22m
+    sendInput
+      [32m✓[39m [2mshould POST message to session messages endpoint (22 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (3 ms)[22m
+    streamEvents
+      [32m✓[39m [2mshould GET events without params when no lastEventId (5 ms)[22m
+      [32m✓[39m [2mshould pass since=lastEventId when provided (3 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (3 ms)[22m
+    cancelSession
+      [32m✓[39m [2mshould POST to session cancel endpoint (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    createWorkspace
+      [32m✓[39m [2mshould POST /workspaces with baseCommit, environment and resourceLimits (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (3 ms)[22m
+    destroyWorkspace
+      [32m✓[39m [2mshould DELETE workspace endpoint (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    createCheckpoint
+      [32m✓[39m [2mshould POST to session checkpoints endpoint (3 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (3 ms)[22m
+    resumeFromCheckpoint
+      [32m✓[39m [2mshould POST to checkpoint resume endpoint (1 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (1 ms)[22m
+    getSession / getWorkspace
+      [32m✓[39m [2mshould GET session details (1 ms)[22m
+      [32m✓[39m [2mshould GET workspace details (1 ms)[22m
+    healthCheck
+      [32m✓[39m [2mshould return true on 200 (1 ms)[22m
+      [32m✓[39m [2mshould return false when unreachable (13 ms)[22m
+    apiKey authorization
+      [32m✓[39m [2mshould attach Bearer authorization when apiKey configured (4 ms)[22m
+
+[1mTest Suites: [22m[1m[32m1 passed[39m[22m, 1 total
+[1mTests:       [22m[1m[32m22 passed[39m[22m, 22 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        2.56 s, estimated 3 s
+[2mRan all test suites[22m[2m.[22m
