@@ -43,6 +43,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Use HTTP repos (lab environment does not trust the Alpine CDN TLS chain)
+RUN sed -i 's/https/http/g' /etc/apk/repositories
+
 RUN apk add --no-cache openssl-dev libpq-dev && \
     addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
