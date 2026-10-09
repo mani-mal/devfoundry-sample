@@ -33,13 +33,13 @@ COPY packages/integrations/context-forge/src ./contextforge/src
 
 # Install dependencies for the source dependencies and build them first
 WORKDIR /app/core
-RUN npm install --omit=dev && npx tsc --build
+RUN npm install && npx tsc --build
 WORKDIR /app/routeforge
-RUN npm install --omit=dev && npx tsc --build
+RUN npm install && npx tsc --build
 WORKDIR /app/opencode
-RUN npm install --omit=dev && npx tsc --build
+RUN npm install && npx tsc --build
 WORKDIR /app/contextforge
-RUN npm install --omit=dev && npx tsc --build
+RUN npm install && npx tsc --build
 
 # Build TypeScript
 RUN npx tsc --build
