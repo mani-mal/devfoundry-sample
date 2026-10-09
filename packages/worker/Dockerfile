@@ -21,15 +21,25 @@ COPY packages/integrations/routeforge/package*.json ./
 COPY packages/integrations/opencode/package*.json ./
 COPY packages/integrations/context-forge/package*.json ./
 
-# Install dependencies
-RUN npm install --omit=dev
+# Install dependencies (dev included: TypeScript is needed for the build)
+RUN npm install
 
 # Copy source code
 COPY packages/worker/src ./src
-COPY packages/core/src ./src
-COPY packages/integrations/routeforge/src ./src
-COPY packages/integrations/opencode/src ./src
-COPY packages/integrations/context-forge/src ./src
+COPY packages/core/src ./core/src
+COPY packages/integrations/routeforge/src ./routeforge/src
+COPY packages/integrations/opencode/src ./opencode/src
+COPY packages/integrations/context-forge/src ./contextforge/src
+
+# Install dependencies for the source dependencies and build them first
+WORKDIR /app/core
+RUN npm install --omit=dev && npx tsc --build
+WORKDIR /app/routeforge
+RUN npm install --omit=dev && npx tsc --build
+WORKDIR /app/opencode
+RUN npm install --omit=dev && npx tsc --build
+WORKDIR /app/contextforge
+RUN npm install --omit=dev && npx tsc --build
 
 # Build TypeScript
 RUN npx tsc --build
