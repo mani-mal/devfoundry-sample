@@ -28,7 +28,6 @@ RUN npm install --workspaces --include-workspace-root
 # Copy source
 COPY packages/core/src packages/core/src
 COPY packages/worker/src packages/worker/src
-COPY packages/worker/tsconfig.json packages/worker/tsconfig.json
 COPY packages/integrations/routeforge/src packages/integrations/routeforge/src
 COPY packages/integrations/opencode/src packages/integrations/opencode/src
 COPY packages/integrations/context-forge/src packages/integrations/context-forge/src
