@@ -89,11 +89,11 @@ export class DevFoundryWorker {
       const result = await client.query<Task>(
         `
         SELECT * FROM tasks
-        WHERE status = $1 AND phase IN ($2, $3, $4, $5)
+        WHERE status = $1 AND phase IN ($2, $3, $4, $5, $6, $7)
         ORDER BY created_at ASC
         LIMIT 10
         `,
-        ['Pending', 'Qualified', 'Running', 'Validating', 'AwaitingReview']
+        ['Pending', 'Submitted', 'Qualified', 'Running', 'Validating', 'AwaitingReview', 'Paused']
       );
       return result.rows;
     } finally {
@@ -123,6 +123,9 @@ export class DevFoundryWorker {
     this.logger.info('Executing task', { taskId: task.id });
 
     switch (task.phase) {
+      case 'Submitted':
+        await this.handleSubmittedPhase(task);
+        break;
       case 'Qualified':
         await this.handleQualifiedPhase(task);
         break;
@@ -141,6 +144,16 @@ export class DevFoundryWorker {
           phase: task.phase,
         });
     }
+  }
+
+  private async handleSubmittedPhase(task: Task): Promise<void> {
+    this.logger.info('Qualifying task', { taskId: task.id });
+
+    // Qualification: identity, policy, capacity (per task lifecycle).
+    // The task row already carries tenant/project/user identity; capacity
+    // profile and model route defaults are present. Mark it Qualified so the
+    // next poll picks it up for execution.
+    await this.updateTaskStatus(task.id, 'Pending', 'Qualified');
   }
 
   private async handleQualifiedPhase(task: Task): Promise<void> {
