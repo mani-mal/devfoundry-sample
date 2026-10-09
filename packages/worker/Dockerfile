@@ -22,7 +22,7 @@ COPY packages/integrations/opencode/package*.json ./
 COPY packages/integrations/context-forge/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy source code
 COPY packages/worker/src ./src
