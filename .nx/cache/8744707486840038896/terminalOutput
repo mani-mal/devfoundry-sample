@@ -1,0 +1,43 @@
+
+> @dev-foundry/integrations-routeforge@0.1.0 test
+> jest
+
+ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated. Please do
+transform: {
+    <transform_regex>: ['ts-jest', { /* ts-jest config goes here in Jest */ }],
+},
+See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/presets#advanced
+ts-jest[config] (WARN) [94mmessage[0m[90m TS151002: [0mUsing hybrid module kind (Node16/18/Next) is only supported in "isolatedModules: true". Please set "isolatedModules: true" in your tsconfig.json. To disable this message, you can set "diagnostics.ignoreCodes" to include 151002 in your ts-jest config. See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/options/diagnostics
+ts-jest[config] (WARN) [94mmessage[0m[90m TS151002: [0mUsing hybrid module kind (Node16/18/Next) is only supported in "isolatedModules: true". Please set "isolatedModules: true" in your tsconfig.json. To disable this message, you can set "diagnostics.ignoreCodes" to include 151002 in your ts-jest config. See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/options/diagnostics
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [2m__tests__/[22m[1mrouteforge.test.ts[22m
+  RouteForgeClient
+    generate
+      [32m✓[39m [2mshould POST to /v1/chat/completions and return the response (17 ms)[22m
+      [32m✓[39m [2mshould include tools and metadata in the request body (3 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error when the API fails (19 ms)[22m
+    stream
+      [32m✓[39m [2mshould set stream: true and return a readable stream (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive streaming error on failure (7 ms)[22m
+    listModels
+      [32m✓[39m [2mshould GET /v1/models and return the data array (4 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    getModel
+      [32m✓[39m [2mshould return the model when found (4 ms)[22m
+      [32m✓[39m [2mshould return null on 404 (1 ms)[22m
+    createTrace
+      [32m✓[39m [2mshould return a stable traceId and spanId (1 ms)[22m
+    logEvaluation
+      [32m✓[39m [2mshould POST evaluation results to /evaluations (44 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (1 ms)[22m
+    getConfiguration and getRoutes
+      [32m✓[39m [2mshould GET /config and return data (1 ms)[22m
+      [32m✓[39m [2mshould GET /routes and return the routes array (1 ms)[22m
+    healthCheck
+      [32m✓[39m [2mshould return true on 200 (1 ms)[22m
+      [32m✓[39m [2mshould return false when unreachable (1 ms)[22m
+
+[1mTest Suites: [22m[1m[32m1 passed[39m[22m, 1 total
+[1mTests:       [22m[1m[32m16 passed[39m[22m, 16 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        [1m[33m5.326 s[39m[22m
+[2mRan all test suites[22m[2m.[22m

@@ -1,8 +1,8 @@
 {
   "run": {
     "command": "nx run-many --target=test",
-    "startTime": "2026-10-09T16:06:48.785Z",
-    "endTime": "2026-10-09T16:06:48.882Z",
+    "startTime": "2026-10-09T17:08:25.063Z",
+    "endTime": "2026-10-09T17:08:43.901Z",
     "inner": false
   },
   "tasks": [
@@ -11,19 +11,8 @@
       "target": "test",
       "projectName": "@dev-foundry/core",
       "hash": "4063277052068096313",
-      "startTime": "2026-10-09T16:06:48.816Z",
-      "endTime": "2026-10-09T16:06:48.842Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/integrations-context-forge:test",
-      "target": "test",
-      "projectName": "@dev-foundry/integrations-context-forge",
-      "hash": "2990651703352459511",
-      "startTime": "2026-10-09T16:06:48.817Z",
-      "endTime": "2026-10-09T16:06:48.845Z",
+      "startTime": "2026-10-09T17:08:25.094Z",
+      "endTime": "2026-10-09T17:08:25.119Z",
       "params": "",
       "cacheStatus": "local-cache-hit",
       "status": 0
@@ -33,19 +22,19 @@
       "target": "test",
       "projectName": "@dev-foundry/integrations-opencode",
       "hash": "3712273117523133660",
-      "startTime": "2026-10-09T16:06:48.817Z",
-      "endTime": "2026-10-09T16:06:48.846Z",
+      "startTime": "2026-10-09T17:08:25.095Z",
+      "endTime": "2026-10-09T17:08:25.120Z",
       "params": "",
       "cacheStatus": "local-cache-hit",
       "status": 0
     },
     {
-      "taskId": "@dev-foundry/integrations-routeforge:test",
+      "taskId": "@dev-foundry/integrations-context-forge:test",
       "target": "test",
-      "projectName": "@dev-foundry/integrations-routeforge",
-      "hash": "2372408914013970939",
-      "startTime": "2026-10-09T16:06:48.851Z",
-      "endTime": "2026-10-09T16:06:48.866Z",
+      "projectName": "@dev-foundry/integrations-context-forge",
+      "hash": "2990651703352459511",
+      "startTime": "2026-10-09T17:08:25.095Z",
+      "endTime": "2026-10-09T17:08:25.121Z",
       "params": "",
       "cacheStatus": "local-cache-hit",
       "status": 0
@@ -55,19 +44,8 @@
       "target": "test",
       "projectName": "cli",
       "hash": "10347682966345058899",
-      "startTime": "2026-10-09T16:06:48.857Z",
-      "endTime": "2026-10-09T16:06:48.868Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "worker:test",
-      "target": "test",
-      "projectName": "worker",
-      "hash": "12365867333758648620",
-      "startTime": "2026-10-09T16:06:48.862Z",
-      "endTime": "2026-10-09T16:06:48.868Z",
+      "startTime": "2026-10-09T17:08:25.138Z",
+      "endTime": "2026-10-09T17:08:25.150Z",
       "params": "",
       "cacheStatus": "local-cache-hit",
       "status": 0
@@ -77,10 +55,32 @@
       "target": "test",
       "projectName": "@dev-foundry/api",
       "hash": "18006624812527945185",
-      "startTime": "2026-10-09T16:06:48.870Z",
-      "endTime": "2026-10-09T16:06:48.876Z",
+      "startTime": "2026-10-09T17:08:25.152Z",
+      "endTime": "2026-10-09T17:08:25.154Z",
       "params": "",
       "cacheStatus": "local-cache-hit",
+      "status": 0
+    },
+    {
+      "taskId": "@dev-foundry/integrations-routeforge:test",
+      "target": "test",
+      "projectName": "@dev-foundry/integrations-routeforge",
+      "hash": "8744707486840038896",
+      "startTime": "2026-10-09T17:08:25.124Z",
+      "endTime": "2026-10-09T17:08:43.860Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
+      "status": 0
+    },
+    {
+      "taskId": "worker:test",
+      "target": "test",
+      "projectName": "worker",
+      "hash": "4274249102330415986",
+      "startTime": "2026-10-09T17:08:25.139Z",
+      "endTime": "2026-10-09T17:08:43.900Z",
+      "params": "",
+      "cacheStatus": "cache-miss",
       "status": 0
     }
   ]
