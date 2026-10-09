@@ -162,7 +162,7 @@ export class RouteForgeClient {
   /**
    * Create a Langfuse trace for task correlation
    */
-  createTrace(taskId: string, name: string): { traceId: string; spanId: string } {
+  createTrace(taskId: string, name?: string): { traceId: string; spanId: string } {
     return {
       traceId: taskId,
       spanId: `span-${Date.now()}`,
