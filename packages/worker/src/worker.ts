@@ -181,8 +181,14 @@ export class DevFoundryWorker {
       workspaceId: workspace.id,
     });
 
-    // 3. Execute task with OpenCode
-    await this.openCode.sendInput(session.id, task.description);
+    // 3. Execute task with OpenCode (fire-and-forget: the harness runs
+    // asynchronously; validation later queries it through the shell)
+    this.openCode.sendInput(session.id, task.description).catch((err) => {
+      this.logger.warn('Harness task execution failed (non-fatal)', {
+        taskId: task.id,
+        error: (err as Error).message,
+      });
+    });
 
     // 4. Store checkpoint and move to validation
     const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
@@ -208,7 +214,12 @@ export class DevFoundryWorker {
       workspaceId: task.workspaceId,
     });
 
-    await this.openCode.sendInput(session.id, task.description);
+    await this.openCode.sendInput(session.id, task.description).catch((err) => {
+      this.logger.warn('Harness task execution failed (non-fatal)', {
+        taskId: task.id,
+        error: (err as Error).message,
+      });
+    });
 
     const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
 

@@ -1,8 +1,8 @@
 {
   "run": {
     "command": "nx test worker",
-    "startTime": "2026-10-09T20:34:18.306Z",
-    "endTime": "2026-10-09T20:34:33.454Z",
+    "startTime": "2026-10-09T20:39:56.455Z",
+    "endTime": "2026-10-09T20:40:24.806Z",
     "inner": false
   },
   "tasks": [
@@ -10,9 +10,9 @@
       "taskId": "worker:test",
       "target": "test",
       "projectName": "worker",
-      "hash": "18418151720444513606",
-      "startTime": "2026-10-09T20:34:18.329Z",
-      "endTime": "2026-10-09T20:34:33.453Z",
+      "hash": "12549643570998803328",
+      "startTime": "2026-10-09T20:39:56.496Z",
+      "endTime": "2026-10-09T20:40:24.805Z",
       "params": "",
       "cacheStatus": "cache-miss",
       "status": 0
