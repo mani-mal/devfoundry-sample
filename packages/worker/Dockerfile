@@ -16,7 +16,8 @@ RUN apk add --no-cache \
 # Copy manifests (skip root lockfile: file: deps out of sync)
 COPY package.json ./
 COPY packages/core/package.json packages/core/
-COPY packages/worker/package.json packages/worker/tsconfig.json ./
+COPY packages/worker/package.json packages/worker/
+COPY packages/worker/tsconfig.json packages/worker/
 COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/
 COPY packages/integrations/opencode/package.json packages/integrations/opencode/
 COPY packages/integrations/context-forge/package.json packages/integrations/context-forge/
