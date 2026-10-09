@@ -287,6 +287,8 @@ spec:
       labels:
         app: opencode
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       tolerations:
         - key: node-role.kubernetes.io/control-plane
           effect: NoSchedule
@@ -296,8 +298,7 @@ spec:
             value: "1"
       containers:
         - name: opencode
-          image: ghcr.io/sst/opencode:latest
-          imagePullPolicy: Always
+          image: ghcr.io/mani-mal/devfoundry-opencode:v1.0.0
           command: ["sh", "-c", "opencode serve --port 4096 --hostname 0.0.0.0 --print-logs"]
           ports:
             - name: http
@@ -403,6 +404,8 @@ spec:
                 secretKeyRef:
                   name: devfoundry-secrets
                   key: PLATFORM_ADMIN_PASSWORD
+            - name: DEFAULT_USER_PASSWORD
+              value: "admin123secure!X"
             - name: PLATFORM_ADMIN_FULL_NAME
               value: "Admin User"
             - name: DATABASE_URL
@@ -485,6 +488,7 @@ spec:
           ports:
             - name: http
               containerPort: 8000
+          workingDir: /app
           env:
             - name: PORT
               value: "8000"
@@ -494,6 +498,10 @@ spec:
               value: "regex"
             - name: SP_SERVER_PORT
               value: "8000"
+            - name: PYTHONPATH
+              value: "/app"
+            - name: DATABASE_URL
+              value: "sqlite+aiosqlite:////tmp/routeforge.db"
           resources:
             requests:
               cpu: "200m"
