@@ -228,7 +228,8 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-worker
-          image: ghcr.io/mani-mal/dev-foundry-worker:v1.1.0
+          image: ghcr.io/mani-mal/dev-foundry-worker:v1.1.2
+          imagePullPolicy: Always
           ports:
             - name: http
               containerPort: 3002
