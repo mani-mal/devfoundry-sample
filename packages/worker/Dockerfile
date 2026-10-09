@@ -1,12 +1,11 @@
 # DevFoundry Worker Service
-FROM node:20-alpine
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
 # Use HTTP repos (lab environment does not trust the Alpine CDN TLS chain)
 RUN sed -i 's/https/http/g' /etc/apk/repositories
 
-# Install build dependencies
 RUN apk add --no-cache \
     python3 \
     make \
@@ -14,44 +13,46 @@ RUN apk add --no-cache \
     openssl-dev \
     libpq-dev
 
-# Copy package files
-COPY packages/worker/package*.json ./
-COPY packages/core/package*.json ./
-COPY packages/integrations/routeforge/package*.json ./
-COPY packages/integrations/opencode/package*.json ./
-COPY packages/integrations/context-forge/package*.json ./
+# Copy manifests first for layer caching
+COPY package.json package-lock.json ./
+COPY packages/core/package.json packages/core/
+COPY packages/worker/package.json packages/worker/tsconfig.json ./
+COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/
+COPY packages/integrations/opencode/package.json packages/integrations/opencode/
+COPY packages/integrations/context-forge/package.json packages/integrations/context-forge/
 
-# Install dependencies (dev included: TypeScript is needed for the build)
-RUN npm install
+# Install workspace dependencies (dev included: TypeScript is needed to build)
+RUN npm ci
 
-# Copy source code
-COPY packages/worker/src ./src
-COPY packages/worker/tsconfig.json ./tsconfig.json
-COPY packages/core/src ./core/src
-COPY packages/core/tsconfig.json ./core/tsconfig.json
-COPY packages/integrations/routeforge/src ./routeforge/src
-COPY packages/integrations/routeforge/tsconfig.json ./routeforge/tsconfig.json
-COPY packages/integrations/opencode/src ./opencode/src
-COPY packages/integrations/opencode/tsconfig.json ./opencode/tsconfig.json
-COPY packages/integrations/context-forge/src ./contextforge/src
-COPY packages/integrations/context-forge/tsconfig.json ./contextforge/tsconfig.json
+# Copy source
+COPY packages/core/src packages/core/src
+COPY packages/worker/src packages/worker/src
+COPY packages/worker/tsconfig.json packages/worker/tsconfig.json
+COPY packages/integrations/routeforge/src packages/integrations/routeforge/src
+COPY packages/integrations/opencode/src packages/integrations/opencode/src
+COPY packages/integrations/context-forge/src packages/integrations/context-forge/src
 
-# Install dependencies for the source dependencies and build them first
-WORKDIR /app/core
-RUN npm install && npx tsc --build
-WORKDIR /app/routeforge
-RUN npm install && npx tsc --build
-WORKDIR /app/opencode
-RUN npm install && npx tsc --build
-WORKDIR /app/contextforge
-RUN npm install && npx tsc --build
+# Build bottom-up
+RUN npx tsc --build packages/core && \
+    npx tsc --build packages/integrations/routeforge && \
+    npx tsc --build packages/integrations/opencode && \
+    npx tsc --build packages/integrations/context-forge && \
+    npx tsc --build packages/worker
 
-# Build TypeScript
-RUN npx tsc --build
+FROM node:20-alpine
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
+WORKDIR /app
+
+RUN apk add --no-cache openssl-dev libpq-dev && \
+    addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
+
+COPY --from=builder /app/packages/worker/dist ./dist
+COPY --from=builder /app/packages/core/dist ./dist
+COPY --from=builder /app/packages/integrations/routeforge/dist ./dist
+COPY --from=builder /app/packages/integrations/opencode/dist ./dist
+COPY --from=builder /app/packages/integrations/context-forge/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
 
 USER nodejs
 
