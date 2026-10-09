@@ -14,7 +14,7 @@ export const createToolsCommand = (contextForge: ContextForgeClient) => {
         const filtered = tools.filter(
           (tool) =>
             tool.name.toLowerCase().includes(query.toLowerCase()) ||
-            tool.description.toLowerCase().includes(query.toLowerCase())
+            (tool.description ?? '').toLowerCase().includes(query.toLowerCase())
         );
         console.log('Found tools:');
         filtered.forEach((tool) => {

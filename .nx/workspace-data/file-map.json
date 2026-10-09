@@ -13,216 +13,88 @@
   "fileMap": {
     "nonProjectFiles": [
       {
-        "file": ".gitignore",
-        "hash": "14816009773745078389"
-      },
-      {
-        "file": "test-verify-all.mjs",
-        "hash": "1820237290451208997"
-      },
-      {
-        "file": "packages/web-console/src/components/ui/Select.tsx",
-        "hash": "4072534341469027066"
-      },
-      {
-        "file": "packages/web-console/src/components/ui/Badge.tsx",
-        "hash": "12478085866930268690"
-      },
-      {
-        "file": "packages/web-console/index.html",
-        "hash": "6858756301267057835"
-      },
-      {
-        "file": "packages/web-console/src/pages/TaskDetail.tsx",
-        "hash": "5150869161850157486"
-      },
-      {
-        "file": "INTEGRATION_STRATEGY.md",
-        "hash": "7594583357835173969"
-      },
-      {
-        "file": "packages/web-console/DELIVERABLE.md",
-        "hash": "13449989056635664081"
-      },
-      {
-        "file": "packages/web-console/public/app.js",
-        "hash": "14126358949587956392"
-      },
-      {
-        "file": "DEVFOUNDRY_ARCHITECTURE.md",
-        "hash": "10263747829429344507"
-      },
-      {
-        "file": "Dockerfile.worker",
-        "hash": "15849942168906827854"
-      },
-      {
-        "file": "docker/postgresql/init.sql",
-        "hash": "15298243450493111591"
-      },
-      {
-        "file": "packages/web-console/package.json",
-        "hash": "14446776591482402207"
-      },
-      {
-        "file": "test-nav-check.mjs",
-        "hash": "5758256864312078177"
-      },
-      {
-        "file": "nx.json",
-        "hash": "2245973893835860531"
-      },
-      {
-        "file": "test-results/01-login-page.png",
-        "hash": "9598708710536207711"
-      },
-      {
-        "file": "packages/web-console/src/store/taskStore.ts",
-        "hash": "10657649531799369277"
-      },
-      {
-        "file": "packages/web-console/INSTRUCTIONS.md",
-        "hash": "8110203244715271523"
-      },
-      {
-        "file": "packages/web-console/src/components/ui/Card.tsx",
-        "hash": "4916628356137572184"
-      },
-      {
-        "file": "k8s/dev-foundry.yaml",
-        "hash": "5164705945379094172"
-      },
-      {
-        "file": "packages/web-console/src/lib/utils.ts",
-        "hash": "13010072281260161433"
-      },
-      {
-        "file": "packages/web-console/src/main.tsx",
-        "hash": "9422392389665001678"
-      },
-      {
-        "file": "test-login-real.mjs",
-        "hash": "9623993667776808912"
-      },
-      {
-        "file": "GITLAB_TOKEN_CREATION.md",
-        "hash": "9377415487430220764"
-      },
-      {
-        "file": "package.json",
-        "hash": "8797295705341082811"
-      },
-      {
-        "file": "packages/web-console/package-lock.json",
-        "hash": "3274392074352197695"
-      },
-      {
-        "file": "packages/web-console/src/components/Navigation.tsx",
-        "hash": "5501377276089880861"
-      },
-      {
-        "file": "packages/web-console/src/components/ScrollToTop.tsx",
-        "hash": "5538892392447831664"
-      },
-      {
-        "file": "docker-compose compact.yml",
-        "hash": "80068754088803804"
-      },
-      {
-        "file": "Dockerfile.web-console",
-        "hash": "6067363390340047932"
-      },
-      {
-        "file": "packages/web-console/src/pages/TasksPage.tsx",
-        "hash": "17729753632070276434"
-      },
-      {
-        "file": "packages/web-console/Dockerfile",
-        "hash": "18385670364682823658"
-      },
-      {
-        "file": "packages/web-console/QUICKSTART.md",
-        "hash": "9770465805381110519"
-      },
-      {
-        "file": "packages/web-console/src/pages/Dashboard.tsx",
-        "hash": "3588844047532182235"
-      },
-      {
-        "file": "scripts/verify-deployment.sh",
-        "hash": "10614616494532473042"
-      },
-      {
-        "file": "packages/web-console/postcss.config.js",
-        "hash": "11345400670859560245"
-      },
-      {
-        "file": "packages/web-console/tsconfig.node.json",
-        "hash": "4208030242441905014"
-      },
-      {
-        "file": "test-results/.last-run.json",
-        "hash": "11141884120100644736"
-      },
-      {
-        "file": "packages/web-console/src/pages/ProjectConfig.tsx",
-        "hash": "16655382263868758715"
-      },
-      {
-        "file": "packages/web-console/src/components/ui/Textarea.tsx",
-        "hash": "15477722692966168140"
+        "file": "packages/web-console/start.sh",
+        "hash": "7819630156140095630"
       },
       {
         "file": ".env.example",
         "hash": "9143151798943912761"
       },
       {
+        "file": "nx.json",
+        "hash": "2245973893835860531"
+      },
+      {
+        "file": "packages/web-console/SETUP.md",
+        "hash": "5943996304354524851"
+      },
+      {
+        "file": "scripts/verify-deployment.sh",
+        "hash": "10614616494532473042"
+      },
+      {
+        "file": "packages/web-console/QUICKSTART.md",
+        "hash": "9770465805381110519"
+      },
+      {
+        "file": "Dockerfile.web-console",
+        "hash": "6067363390340047932"
+      },
+      {
         "file": "Dockerfile",
         "hash": "13038416759220696988"
       },
       {
-        "file": "test-streaming.mjs",
-        "hash": "10412059505967742153"
+        "file": "packages/web-console/tsconfig.node.json",
+        "hash": "4208030242441905014"
       },
       {
-        "file": "packages/web-console/UI_IMPROVEMENTS.md",
-        "hash": "2531733020575739421"
+        "file": "TEST_URLS.md",
+        "hash": "5906470217556184147"
       },
       {
-        "file": "docker/context-forge/config.yaml",
-        "hash": "16958929377563982851"
+        "file": "packages/web-console/package.json",
+        "hash": "14446776591482402207"
       },
       {
-        "file": "packages/web-console/public/index.html",
-        "hash": "17235046520529722076"
+        "file": "Dockerfile.api",
+        "hash": "2214397922588303320"
       },
       {
-        "file": "packages/web-console/start.sh",
-        "hash": "7819630156140095630"
+        "file": "packages/web-console/src/store/taskStore.ts",
+        "hash": "10657649531799369277"
       },
       {
-        "file": "docker/README.md",
-        "hash": "10585010400766584957"
+        "file": "packages/web-console/package-lock.json",
+        "hash": "3274392074352197695"
       },
       {
         "file": "packages/web-console/src/pages/ApplianceHealth.tsx",
         "hash": "9355520702186899600"
       },
       {
-        "file": "PYTHON_SERVICES_INTEGRATION.md",
-        "hash": "17683074519612297742"
+        "file": "packages/web-console/src/lib/api.ts",
+        "hash": "176260034588280304"
       },
       {
-        "file": "packages/web-console/vite.config.ts",
-        "hash": "13285851368772670347"
+        "file": "packages/web-console/.env.example",
+        "hash": "8347110820132218870"
       },
       {
-        "file": "docker-compose.yml",
-        "hash": "18217542432093066731"
+        "file": "packages/web-console/src/components/Navigation.tsx",
+        "hash": "5501377276089880861"
       },
       {
-        "file": "packages/web-console/src/types.ts",
-        "hash": "14063277212374445537"
+        "file": "package-lock.json",
+        "hash": "15826374874083145780"
+      },
+      {
+        "file": "docker/postgresql/init.sql",
+        "hash": "15298243450493111591"
+      },
+      {
+        "file": "packages/web-console/src/lib/utils.ts",
+        "hash": "13010072281260161433"
       },
       {
         "file": "test-e2e.mjs",
@@ -233,103 +105,279 @@
         "hash": "5484486999014879819"
       },
       {
-        "file": "packages/web-console/src/lib/api.ts",
-        "hash": "176260034588280304"
+        "file": "packages/web-console/src/components/ui/Badge.tsx",
+        "hash": "12478085866930268690"
       },
       {
-        "file": "Dockerfile.api",
-        "hash": "2214397922588303320"
+        "file": "packages/web-console/public/app.js",
+        "hash": "14126358949587956392"
       },
       {
-        "file": ".dockerignore",
-        "hash": "13486079976889287787"
+        "file": "package.json",
+        "hash": "8797295705341082811"
       },
       {
-        "file": "Dockerfile.routeforge",
-        "hash": "7485169546984902540"
+        "file": "packages/web-console/src/components/ui/Select.tsx",
+        "hash": "4072534341469027066"
       },
       {
-        "file": "package-lock.json",
-        "hash": "15826374874083145780"
+        "file": "packages/web-console/public/index.html",
+        "hash": "17235046520529722076"
       },
       {
-        "file": "packages/web-console/src/pages/index.ts",
-        "hash": "14102504072319467425"
+        "file": "packages/web-console/src/components/ui/Card.tsx",
+        "hash": "4916628356137572184"
       },
       {
-        "file": "packages/web-console/public/styles.css",
-        "hash": "13262810237262448411"
+        "file": "packages/web-console/DELIVERABLE.md",
+        "hash": "13449989056635664081"
       },
       {
-        "file": "packages/web-console/nginx.conf",
-        "hash": "8229270095932709083"
+        "file": "docker-compose compact.yml",
+        "hash": "80068754088803804"
       },
       {
-        "file": "TEST_URLS.md",
-        "hash": "5906470217556184147"
+        "file": "packages/web-console/tsconfig.json",
+        "hash": "14214944386271363872"
       },
       {
-        "file": "packages/web-console/src/pages/Login.tsx",
-        "hash": "14083635284098394396"
+        "file": "docker-compose.yml",
+        "hash": "18217542432093066731"
       },
       {
-        "file": "packages/web-console/src/components/ui/Button.tsx",
-        "hash": "13568821447636490264"
+        "file": "test-nav-check.mjs",
+        "hash": "5758256864312078177"
+      },
+      {
+        "file": "packages/web-console/src/components/ui/Textarea.tsx",
+        "hash": "15477722692966168140"
+      },
+      {
+        "file": "test-results/.last-run.json",
+        "hash": "11141884120100644736"
+      },
+      {
+        "file": "test-results/01-login-page.png",
+        "hash": "9598708710536207711"
       },
       {
         "file": "docker/routeforge/config.yaml",
         "hash": "8054259230556953171"
       },
       {
-        "file": "Dockerfile.contextforge",
-        "hash": "8985226515015526228"
+        "file": "packages/web-console/index.html",
+        "hash": "6858756301267057835"
       },
       {
-        "file": "packages/web-console/README.md",
-        "hash": "818186744052306508"
+        "file": "PYTHON_SERVICES_INTEGRATION.md",
+        "hash": "17683074519612297742"
       },
       {
-        "file": "packages/web-console/tsconfig.app.json",
-        "hash": "11143341468506080588"
+        "file": "test-streaming.mjs",
+        "hash": "10412059505967742153"
       },
       {
-        "file": "packages/web-console/src/components/ui/Input.tsx",
-        "hash": "2124574288387620736"
+        "file": "test-login-real.mjs",
+        "hash": "9623993667776808912"
       },
       {
-        "file": "packages/web-console/src/App.tsx",
-        "hash": "13380184797889380632"
+        "file": "packages/web-console/src/types.ts",
+        "hash": "14063277212374445537"
       },
       {
-        "file": "IMPLEMENTATION.md",
-        "hash": "84236437947428450"
+        "file": "packages/web-console/src/pages/index.ts",
+        "hash": "14102504072319467425"
       },
       {
-        "file": "opencode.json",
-        "hash": "7144233796993117018"
+        "file": "DEVFOUNDRY_ARCHITECTURE.md",
+        "hash": "10263747829429344507"
+      },
+      {
+        "file": "packages/web-console/public/styles.css",
+        "hash": "13262810237262448411"
+      },
+      {
+        "file": "packages/web-console/vite.config.ts",
+        "hash": "13285851368772670347"
+      },
+      {
+        "file": "packages/web-console/postcss.config.js",
+        "hash": "11345400670859560245"
       },
       {
         "file": "test-results/02-after-login.png",
         "hash": "10479217650891084822"
       },
       {
-        "file": "packages/web-console/.env.example",
-        "hash": "8347110820132218870"
+        "file": "packages/web-console/nginx.conf",
+        "hash": "8229270095932709083"
+      },
+      {
+        "file": "packages/web-console/src/components/ui/Button.tsx",
+        "hash": "13568821447636490264"
+      },
+      {
+        "file": "packages/web-console/src/pages/TasksPage.tsx",
+        "hash": "17729753632070276434"
+      },
+      {
+        "file": "k8s/dev-foundry.yaml",
+        "hash": "6860117289195303664"
+      },
+      {
+        "file": ".gitignore",
+        "hash": "14816009773745078389"
+      },
+      {
+        "file": "docker/README.md",
+        "hash": "10585010400766584957"
+      },
+      {
+        "file": "packages/web-console/src/pages/TaskDetail.tsx",
+        "hash": "5150869161850157486"
+      },
+      {
+        "file": "packages/web-console/tsconfig.app.json",
+        "hash": "11143341468506080588"
+      },
+      {
+        "file": "IMPLEMENTATION.md",
+        "hash": "84236437947428450"
+      },
+      {
+        "file": "packages/web-console/src/pages/ProjectConfig.tsx",
+        "hash": "16655382263868758715"
+      },
+      {
+        "file": "opencode.json",
+        "hash": "7144233796993117018"
+      },
+      {
+        "file": "Dockerfile.routeforge",
+        "hash": "7485169546984902540"
       },
       {
         "file": "packages/web-console/tailwind.config.js",
         "hash": "4356539612487155863"
       },
       {
-        "file": "packages/web-console/SETUP.md",
-        "hash": "5943996304354524851"
+        "file": "Dockerfile.contextforge",
+        "hash": "8985226515015526228"
       },
       {
-        "file": "packages/web-console/tsconfig.json",
-        "hash": "14214944386271363872"
+        "file": "packages/web-console/src/pages/Login.tsx",
+        "hash": "14083635284098394396"
+      },
+      {
+        "file": "test-verify-all.mjs",
+        "hash": "1820237290451208997"
+      },
+      {
+        "file": "packages/web-console/src/components/ScrollToTop.tsx",
+        "hash": "5538892392447831664"
+      },
+      {
+        "file": "packages/web-console/src/components/ui/Input.tsx",
+        "hash": "2124574288387620736"
+      },
+      {
+        "file": "packages/web-console/INSTRUCTIONS.md",
+        "hash": "8110203244715271523"
+      },
+      {
+        "file": "packages/web-console/src/main.tsx",
+        "hash": "9422392389665001678"
+      },
+      {
+        "file": "GITLAB_TOKEN_CREATION.md",
+        "hash": "9377415487430220764"
+      },
+      {
+        "file": "packages/web-console/UI_IMPROVEMENTS.md",
+        "hash": "2531733020575739421"
+      },
+      {
+        "file": "packages/web-console/README.md",
+        "hash": "818186744052306508"
+      },
+      {
+        "file": "packages/web-console/src/App.tsx",
+        "hash": "13380184797889380632"
+      },
+      {
+        "file": ".dockerignore",
+        "hash": "13486079976889287787"
+      },
+      {
+        "file": "INTEGRATION_STRATEGY.md",
+        "hash": "7594583357835173969"
+      },
+      {
+        "file": "Dockerfile.worker",
+        "hash": "15849942168906827854"
+      },
+      {
+        "file": "packages/web-console/src/pages/Dashboard.tsx",
+        "hash": "3588844047532182235"
+      },
+      {
+        "file": "docker/context-forge/config.yaml",
+        "hash": "16958929377563982851"
+      },
+      {
+        "file": "packages/web-console/Dockerfile",
+        "hash": "18385670364682823658"
       }
     ],
     "projectFileMap": {
+      "worker": [
+        {
+          "file": "packages/worker/Dockerfile",
+          "hash": "5439554342048277119"
+        },
+        {
+          "file": "packages/worker/__tests__/worker.e2e.test.ts",
+          "hash": "15011170770652330116"
+        },
+        {
+          "file": "packages/worker/jest.config.ts",
+          "hash": "9915794454232186134"
+        },
+        {
+          "file": "packages/worker/package.json",
+          "hash": "17813446479670155600",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "@dev-foundry/core",
+            "@dev-foundry/integrations-routeforge",
+            "@dev-foundry/integrations-opencode",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/worker/src/index.ts",
+          "hash": "8939200899118900248"
+        },
+        {
+          "file": "packages/worker/src/opencode.ts",
+          "hash": "10867325501076762513"
+        },
+        {
+          "file": "packages/worker/src/worker.ts",
+          "hash": "3996967704578617832"
+        },
+        {
+          "file": "packages/worker/tsconfig.json",
+          "hash": "5133970760178431574"
+        },
+        {
+          "file": "packages/worker/tsconfig.tsbuildinfo",
+          "hash": "17561803839212758090"
+        }
+      ],
       "@dev-foundry/core": [
         {
           "file": "packages/core/jest.config.ts",
@@ -400,39 +448,10 @@
         {
           "file": "packages/core/tsconfig.json",
           "hash": "14591552061265069082"
-        }
-      ],
-      "@dev-foundry/api": [
-        {
-          "file": "packages/api/Dockerfile",
-          "hash": "9307127761738284375"
         },
         {
-          "file": "packages/api/package.json",
-          "hash": "9696038301955142582",
-          "deps": [
-            "npm:@types/express",
-            "npm:@types/node",
-            "npm:@types/pg",
-            "npm:@types/uuid",
-            "npm:typescript",
-            "npm:jest",
-            "npm:express",
-            "npm:pg",
-            "npm:uuid"
-          ]
-        },
-        {
-          "file": "packages/api/src/index.ts",
-          "hash": "18267300788327138514"
-        },
-        {
-          "file": "packages/api/start.sh",
-          "hash": "16745471915866294478"
-        },
-        {
-          "file": "packages/api/tsconfig.json",
-          "hash": "3747545671092685648"
+          "file": "packages/core/tsconfig.tsbuildinfo",
+          "hash": "10738646170686616001"
         }
       ],
       "@dev-foundry/integrations-context-forge": [
@@ -468,93 +487,10 @@
         {
           "file": "packages/integrations/context-forge/tsconfig.json",
           "hash": "10321483776515864080"
-        }
-      ],
-      "worker": [
-        {
-          "file": "packages/worker/Dockerfile",
-          "hash": "5439554342048277119"
         },
         {
-          "file": "packages/worker/__tests__/worker.e2e.test.ts",
-          "hash": "14850664192761595684"
-        },
-        {
-          "file": "packages/worker/jest.config.ts",
-          "hash": "9915794454232186134"
-        },
-        {
-          "file": "packages/worker/package.json",
-          "hash": "17813446479670155600",
-          "deps": [
-            "npm:@types/node",
-            "npm:@types/uuid",
-            "npm:typescript",
-            "npm:jest",
-            "@dev-foundry/core",
-            "@dev-foundry/integrations-routeforge",
-            "@dev-foundry/integrations-opencode",
-            "npm:uuid"
-          ]
-        },
-        {
-          "file": "packages/worker/src/index.ts",
-          "hash": "8939200899118900248"
-        },
-        {
-          "file": "packages/worker/src/opencode.ts",
-          "hash": "10867325501076762513"
-        },
-        {
-          "file": "packages/worker/src/worker.ts",
-          "hash": "2848727745801241778"
-        },
-        {
-          "file": "packages/worker/tsconfig.json",
-          "hash": "5133970760178431574"
-        },
-        {
-          "file": "packages/worker/tsconfig.tsbuildinfo",
-          "hash": "12793786936932593188"
-        }
-      ],
-      "@dev-foundry/integrations-opencode": [
-        {
-          "file": "packages/integrations/opencode/__tests__/opencode.test.ts",
-          "hash": "4456585473726413009"
-        },
-        {
-          "file": "packages/integrations/opencode/jest.config.ts",
-          "hash": "1584569901531165525"
-        },
-        {
-          "file": "packages/integrations/opencode/package.json",
-          "hash": "11751187330204693969",
-          "deps": [
-            "npm:@types/node",
-            "npm:@types/uuid",
-            "npm:typescript",
-            "npm:jest",
-            "npm:@types/jest",
-            "npm:axios",
-            "npm:uuid"
-          ]
-        },
-        {
-          "file": "packages/integrations/opencode/src/index.ts",
-          "hash": "11908994420854241699"
-        },
-        {
-          "file": "packages/integrations/opencode/src/opencode.ts",
-          "hash": "17163563304110491914"
-        },
-        {
-          "file": "packages/integrations/opencode/tsconfig.json",
-          "hash": "10321483776515864080"
-        },
-        {
-          "file": "packages/integrations/opencode/tsconfig.tsbuildinfo",
-          "hash": "4075347728494444811"
+          "file": "packages/integrations/context-forge/tsconfig.tsbuildinfo",
+          "hash": "3326254692143878804"
         }
       ],
       "cli": [
@@ -601,7 +537,7 @@
         },
         {
           "file": "packages/cli/src/commands/tools.ts",
-          "hash": "4679441054859360565"
+          "hash": "3696331956772306338"
         },
         {
           "file": "packages/cli/src/index.ts",
@@ -649,6 +585,78 @@
         {
           "file": "packages/integrations/routeforge/tsconfig.json",
           "hash": "10321483776515864080"
+        },
+        {
+          "file": "packages/integrations/routeforge/tsconfig.tsbuildinfo",
+          "hash": "8308186062924609756"
+        }
+      ],
+      "@dev-foundry/integrations-opencode": [
+        {
+          "file": "packages/integrations/opencode/__tests__/opencode.test.ts",
+          "hash": "4456585473726413009"
+        },
+        {
+          "file": "packages/integrations/opencode/jest.config.ts",
+          "hash": "1584569901531165525"
+        },
+        {
+          "file": "packages/integrations/opencode/package.json",
+          "hash": "11751187330204693969",
+          "deps": [
+            "npm:@types/node",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:@types/jest",
+            "npm:axios",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/integrations/opencode/src/index.ts",
+          "hash": "11908994420854241699"
+        },
+        {
+          "file": "packages/integrations/opencode/src/opencode.ts",
+          "hash": "17163563304110491914"
+        },
+        {
+          "file": "packages/integrations/opencode/tsconfig.json",
+          "hash": "10321483776515864080"
+        }
+      ],
+      "@dev-foundry/api": [
+        {
+          "file": "packages/api/Dockerfile",
+          "hash": "9307127761738284375"
+        },
+        {
+          "file": "packages/api/package.json",
+          "hash": "9696038301955142582",
+          "deps": [
+            "npm:@types/express",
+            "npm:@types/node",
+            "npm:@types/pg",
+            "npm:@types/uuid",
+            "npm:typescript",
+            "npm:jest",
+            "npm:express",
+            "npm:pg",
+            "npm:uuid"
+          ]
+        },
+        {
+          "file": "packages/api/src/index.ts",
+          "hash": "18267300788327138514"
+        },
+        {
+          "file": "packages/api/start.sh",
+          "hash": "16745471915866294478"
+        },
+        {
+          "file": "packages/api/tsconfig.json",
+          "hash": "3747545671092685648"
         }
       ]
     }

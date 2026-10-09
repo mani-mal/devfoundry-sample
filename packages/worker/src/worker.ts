@@ -190,11 +190,11 @@ export class DevFoundryWorker {
     await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
       checkpoint: {
         snapshotId: checkpoint.snapshotId,
+        workspaceId: workspace.id,
         workspaceState: checkpoint.workspaceState,
         sessionState: checkpoint.sessionState,
         timestamp: new Date(),
       },
-      workspace_id: workspace.id,
     });
   }
 
@@ -215,6 +215,7 @@ export class DevFoundryWorker {
     await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
       checkpoint: {
         snapshotId: checkpoint.snapshotId,
+        workspaceId: session.id,
         workspaceState: checkpoint.workspaceState,
         sessionState: checkpoint.sessionState,
         timestamp: new Date(),

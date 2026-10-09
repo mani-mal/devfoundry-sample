@@ -1,1 +1,1 @@
-{"root":["./src/index.ts","./src/opencode.ts","./src/worker.ts"],"errors":true,"version":"5.9.3"}
+{"root":["./src/index.ts","./src/opencode.ts","./src/worker.ts"],"version":"5.9.3"}

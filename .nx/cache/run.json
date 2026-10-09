@@ -1,84 +1,18 @@
 {
   "run": {
-    "command": "nx run-many --target=test",
-    "startTime": "2026-10-09T19:39:47.847Z",
-    "endTime": "2026-10-09T19:40:00.907Z",
+    "command": "nx test worker",
+    "startTime": "2026-10-09T20:34:18.306Z",
+    "endTime": "2026-10-09T20:34:33.454Z",
     "inner": false
   },
   "tasks": [
     {
-      "taskId": "@dev-foundry/core:test",
-      "target": "test",
-      "projectName": "@dev-foundry/core",
-      "hash": "4812811836771951514",
-      "startTime": "2026-10-09T19:39:47.878Z",
-      "endTime": "2026-10-09T19:39:47.914Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/integrations-routeforge:test",
-      "target": "test",
-      "projectName": "@dev-foundry/integrations-routeforge",
-      "hash": "16007738808080714324",
-      "startTime": "2026-10-09T19:39:47.879Z",
-      "endTime": "2026-10-09T19:39:47.917Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/integrations-opencode:test",
-      "target": "test",
-      "projectName": "@dev-foundry/integrations-opencode",
-      "hash": "13868565223739125166",
-      "startTime": "2026-10-09T19:39:47.878Z",
-      "endTime": "2026-10-09T19:39:47.917Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/integrations-context-forge:test",
-      "target": "test",
-      "projectName": "@dev-foundry/integrations-context-forge",
-      "hash": "12529133945001946287",
-      "startTime": "2026-10-09T19:39:47.928Z",
-      "endTime": "2026-10-09T19:39:47.987Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/api:test",
-      "target": "test",
-      "projectName": "@dev-foundry/api",
-      "hash": "5866936310380367948",
-      "startTime": "2026-10-09T19:39:47.990Z",
-      "endTime": "2026-10-09T19:39:47.996Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "cli:test",
-      "target": "test",
-      "projectName": "cli",
-      "hash": "2981092794625978767",
-      "startTime": "2026-10-09T19:39:47.931Z",
-      "endTime": "2026-10-09T19:39:57.879Z",
-      "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 0
-    },
-    {
       "taskId": "worker:test",
       "target": "test",
       "projectName": "worker",
-      "hash": "1603362429019543475",
-      "startTime": "2026-10-09T19:39:47.950Z",
-      "endTime": "2026-10-09T19:40:00.906Z",
+      "hash": "18418151720444513606",
+      "startTime": "2026-10-09T20:34:18.329Z",
+      "endTime": "2026-10-09T20:34:33.453Z",
       "params": "",
       "cacheStatus": "cache-miss",
       "status": 0

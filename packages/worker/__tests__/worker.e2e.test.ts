@@ -19,29 +19,21 @@ function startMockOpenCode(port: number): Promise<http.Server> {
       if (req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'ok' }));
-      } else if (req.url === '/workspaces') {
+      } else if (req.url === '/session') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ id: 'ws-e2e-1', status: 'ready', createdAt: new Date().toISOString() }));
-      } else if (req.url === '/sessions') {
+        const id = `sess-e2e-${mockRequests.length}`;
+        res.end(JSON.stringify({ id, directory: '/tmp/wt', title: 'e2e' }));
+      } else if (req.url?.startsWith('/session/') && req.url?.endsWith('/message')) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
-          id: 'sess-e2e-1',
-          status: 'created',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          info: { id: 'reply-e2e-1' },
+          parts: [{ type: 'text', text: 'assistant reply' }],
         }));
-      } else if (req.url?.includes('/messages')) {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify([{ id: 'e-1', type: 'message', timestamp: new Date().toISOString(), payload: {} }]));
-      } else if (req.url?.includes('/checkpoints')) {
+      } else if (req.url?.startsWith('/session/') && req.url?.endsWith('/shell')) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
-          id: 'cp-e2e-1',
-          sessionId: 'sess-e2e-1',
-          snapshotId: 'snap-e2e-1',
-          workspaceState: { worktreePath: '/tmp/wt', baseCommit: 'abc123', isDirty: true, fileChanges: [] },
-          sessionState: { sessionId: 'sess-e2e-1' },
-          timestamp: new Date().toISOString(),
+          info: { id: 'shell-e2e-1' },
+          parts: [{ type: 'tool', state: { status: 'completed', output: '' } }],
         }));
       } else {
         res.writeHead(404);
@@ -132,17 +124,17 @@ describe('DevFoundryWorker E2E - vertical slice path', () => {
 
     // Verify OpenCode API was called in the right order
     const urls = mockRequests.map((r) => r.url);
-    expect(urls.indexOf('/workspaces')).toBeGreaterThanOrEqual(0);
-    expect(urls.indexOf('/sessions')).toBeGreaterThan(urls.indexOf('/workspaces'));
-    expect(urls.some((u) => u?.includes('/messages'))).toBe(true);
-    expect(urls.some((u) => u?.includes('/checkpoints'))).toBe(true);
+    const sessionIdx = urls.indexOf('/session');
+    expect(sessionIdx).toBeGreaterThanOrEqual(0);
+    expect(urls.some((u) => u?.includes('/message'))).toBe(true);
+    expect(urls.some((u) => u?.includes('/shell'))).toBe(true);
 
     // Verify the lifecycle update was issued (Validating + checkpoint)
     const update = mockDb.queries.find((q) => q.text.startsWith('UPDATE tasks'));
     expect(update).toBeDefined();
     expect(update!.params![1]).toBe('Validating');
-    const checkpointArg = String(update!.params!.find((p) => String(p).includes('snap-e2e-1')));
-    expect(checkpointArg).toContain('snap-e2e-1');
+    const checkpointArg = String(update!.params!.find((p) => String(p).includes('snapshotId')));
+    expect(checkpointArg).toContain('snapshotId');
   });
 
   it('should mark task Failed when the workspace creation fails', async () => {
