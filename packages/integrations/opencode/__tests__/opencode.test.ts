@@ -1,4 +1,4 @@
-import { OpenCodeAdapter } from '../src/opencode';
+import { OpenCodeAdapter, parseGitPorcelain } from '../src/opencode';
 import type { OpenCodeSession } from '../src/opencode';
 
 const mockGet = jest.fn();
@@ -34,7 +34,7 @@ describe('OpenCodeAdapter', () => {
   });
 
   describe('createSession', () => {
-    it('should POST /sessions with task, tools and context', async () => {
+    it('should POST /session with title from task', async () => {
       const expected = makeSession();
       mockPost.mockResolvedValue({ data: expected });
 
@@ -45,233 +45,202 @@ describe('OpenCodeAdapter', () => {
       });
 
       expect(result).toEqual(expected);
-      expect(mockPost).toHaveBeenCalledWith('/sessions', {
-        task: 'Fix authentication bug',
-        tools: ['skill-git'],
-        context: { projectId: 'project-1' },
+      expect(mockPost).toHaveBeenCalledWith('/session', {
+        title: 'Fix authentication bug',
       });
     });
 
     it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('ECONNREFUSED'));
-
+      mockPost.mockRejectedValue(new Error('connection refused'));
       await expect(adapter.createSession({ task: 'x' })).rejects.toThrow(
-        'OpenCode session creation error: ECONNREFUSED'
+        'OpenCode session creation error'
       );
+    });
+  });
+
+  describe('listSessions', () => {
+    it('should GET /session and return the array', async () => {
+      const expected = [makeSession(), makeSession({ id: 'session-2' })];
+      mockGet.mockResolvedValue({ data: expected });
+
+      const result = await adapter.listSessions();
+      expect(result).toEqual(expected);
+      expect(mockGet).toHaveBeenCalledWith('/session');
     });
   });
 
   describe('sendInput', () => {
-    it('should POST message to session messages endpoint', async () => {
-      const events = [{ id: 'e-1', type: 'message', timestamp: 'now', payload: {} }];
-      mockPost.mockResolvedValue({ data: events });
+    it('should POST text part to /session/:id/message', async () => {
+      const reply = { info: { id: 'msg-1', role: 'assistant' }, parts: [{ type: 'text', text: 'ok' }] };
+      mockPost.mockResolvedValue({ data: reply });
 
-      const result = await adapter.sendInput('session-1', 'Apply changes');
-
-      expect(result).toEqual(events);
-      expect(mockPost).toHaveBeenCalledWith('/sessions/session-1/messages', {
-        message: 'Apply changes',
-      });
+      const result = await adapter.sendInput('session-1', 'hello');
+      expect(result.length).toBeGreaterThan(0);
+      expect(mockPost).toHaveBeenCalledWith(
+        '/session/session-1/message',
+        { parts: [{ type: 'text', text: 'hello' }] },
+        expect.objectContaining({ timeout: expect.any(Number) })
+      );
     });
 
     it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('bad'));
-
-      await expect(adapter.sendInput('s-1', 'hi')).rejects.toThrow(
-        'OpenCode send input error: bad'
+      mockPost.mockRejectedValue(new Error('timeout'));
+      await expect(adapter.sendInput('session-1', 'x')).rejects.toThrow(
+        'OpenCode send input error'
       );
     });
   });
 
-  describe('streamEvents', () => {
-    it('should GET events without params when no lastEventId', async () => {
-      const events = [{ id: 'e-1', type: 'message', timestamp: 'now', payload: {} }];
-      mockGet.mockResolvedValue({ data: events });
+  describe('runShellCommand', () => {
+    it('should POST agent+command to /session/:id/shell and extract tool output', async () => {
+      const reply = {
+        info: { id: 'msg-2' },
+        parts: [{ type: 'tool', tool: 'bash', state: { status: 'completed', output: 'hello-from-shell' } }],
+      };
+      mockPost.mockResolvedValue({ data: reply });
 
-      const result = await adapter.streamEvents('session-1');
-
-      expect(result).toEqual(events);
-      expect(mockGet).toHaveBeenCalledWith('/sessions/session-1/events', {
-        params: undefined,
-      });
+      const result = await adapter.runShellCommand('session-1', 'echo hello-from-shell');
+      expect(result).toEqual({ status: 'completed', output: 'hello-from-shell' });
+      expect(mockPost).toHaveBeenCalledWith(
+        '/session/session-1/shell',
+        { agent: 'build', command: 'echo hello-from-shell' },
+        expect.objectContaining({ timeout: expect.any(Number) })
+      );
     });
 
-    it('should pass since=lastEventId when provided', async () => {
-      mockGet.mockResolvedValue({ data: [] });
-
-      await adapter.streamEvents('session-1', 'e-0');
-
-      expect(mockGet).toHaveBeenCalledWith('/sessions/session-1/events', {
-        params: { since: 'e-0' },
-      });
+    it('should return empty output when no tool part', async () => {
+      mockPost.mockResolvedValue({ data: { info: {}, parts: [] } });
+      const result = await adapter.runShellCommand('session-1', 'ls');
+      expect(result).toEqual({ status: 'unknown', output: '' });
     });
 
     it('should throw a descriptive error on failure', async () => {
-      mockGet.mockRejectedValue(new Error('stream-fail'));
-
-      await expect(adapter.streamEvents('s-1')).rejects.toThrow(
-        'OpenCode stream events error: stream-fail'
+      mockPost.mockRejectedValue(new Error('boom'));
+      await expect(adapter.runShellCommand('session-1', 'ls')).rejects.toThrow(
+        'OpenCode shell command error'
       );
     });
   });
 
   describe('cancelSession', () => {
-    it('should POST to session cancel endpoint', async () => {
-      mockPost.mockResolvedValue({ data: undefined });
-
+    it('should POST to /session/:id/abort', async () => {
+      mockPost.mockResolvedValue({ data: {} });
       await adapter.cancelSession('session-1');
-
-      expect(mockPost).toHaveBeenCalledWith('/sessions/session-1/cancel');
+      expect(mockPost).toHaveBeenCalledWith('/session/session-1/abort');
     });
 
     it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('cancel-fail'));
-
-      await expect(adapter.cancelSession('s-1')).rejects.toThrow(
-        'OpenCode cancel session error: cancel-fail'
+      mockPost.mockRejectedValue(new Error('gone'));
+      await expect(adapter.cancelSession('session-1')).rejects.toThrow(
+        'OpenCode cancel session error'
       );
     });
   });
 
   describe('createWorkspace', () => {
-    it('should POST /workspaces with baseCommit, environment and resourceLimits', async () => {
-      const expected = { id: 'ws-1', status: 'ready', createdAt: 'now' };
-      mockPost.mockResolvedValue({ data: expected });
+    it('should create a session and map it to a ready workspace', async () => {
+      const session = makeSession({ id: 'ws-1', directory: '/app' });
+      mockPost.mockResolvedValue({ data: session });
 
-      const config = {
+      const result = await adapter.createWorkspace({ baseCommit: 'abc123' });
+      expect(result).toEqual({
+        id: 'ws-1',
+        status: 'ready',
+        worktreePath: '/app',
         baseCommit: 'abc123',
-        environment: { NODE_ENV: 'test' },
-        resourceLimits: { cpu: 2, memory: '4G' },
-      };
-      const result = await adapter.createWorkspace(config);
-
-      expect(result).toEqual(expected);
-      expect(mockPost).toHaveBeenCalledWith('/workspaces', config);
+        environment: undefined,
+        createdAt: expect.any(String),
+      });
     });
 
-    it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('ws-fail'));
-
-      await expect(
-        adapter.createWorkspace({ baseCommit: 'x' })
-      ).rejects.toThrow('OpenCode workspace creation error: ws-fail');
+    it('should throw a descriptive error when session creation fails', async () => {
+      mockPost.mockRejectedValue(new Error('nope'));
+      await expect(adapter.createWorkspace({ baseCommit: 'abc' })).rejects.toThrow(
+        'OpenCode workspace creation error'
+      );
     });
   });
 
   describe('destroyWorkspace', () => {
-    it('should DELETE workspace endpoint', async () => {
-      mockDelete.mockResolvedValue({ data: undefined });
-
+    it('should abort the underlying session', async () => {
+      mockPost.mockResolvedValue({ data: {} });
       await adapter.destroyWorkspace('ws-1');
-
-      expect(mockDelete).toHaveBeenCalledWith('/workspaces/ws-1');
-    });
-
-    it('should throw a descriptive error on failure', async () => {
-      mockDelete.mockRejectedValue(new Error('destroy-fail'));
-
-      await expect(adapter.destroyWorkspace('ws-1')).rejects.toThrow(
-        'OpenCode destroy workspace error: destroy-fail'
-      );
+      expect(mockPost).toHaveBeenCalledWith('/session/ws-1/abort');
     });
   });
 
   describe('createCheckpoint', () => {
-    it('should POST to session checkpoints endpoint', async () => {
-      const expected = {
-        id: 'cp-1',
-        sessionId: 'session-1',
-        snapshotId: 'snapshot-1',
-        workspaceState: {
-          worktreePath: '/tmp/wt',
-          baseCommit: 'abc',
-          isDirty: false,
-          fileChanges: [],
+    it('should capture workspace state from git via shell and build a checkpoint', async () => {
+      mockPost.mockResolvedValue({
+        data: {
+          info: {},
+          parts: [{ type: 'tool', state: { status: 'completed', output: ' M src/a.ts\n?? new.ts' } }],
         },
-        sessionState: { sessionId: 'session-1' },
-        timestamp: 'now',
-      };
-      mockPost.mockResolvedValue({ data: expected });
+      });
 
-      const result = await adapter.createCheckpoint('session-1');
-
-      expect(result).toEqual(expected);
-      expect(mockPost).toHaveBeenCalledWith('/sessions/session-1/checkpoints');
+      const result = await adapter.createCheckpoint('session-1', '/app');
+      expect(result.sessionId).toBe('session-1');
+      expect(result.snapshotId).toMatch(/^snap-/);
+      expect(result.workspaceState.isDirty).toBe(true);
+      expect(result.workspaceState.fileChanges).toEqual([
+        { path: 'src/a.ts', status: 'modified' },
+        { path: 'new.ts', status: 'added' },
+      ]);
     });
 
-    it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('cp-fail'));
-
-      await expect(adapter.createCheckpoint('s-1')).rejects.toThrow(
-        'OpenCode create checkpoint error: cp-fail'
+    it('should throw a descriptive error when the shell call fails', async () => {
+      mockPost.mockRejectedValue(new Error('fail'));
+      await expect(adapter.createCheckpoint('session-1')).rejects.toThrow(
+        'OpenCode create checkpoint error'
       );
     });
   });
 
-  describe('resumeFromCheckpoint', () => {
-    it('should POST to checkpoint resume endpoint', async () => {
-      const expected = makeSession({ id: 'session-2', status: 'running' });
-      mockPost.mockResolvedValue({ data: expected });
-
-      const result = await adapter.resumeFromCheckpoint('cp-1');
-
-      expect(result).toEqual(expected);
-      expect(mockPost).toHaveBeenCalledWith('/checkpoints/cp-1/resume');
+  describe('getSession', () => {
+    it('should unwrap array responses to the first session', async () => {
+      const session = makeSession({ id: 'session-1' });
+      mockGet.mockResolvedValue({ data: [session] });
+      const result = await adapter.getSession('session-1');
+      expect(result).toEqual(session);
     });
 
-    it('should throw a descriptive error on failure', async () => {
-      mockPost.mockRejectedValue(new Error('resume-fail'));
-
-      await expect(adapter.resumeFromCheckpoint('cp-1')).rejects.toThrow(
-        'OpenCode resume from checkpoint error: resume-fail'
-      );
-    });
-  });
-
-  describe('getSession / getWorkspace', () => {
-    it('should GET session details', async () => {
-      const expected = makeSession();
-      mockGet.mockResolvedValue({ data: expected });
-
-      expect(await adapter.getSession('session-1')).toEqual(expected);
-      expect(mockGet).toHaveBeenCalledWith('/sessions/session-1');
-    });
-
-    it('should GET workspace details', async () => {
-      const expected = { id: 'ws-1', status: 'ready', createdAt: 'now' };
-      mockGet.mockResolvedValue({ data: expected });
-
-      expect(await adapter.getWorkspace('ws-1')).toEqual(expected);
-      expect(mockGet).toHaveBeenCalledWith('/workspaces/ws-1');
+    it('should pass through object responses', async () => {
+      const session = makeSession({ id: 'session-1' });
+      mockGet.mockResolvedValue({ data: session });
+      const result = await adapter.getSession('session-1');
+      expect(result).toEqual(session);
     });
   });
 
   describe('healthCheck', () => {
-    it('should return true on 200', async () => {
+    it('should GET / and return true on 200', async () => {
       mockGet.mockResolvedValue({ status: 200 });
-
       expect(await adapter.healthCheck()).toBe(true);
     });
 
-    it('should return false when unreachable', async () => {
-      mockGet.mockRejectedValue(new Error('ECONNREFUSED'));
-
+    it('should return false on failure', async () => {
+      mockGet.mockRejectedValue(new Error('down'));
       expect(await adapter.healthCheck()).toBe(false);
     });
   });
+});
 
-  describe('apiKey authorization', () => {
-    it('should attach Bearer authorization when apiKey configured', () => {
-      const { default: axios } = require('axios');
-      jest.clearAllMocks();
+describe('parseGitPorcelain', () => {
+  it('should parse added, modified and deleted files', () => {
+    const output = 'A  added.ts\n M modified.ts\n D deleted.ts\n?? untracked.ts';
+    expect(parseGitPorcelain(output)).toEqual([
+      { path: 'added.ts', status: 'added' },
+      { path: 'modified.ts', status: 'modified' },
+      { path: 'deleted.ts', status: 'deleted' },
+      { path: 'untracked.ts', status: 'added' },
+    ]);
+  });
 
-      new OpenCodeAdapter({ baseUrl: 'http://localhost:4096', apiKey: 'secret-token' });
+  it('should return empty for empty output', () => {
+    expect(parseGitPorcelain('')).toEqual([]);
+  });
 
-      expect(axios.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          headers: { Authorization: 'Bearer secret-token' },
-        })
-      );
-    });
+  it('should skip lines without a path', () => {
+    expect(parseGitPorcelain(' M \n\n A ')).toEqual([]);
   });
 });

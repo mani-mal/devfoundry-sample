@@ -12,6 +12,11 @@ import { Database } from '@dev-foundry/core';
 import { Task, TaskPhase, TaskStatus } from '@dev-foundry/core';
 import { createLogger } from '@dev-foundry/core';
 import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
+
+function computePatchDigest(patch: string): string {
+  return crypto.createHash('sha256').update(patch || '').digest('hex');
+}
 
 export interface WorkerOptions {
   database: Database;
@@ -180,7 +185,7 @@ export class DevFoundryWorker {
     await this.openCode.sendInput(session.id, task.description);
 
     // 4. Store checkpoint and move to validation
-    const checkpoint = await this.openCode.createCheckpoint(session.id);
+    const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
 
     await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
       checkpoint: {
@@ -205,7 +210,7 @@ export class DevFoundryWorker {
 
     await this.openCode.sendInput(session.id, task.description);
 
-    const checkpoint = await this.openCode.createCheckpoint(session.id);
+    const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
 
     await this.updateTaskStatus(task.id, 'Pending', 'Validating', undefined, {
       checkpoint: {
@@ -258,23 +263,77 @@ export class DevFoundryWorker {
   }
 
   private async collectPatch(workspaceId: string): Promise<string> {
-    // Collect file changes from checkpoint workspace state
-    return '';
+    // Collect the candidate patch from the checkpoint workspace state
+    if (!workspaceId) return '';
+    try {
+      const result = await this.openCode.runShellCommand(
+        workspaceId,
+        'git diff && git status --porcelain'
+      );
+      return result.status === 'completed' ? result.output : '';
+    } catch {
+      return '';
+    }
   }
 
   private async runLint(task: Task): Promise<any[]> {
-    // Run linting on task changes
-    return [];
+    // Run linting inside the validation session on the candidate patch
+    if (!task.workspaceId) return [];
+    try {
+      const result = await this.openCode.runShellCommand(
+        task.workspaceId,
+        'npm run lint --if-present 2>&1 || true'
+      );
+      if (result.status !== 'completed' || !result.output) return [];
+      return [{
+        type: 'lint',
+        content: result.output,
+        passed: result.passed,
+        provenance: { phase: 'Validating', scanner: 'lint' },
+      }];
+    } catch {
+      return [];
+    }
   }
 
   private async runTests(task: Task): Promise<any[]> {
-    // Run unit/integration tests
-    return [];
+    // Run unit/integration tests inside the validation session
+    if (!task.workspaceId) return [];
+    try {
+      const result = await this.openCode.runShellCommand(
+        task.workspaceId,
+        'npm test --if-present --passWithNoTests 2>&1 || true'
+      );
+      if (result.status !== 'completed' || !result.output) return [];
+      return [{
+        type: 'test',
+        content: result.output,
+        passed: result.passed,
+        provenance: { phase: 'Validating', scanner: 'tests' },
+      }];
+    } catch {
+      return [];
+    }
   }
 
   private async runSecurityScan(task: Task): Promise<any[]> {
-    // Run secret scanning and SAST
-    return [];
+    // Run secret scanning and SAST inside the validation session
+    if (!task.workspaceId) return [];
+    try {
+      const result = await this.openCode.runShellCommand(
+        task.workspaceId,
+        'npm audit --omit=dev 2>&1 || true'
+      );
+      if (result.status !== 'completed' || !result.output) return [];
+      return [{
+        type: 'security',
+        content: result.output,
+        passed: result.passed,
+        provenance: { phase: 'Validating', scanner: 'npm-audit' },
+      }];
+    } catch {
+      return [];
+    }
   }
 
   private async storeEvidence(taskId: string, evidence: any[]): Promise<void> {
@@ -300,20 +359,28 @@ export class DevFoundryWorker {
   }
 
   private async generateReviewPacket(task: Task): Promise<any> {
+    // Generate the review packet from the checkpoint + validation state
+    const patch = await this.collectPatch(task.workspaceId ?? '');
+    const changedFiles = task.checkpoint?.workspaceState?.fileChanges ?? [];
+
     return {
       taskId: task.id,
       requirements: task.description,
       baseCommit: task.baseCommit,
-      patchDigest: 'todo',
-      changedFiles: [],
+      patchDigest: computePatchDigest(patch),
+      changedFiles,
       skillVersions: task.skills,
       modelRoute: task.modelRoute,
       toolPermissions: task.toolPermissions,
       checkResults: [],
-      environment: {},
+      environment: {
+        os: process.platform,
+        architecture: process.arch,
+        nodeVersion: process.version,
+      },
       screenshots: [],
       knownGaps: [],
-      failedAttempts: [],
+      failedAttempts: task.outcome?.success === false ? [task.outcome] : [],
     };
   }
 

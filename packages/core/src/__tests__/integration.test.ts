@@ -113,7 +113,7 @@ describe('DevFoundry Integration Tests - Vertical Slice', () => {
         worktreePath: testWorkspaceDir,
         baseCommit: taskData.baseCommit,
       });
-      expect(workspaceCreated.id).toBe('workspace-1');
+      expect(workspaceCreated.id).toMatch(/^session-/);
       expect(workspaceCreated.status).toBe('ready');
       
       // Simulate agent execution - generate candidate patch
@@ -652,14 +652,23 @@ describe('DevFoundry Integration Tests - Vertical Slice', () => {
         if (req.url === '/health' && req.method === 'GET') {
           res.writeHead(200);
           res.end(JSON.stringify({ status: 'ok' }));
-        } else if (req.url === '/sessions' && req.method === 'POST') {
+        } else if (req.url === '/session' && req.method === 'POST') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({
             id: `session-${Date.now()}`,
+            slug: 'mock-session',
             status: 'created' as const,
+            directory: '/app',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }));
+        } else if (req.url?.match(/^\/session\/[^/]+$/) && req.method === 'GET') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify([{
+            id: 'session-1',
+            status: 'created' as const,
+            directory: '/app',
+          }]));
         } else if (req.url?.includes('/messages') && req.method === 'POST') {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify([
@@ -670,7 +679,13 @@ describe('DevFoundry Integration Tests - Vertical Slice', () => {
           res.end(JSON.stringify([
             { id: 'event-1', type: 'message' as const, timestamp: Date.now(), payload: {} },
           ]));
-        } else if (req.url?.includes('/cancel') && req.method === 'POST') {
+        } else if (req.url?.includes('/shell') && req.method === 'POST') {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            info: { id: 'msg-shell' },
+            parts: [{ type: 'tool', state: { status: 'completed', output: '' } }],
+          }));
+        } else if (req.url?.includes('/abort') && req.method === 'POST') {
           res.writeHead(200);
           res.end();
         } else if (req.url?.includes('/checkpoints') && req.method === 'POST') {
@@ -683,18 +698,12 @@ describe('DevFoundry Integration Tests - Vertical Slice', () => {
             sessionState: { sessionId: 'session-1' },
             timestamp: new Date().toISOString(),
           }));
-        } else if (req.url === '/workspaces' && req.method === 'POST') {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ id: 'workspace-1', status: 'ready' as const, createdAt: new Date().toISOString() }));
-        } else if (req.url?.includes('/workspaces') && req.method === 'DELETE') {
-          res.writeHead(200);
-          res.end();
         } else {
           res.writeHead(404);
           res.end();
         }
       });
-      
+
       server.listen(3457, () => {
         resolve(server);
       });

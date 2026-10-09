@@ -1,0 +1,162 @@
+
+> cli@0.1.0 test
+> jest --passWithNoTests
+
+error: unknown command 'node'
+error: unknown command 'node'
+error: unknown command 'node'
+error: unknown command 'node'
+error: unknown command 'node'
+error: unknown command 'node'
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2m__tests__/[22m[1mcommands.test.ts[22m
+  config command
+    [31m✕[39m [2mshould set and persist a value (13 ms)[22m
+    [31m✕[39m [2mshould get a persisted value (2 ms)[22m
+    [31m✕[39m [2mshould fall back to env for get (3 ms)[22m
+    [31m✕[39m [2mshould list persisted keys (5 ms)[22m
+  skill command
+    [32m✓[39m [2mshould have list and install subcommands (7 ms)[22m
+    [31m✕[39m [2mshould install with default options and report the digest (1 ms)[22m
+    [31m✕[39m [2mshould error when no database is configured (63 ms)[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should set and persist a value[39m[22m
+
+    CommanderError: error: unknown command 'node'
+[2m[22m
+[2m    [0m [90m 27 |[39m   [36mconst[39m parse [33m=[39m (cmd[33m:[39m [33mCommand[39m[33m,[39m args[33m:[39m string[]) [33m=>[39m {[22m
+[2m     [90m 28 |[39m     cmd[33m.[39mexitOverride()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 29 |[39m     cmd[33m.[39mparse(args[33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[33m;[39m[22m
+[2m     [90m    |[39m         [31m[1m^[22m[2m[39m[22m
+[2m     [90m 30 |[39m   }[33m;[39m[22m
+[2m     [90m 31 |[39m[22m
+[2m     [90m 32 |[39m   it([32m'should set and persist a value'[39m[33m,[39m () [33m=>[39m {[0m[22m
+[2m[22m
+[2m      [2mat Command._exit ([22m[2m../../node_modules/commander/lib/command.js[2m:509:26)[22m[2m[22m
+[2m      [2mat Command.error ([22m[2m../../node_modules/commander/lib/command.js[2m:1831:10)[22m[2m[22m
+[2m      [2mat Command.unknownCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:2053:10)[22m[2m[22m
+[2m      [2mat Command._parseCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:1525:14)[22m[2m[22m
+[2m      [2mat Command.parse ([22m[2m../../node_modules/commander/lib/command.js[2m:1064:10)[22m[2m[22m
+[2m      [2mat parse ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:29:9)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:35:5)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should get a persisted value[39m[22m
+
+    CommanderError: error: unknown command 'node'
+[2m[22m
+[2m    [0m [90m 27 |[39m   [36mconst[39m parse [33m=[39m (cmd[33m:[39m [33mCommand[39m[33m,[39m args[33m:[39m string[]) [33m=>[39m {[22m
+[2m     [90m 28 |[39m     cmd[33m.[39mexitOverride()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 29 |[39m     cmd[33m.[39mparse(args[33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[33m;[39m[22m
+[2m     [90m    |[39m         [31m[1m^[22m[2m[39m[22m
+[2m     [90m 30 |[39m   }[33m;[39m[22m
+[2m     [90m 31 |[39m[22m
+[2m     [90m 32 |[39m   it([32m'should set and persist a value'[39m[33m,[39m () [33m=>[39m {[0m[22m
+[2m[22m
+[2m      [2mat Command._exit ([22m[2m../../node_modules/commander/lib/command.js[2m:509:26)[22m[2m[22m
+[2m      [2mat Command.error ([22m[2m../../node_modules/commander/lib/command.js[2m:1831:10)[22m[2m[22m
+[2m      [2mat Command.unknownCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:2053:10)[22m[2m[22m
+[2m      [2mat Command._parseCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:1525:14)[22m[2m[22m
+[2m      [2mat Command.parse ([22m[2m../../node_modules/commander/lib/command.js[2m:1064:10)[22m[2m[22m
+[2m      [2mat parse ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:29:9)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:52:5)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should fall back to env for get[39m[22m
+
+    CommanderError: error: unknown command 'node'
+[2m[22m
+[2m    [0m [90m 27 |[39m   [36mconst[39m parse [33m=[39m (cmd[33m:[39m [33mCommand[39m[33m,[39m args[33m:[39m string[]) [33m=>[39m {[22m
+[2m     [90m 28 |[39m     cmd[33m.[39mexitOverride()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 29 |[39m     cmd[33m.[39mparse(args[33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[33m;[39m[22m
+[2m     [90m    |[39m         [31m[1m^[22m[2m[39m[22m
+[2m     [90m 30 |[39m   }[33m;[39m[22m
+[2m     [90m 31 |[39m[22m
+[2m     [90m 32 |[39m   it([32m'should set and persist a value'[39m[33m,[39m () [33m=>[39m {[0m[22m
+[2m[22m
+[2m      [2mat Command._exit ([22m[2m../../node_modules/commander/lib/command.js[2m:509:26)[22m[2m[22m
+[2m      [2mat Command.error ([22m[2m../../node_modules/commander/lib/command.js[2m:1831:10)[22m[2m[22m
+[2m      [2mat Command.unknownCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:2053:10)[22m[2m[22m
+[2m      [2mat Command._parseCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:1525:14)[22m[2m[22m
+[2m      [2mat Command.parse ([22m[2m../../node_modules/commander/lib/command.js[2m:1064:10)[22m[2m[22m
+[2m      [2mat parse ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:29:9)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:61:5)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should list persisted keys[39m[22m
+
+    CommanderError: error: unknown command 'node'
+[2m[22m
+[2m    [0m [90m 27 |[39m   [36mconst[39m parse [33m=[39m (cmd[33m:[39m [33mCommand[39m[33m,[39m args[33m:[39m string[]) [33m=>[39m {[22m
+[2m     [90m 28 |[39m     cmd[33m.[39mexitOverride()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 29 |[39m     cmd[33m.[39mparse(args[33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[33m;[39m[22m
+[2m     [90m    |[39m         [31m[1m^[22m[2m[39m[22m
+[2m     [90m 30 |[39m   }[33m;[39m[22m
+[2m     [90m 31 |[39m[22m
+[2m     [90m 32 |[39m   it([32m'should set and persist a value'[39m[33m,[39m () [33m=>[39m {[0m[22m
+[2m[22m
+[2m      [2mat Command._exit ([22m[2m../../node_modules/commander/lib/command.js[2m:509:26)[22m[2m[22m
+[2m      [2mat Command.error ([22m[2m../../node_modules/commander/lib/command.js[2m:1831:10)[22m[2m[22m
+[2m      [2mat Command.unknownCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:2053:10)[22m[2m[22m
+[2m      [2mat Command._parseCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:1525:14)[22m[2m[22m
+[2m      [2mat Command.parse ([22m[2m../../node_modules/commander/lib/command.js[2m:1064:10)[22m[2m[22m
+[2m      [2mat parse ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:29:9)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:75:5)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mskill command › should install with default options and report the digest[39m[22m
+
+    CommanderError: error: unknown command 'node'
+[2m[22m
+[2m    [0m [90m 109 |[39m     [36mconst[39m skill [33m=[39m createSkillCommand(mockDb [36mas[39m never)[33m;[39m[22m
+[2m     [90m 110 |[39m     skill[33m.[39mexitOverride()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 111 |[39m     [36mawait[39m skill[33m.[39mparseAsync([[32m'node'[39m[33m,[39m [32m'devfoundry'[39m[33m,[39m [32m'skill'[39m[33m,[39m [32m'install'[39m[33m,[39m [32m'version-control'[39m[33m,[39m [32m'--version'[39m[33m,[39m [32m'2.0.0'[39m[33m,[39m [32m'--status'[39m[33m,[39m [32m'approved'[39m][33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[33m;[39m[22m
+[2m     [90m     |[39m                 [31m[1m^[22m[2m[39m[22m
+[2m     [90m 112 |[39m     jest[33m.[39mrestoreAllMocks()[33m;[39m[22m
+[2m     [90m 113 |[39m[22m
+[2m     [90m 114 |[39m     expect(out[33m.[39mjoin([32m'\n'[39m))[33m.[39mtoContain([32m'Skill installed: version-control@2.0.0 (approved)'[39m)[33m;[39m[0m[22m
+[2m[22m
+[2m      [2mat Command._exit ([22m[2m../../node_modules/commander/lib/command.js[2m:509:26)[22m[2m[22m
+[2m      [2mat Command.error ([22m[2m../../node_modules/commander/lib/command.js[2m:1831:10)[22m[2m[22m
+[2m      [2mat Command.unknownCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:2053:10)[22m[2m[22m
+[2m      [2mat Command._parseCommand ([22m[2m../../node_modules/commander/lib/command.js[2m:1525:14)[22m[2m[22m
+[2m      [2mat Command.parseAsync ([22m[2m../../node_modules/commander/lib/command.js[2m:1092:16)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:111:17)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mskill command › should error when no database is configured[39m[22m
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mrejects[2m.[22mtoThrow[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected substring: [32m"exit 1"[39m
+    Received message:   [31m"error: unknown command 'node'"[39m
+
+        [0m [90m 125 |[39m     skill[33m.[39mexitOverride()[33m;[39m
+         [90m 126 |[39m     [36mawait[39m expect(
+        [31m[1m>[22m[39m[90m 127 |[39m       skill[33m.[39mparseAsync([[32m'node'[39m[33m,[39m [32m'devfoundry'[39m[33m,[39m [32m'skill'[39m[33m,[39m [32m'install'[39m[33m,[39m [32m'some-skill'[39m][33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })
+         [90m     |[39m             [31m[1m^[22m[39m
+         [90m 128 |[39m     )[33m.[39mrejects[33m.[39mtoThrow([32m'exit 1'[39m)[33m;[39m
+         [90m 129 |[39m
+         [90m 130 |[39m     jest[33m.[39mrestoreAllMocks()[33m;[39m[0m
+
+          [2mat Command._exit ([22m../../node_modules/commander/lib/command.js[2m:509:26)[22m
+          [2mat Command.error ([22m../../node_modules/commander/lib/command.js[2m:1831:10)[22m
+          [2mat Command.unknownCommand ([22m../../node_modules/commander/lib/command.js[2m:2053:10)[22m
+          [2mat Command._parseCommand ([22m../../node_modules/commander/lib/command.js[2m:1525:14)[22m
+          [2mat Command.parseAsync ([22m../../node_modules/commander/lib/command.js[2m:1092:16)[22m
+          [2mat Object.<anonymous> ([22m__tests__/commands.test.ts[2m:127:13)[22m
+[2m[22m
+[2m    [0m [90m 126 |[39m     [36mawait[39m expect([22m
+[2m     [90m 127 |[39m       skill[33m.[39mparseAsync([[32m'node'[39m[33m,[39m [32m'devfoundry'[39m[33m,[39m [32m'skill'[39m[33m,[39m [32m'install'[39m[33m,[39m [32m'some-skill'[39m][33m,[39m { [36mfrom[39m[33m:[39m [32m'user'[39m })[22m
+[2m    [31m[1m>[22m[2m[39m[90m 128 |[39m     )[33m.[39mrejects[33m.[39mtoThrow([32m'exit 1'[39m)[33m;[39m[22m
+[2m     [90m     |[39m               [31m[1m^[22m[2m[39m[22m
+[2m     [90m 129 |[39m[22m
+[2m     [90m 130 |[39m     jest[33m.[39mrestoreAllMocks()[33m;[39m[22m
+[2m     [90m 131 |[39m     expect(errSpy)[33m.[39mtoHaveBeenCalled()[33m;[39m[0m[22m
+[2m[22m
+[2m      [2mat Object.toThrow ([22m[2m../../node_modules/expect/build/index.js[2m:218:22)[22m[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:128:15)[22m[2m[22m
+
+[1mTest Suites: [22m[1m[31m1 failed[39m[22m, 1 total
+[1mTests:       [22m[1m[31m6 failed[39m[22m, [1m[32m1 passed[39m[22m, 7 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        1.875 s, estimated 3 s
+[2mRan all test suites[22m[2m.[22m
+npm ERR! Lifecycle script `test` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: cli@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/cli 

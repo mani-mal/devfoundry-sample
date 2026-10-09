@@ -1,0 +1,52 @@
+
+> @dev-foundry/integrations-opencode@0.1.0 test
+> jest
+
+ts-jest[ts-jest-transformer] (WARN) Define `ts-jest` config under `globals` is deprecated. Please do
+transform: {
+    <transform_regex>: ['ts-jest', { /* ts-jest config goes here in Jest */ }],
+},
+See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/presets#advanced
+ts-jest[config] (WARN) [94mmessage[0m[90m TS151002: [0mUsing hybrid module kind (Node16/18/Next) is only supported in "isolatedModules: true". Please set "isolatedModules: true" in your tsconfig.json. To disable this message, you can set "diagnostics.ignoreCodes" to include 151002 in your ts-jest config. See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/options/diagnostics
+ts-jest[config] (WARN) [94mmessage[0m[90m TS151002: [0mUsing hybrid module kind (Node16/18/Next) is only supported in "isolatedModules: true". Please set "isolatedModules: true" in your tsconfig.json. To disable this message, you can set "diagnostics.ignoreCodes" to include 151002 in your ts-jest config. See more at https://kulshekhar.github.io/ts-jest/docs/getting-started/options/diagnostics
+[0m[7m[1m[32m PASS [39m[22m[27m[0m [2m__tests__/[22m[1mopencode.test.ts[22m
+  OpenCodeAdapter
+    createSession
+      [32m✓[39m [2mshould POST /session with title from task (6 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (17 ms)[22m
+    listSessions
+      [32m✓[39m [2mshould GET /session and return the array (1 ms)[22m
+    sendInput
+      [32m✓[39m [2mshould POST text part to /session/:id/message (3 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    runShellCommand
+      [32m✓[39m [2mshould POST agent+command to /session/:id/shell and extract tool output (2 ms)[22m
+      [32m✓[39m [2mshould return empty output when no tool part (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    cancelSession
+      [32m✓[39m [2mshould POST to /session/:id/abort (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error on failure (2 ms)[22m
+    createWorkspace
+      [32m✓[39m [2mshould create a session and map it to a ready workspace (1 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error when session creation fails (1 ms)[22m
+    destroyWorkspace
+      [32m✓[39m [2mshould abort the underlying session (1 ms)[22m
+    createCheckpoint
+      [32m✓[39m [2mshould capture workspace state from git via shell and build a checkpoint (2 ms)[22m
+      [32m✓[39m [2mshould throw a descriptive error when the shell call fails (1 ms)[22m
+    getSession
+      [32m✓[39m [2mshould unwrap array responses to the first session (1 ms)[22m
+      [32m✓[39m [2mshould pass through object responses (1 ms)[22m
+    healthCheck
+      [32m✓[39m [2mshould GET / and return true on 200[22m
+      [32m✓[39m [2mshould return false on failure (1 ms)[22m
+  parseGitPorcelain
+    [32m✓[39m [2mshould parse added, modified and deleted files[22m
+    [32m✓[39m [2mshould return empty for empty output (1 ms)[22m
+    [32m✓[39m [2mshould skip lines without a path (1 ms)[22m
+
+[1mTest Suites: [22m[1m[32m1 passed[39m[22m, 1 total
+[1mTests:       [22m[1m[32m22 passed[39m[22m, 22 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        [1m[33m4.419 s[39m[22m
+[2mRan all test suites[22m[2m.[22m

@@ -1,10 +1,14 @@
 /**
  * OpenCode Adapter for DevFoundry
- * 
- * This adapter integrates with OpenCode (a Python-based agent framework).
- * OpenCode provides: Context-aware agent execution, tool calling,
- * workspace management, and session persistence.
- * 
+ *
+ * Integrates with OpenCode (agent framework) via its HTTP API:
+ *   POST /session                      -> create session
+ *   GET  /session                      -> list sessions
+ *   GET  /session/:id                  -> get session (returns array)
+ *   POST /session/:id/message          -> send text message
+ *   POST /session/:id/shell            -> run shell command (agent required)
+ *   POST /session/:id/abort            -> cancel/abort session
+ *
  * DevFoundry uses OpenCode as a managed harness/worker through its HTTP API.
  */
 
@@ -18,12 +22,14 @@ export interface OpenCodeConfig {
 
 export interface OpenCodeSession {
   id: string;
-  status: 'created' | 'running' | 'completed' | 'failed';
-  task?: string;
-  context?: Record<string, unknown>;
-  tools?: string[];
-  createdAt: string;
-  updatedAt: string;
+  slug?: string;
+  projectID?: string;
+  directory?: string;
+  title?: string;
+  cost?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
 }
 
 export interface OpenCodeEvent {
@@ -51,6 +57,11 @@ export interface OpenCodeTaskRequest {
   checkpointId?: string;
 }
 
+export interface OpenCodeFileChange {
+  path: string;
+  status: 'added' | 'modified' | 'deleted';
+}
+
 export interface OpenCodeCheckpoint {
   id: string;
   sessionId: string;
@@ -59,16 +70,25 @@ export interface OpenCodeCheckpoint {
     worktreePath: string;
     baseCommit: string;
     isDirty: boolean;
-    fileChanges: Array<{
-      path: string;
-      status: 'added' | 'modified' | 'deleted';
-    }>;
+    fileChanges: OpenCodeFileChange[];
   };
   sessionState: {
     sessionId: string;
     lastEventId?: string;
   };
   timestamp: string;
+}
+
+/** Strip a { name, data } error envelope and surface a readable message. */
+function unwrapError(error: unknown, fallback: string): Error {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { name?: string; data?: { message?: string } } | string | undefined;
+    if (typeof data === 'object' && data !== null && typeof data.data === 'object' && data.data?.message) {
+      return new Error(`${fallback}: ${data.data.message}`);
+    }
+    return new Error(`${fallback}: ${(error as Error).message}`);
+  }
+  return new Error(`${fallback}: ${(error as Error).message}`);
 }
 
 export class OpenCodeAdapter {
@@ -81,15 +101,16 @@ export class OpenCodeAdapter {
       baseURL: config.baseUrl,
       timeout: config.timeout || 60000,
       headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {},
+      proxy: false,
     });
   }
 
   /**
-   * Health check - verify OpenCode is running
+   * Health check - verify OpenCode is running (GET / returns the SPA).
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.client.get('/health');
+      const response = await this.client.get('/');
       return response.status === 200;
     } catch {
       return false;
@@ -97,58 +118,122 @@ export class OpenCodeAdapter {
   }
 
   /**
-   * Create a new agent session
+   * Create a new agent session (POST /session).
    */
   async createSession(request: OpenCodeTaskRequest): Promise<OpenCodeSession> {
     try {
-      const response = await this.client.post<OpenCodeSession>('/sessions', request);
+      const body: Record<string, unknown> = {};
+      if (request.task) {
+        body.title = request.task;
+      }
+      const response = await this.client.post<OpenCodeSession>('/session', body);
       return response.data;
     } catch (error) {
-      throw new Error(`OpenCode session creation error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode session creation error');
     }
   }
 
   /**
-   * Send input to a running session
+   * List sessions (GET /session).
+   */
+  async listSessions(): Promise<OpenCodeSession[]> {
+    try {
+      const response = await this.client.get<OpenCodeSession[]>('/session');
+      return response.data;
+    } catch (error) {
+      throw unwrapError(error, 'OpenCode list sessions error');
+    }
+  }
+
+  /**
+   * Send text input to a session (POST /session/:id/message).
    */
   async sendInput(sessionId: string, input: string): Promise<OpenCodeEvent[]> {
     try {
-      const response = await this.client.post<OpenCodeEvent[]>(`/sessions/${sessionId}/messages`, {
-        message: input,
-      });
-      return response.data;
+      const response = await this.client.post(
+        `/session/${sessionId}/message`,
+        {
+          parts: [{ type: 'text', text: input }],
+        },
+        { timeout: this.config.timeout || 120000 }
+      );
+      const data = response.data;
+      // The reply is the assistant message: { info, parts }
+      return Array.isArray(data)
+        ? data
+        : [{
+            id: (data as { info?: { id?: string } })?.info?.id ?? 'reply',
+            type: 'message',
+            timestamp: new Date().toISOString(),
+            payload: data as Record<string, unknown>,
+          }];
     } catch (error) {
-      throw new Error(`OpenCode send input error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode send input error');
     }
   }
 
   /**
-   * Stream events from a session
+   * Run a shell command inside the session (POST /session/:id/shell).
+   * Returns the tool part output, or empty string if unavailable.
    */
-  async streamEvents(sessionId: string, lastEventId?: string): Promise<OpenCodeEvent[]> {
+  async runShellCommand(sessionId: string, command: string): Promise<{ status: string; output: string }> {
     try {
-      const response = await this.client.get<OpenCodeEvent[]>(`/sessions/${sessionId}/events`, {
-        params: lastEventId ? { since: lastEventId } : undefined,
-      });
-      return response.data;
+      const response = await this.client.post(
+        `/session/${sessionId}/shell`,
+        { agent: 'build', command },
+        { timeout: this.config.timeout || 120000 }
+      );
+      const parts = (response.data as { parts?: Array<Record<string, unknown>> }).parts ?? [];
+      for (const p of parts) {
+        if ((p as Record<string, unknown>).type === 'tool') {
+          const state = (p as Record<string, unknown>).state as
+            | { status?: string; output?: string }
+            | undefined;
+          return {
+            status: state?.status ?? 'unknown',
+            output: typeof state?.output === 'string' ? state.output : '',
+          };
+        }
+      }
+      return { status: 'unknown', output: '' };
     } catch (error) {
-      throw new Error(`OpenCode stream events error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode shell command error');
     }
   }
 
   /**
-   * Request session cancellation
+   * Collect file changes from the session's working directory via git.
+   */
+  async collectFileChanges(sessionId: string, repoPath: string): Promise<OpenCodeFileChange[]> {
+    try {
+      const result = await this.runShellCommand(
+        sessionId,
+        'git status --porcelain && git diff --numstat'
+      );
+      if (result.status !== 'completed' || !result.output) {
+        return [];
+      }
+      return parseGitPorcelain(result.output);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Cancel/abort a session (POST /session/:id/abort).
    */
   async cancelSession(sessionId: string): Promise<void> {
     try {
-      await this.client.post(`/sessions/${sessionId}/cancel`);
+      await this.client.post(`/session/${sessionId}/abort`);
     } catch (error) {
-      throw new Error(`OpenCode cancel session error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode cancel session error');
     }
   }
 
   /**
-   * Create a new workspace
+   * Create a workspace — maps to a session working in the repo directory.
+   * OpenCode sessions are directory-scoped, so we create a session and report
+   * its directory as the worktree path.
    */
   async createWorkspace(config: {
     baseCommit: string;
@@ -159,69 +244,109 @@ export class OpenCodeAdapter {
     };
   }): Promise<OpenCodeWorkspace> {
     try {
-      const response = await this.client.post<OpenCodeWorkspace>('/workspaces', config);
-      return response.data;
+      const session = await this.createSession({ task: `workspace-${config.baseCommit}` });
+      return {
+        id: session.id,
+        status: 'ready',
+        worktreePath: (session.directory as string) ?? '/app',
+        baseCommit: config.baseCommit,
+        environment: config.environment,
+        createdAt: new Date().toISOString(),
+      };
     } catch (error) {
-      throw new Error(`OpenCode workspace creation error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode workspace creation error');
     }
   }
 
   /**
-   * Destroy a workspace
+   * Destroy a workspace — abort the underlying session.
    */
   async destroyWorkspace(workspaceId: string): Promise<void> {
-    try {
-      await this.client.delete(`/workspaces/${workspaceId}`);
-    } catch (error) {
-      throw new Error(`OpenCode destroy workspace error: ${(error as Error).message}`);
-    }
+    return this.cancelSession(workspaceId);
   }
 
   /**
-   * Create a checkpoint of session state
+   * Checkpoint: capture workspace state (file changes) + session state via API.
+   * Uses the session shell to query git status in the repo.
    */
-  async createCheckpoint(sessionId: string): Promise<OpenCodeCheckpoint> {
+  async createCheckpoint(sessionId: string, repoPath = '/app'): Promise<OpenCodeCheckpoint> {
     try {
-      const response = await this.client.post<OpenCodeCheckpoint>(`/sessions/${sessionId}/checkpoints`);
-      return response.data;
+      const shellResult = await this.runShellCommand(
+        sessionId,
+        'git status --porcelain || true'
+      );
+      const fileChanges = parseGitPorcelain(shellResult.output || '');
+      const snapshotId = `snap-${Date.now()}`;
+      return {
+        id: `cp-${Date.now()}`,
+        sessionId,
+        snapshotId,
+        workspaceState: {
+          worktreePath: repoPath,
+          baseCommit: 'HEAD',
+          isDirty: fileChanges.length > 0,
+          fileChanges,
+        },
+        sessionState: { sessionId },
+        timestamp: new Date().toISOString(),
+      };
     } catch (error) {
-      throw new Error(`OpenCode create checkpoint error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode create checkpoint error');
     }
   }
 
   /**
-   * Resume from a checkpoint
+   * Resume a session (open reuses directory state; returns the session).
    */
-  async resumeFromCheckpoint(checkpointId: string): Promise<OpenCodeSession> {
-    try {
-      const response = await this.client.post<OpenCodeSession>(`/checkpoints/${checkpointId}/resume`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`OpenCode resume from checkpoint error: ${(error as Error).message}`);
-    }
+  async resumeFromCheckpoint(sessionId: string): Promise<OpenCodeSession> {
+    return this.getSession(sessionId);
   }
 
   /**
-   * Get session details
+   * Get session details (GET /session/:id — returns array; take first).
    */
   async getSession(sessionId: string): Promise<OpenCodeSession> {
     try {
-      const response = await this.client.get<OpenCodeSession>(`/sessions/${sessionId}`);
-      return response.data;
+      const response = await this.client.get<OpenCodeSession[] | OpenCodeSession>(`/session/${sessionId}`);
+      const data = response.data;
+      return Array.isArray(data) ? (data[0] ?? { id: sessionId }) : (data ?? { id: sessionId });
     } catch (error) {
-      throw new Error(`OpenCode get session error: ${(error as Error).message}`);
+      throw unwrapError(error, 'OpenCode get session error');
     }
   }
 
   /**
-   * Get workspace details
+   * Get workspace details — same as getSession (directory-scoped sessions).
    */
   async getWorkspace(workspaceId: string): Promise<OpenCodeWorkspace> {
-    try {
-      const response = await this.client.get<OpenCodeWorkspace>(`/workspaces/${workspaceId}`);
-      return response.data;
-    } catch (error) {
-      throw new Error(`OpenCode get workspace error: ${(error as Error).message}`);
-    }
+    const session = await this.getSession(workspaceId);
+    return {
+      id: session.id,
+      status: 'ready',
+      worktreePath: (session.directory as string) ?? '/app',
+      createdAt: new Date().toISOString(),
+    };
   }
+}
+
+/**
+ * Parse `git status --porcelain` output into file changes.
+ */
+export function parseGitPorcelain(output: string): OpenCodeFileChange[] {
+  const changes: OpenCodeFileChange[] = [];
+  const lines = output.split('\n').filter((l) => l.trim());
+  for (const line of lines) {
+    const staged = line.charAt(0);
+    const unstaged = line.charAt(1);
+    const path = line.substring(3).trim();
+    if (!path) continue;
+    let statusType: 'added' | 'modified' | 'deleted' = 'modified';
+    if (staged === 'A' || staged === '?' || unstaged === '?' || unstaged === 'A') {
+      statusType = 'added';
+    } else if (staged === 'D' || unstaged === 'D') {
+      statusType = 'deleted';
+    }
+    changes.push({ path, status: statusType });
+  }
+  return changes;
 }

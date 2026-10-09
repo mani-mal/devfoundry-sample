@@ -1,0 +1,56 @@
+
+> cli@0.1.0 test
+> jest --passWithNoTests
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2m__tests__/[22m[1mcommands.test.ts[22m
+  config command
+    [31m✕[39m [2mshould set and persist a value (11 ms)[22m
+    [32m✓[39m [2mshould get a persisted value (9 ms)[22m
+    [32m✓[39m [2mshould fall back to env for get (3 ms)[22m
+    [31m✕[39m [2mshould list persisted keys (4 ms)[22m
+  skill command
+    [32m✓[39m [2mshould have list and install subcommands (3 ms)[22m
+    [32m✓[39m [2mshould install with default options and report the digest (6 ms)[22m
+    [32m✓[39m [2mshould error when no database is configured (13 ms)[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should set and persist a value[39m[22m
+
+    ENOENT: no such file or directory, open '/tmp/opencode/cli-config-test/.devfoundry/config.json'
+[2m[22m
+[2m    [0m [90m 36 |[39m     jest[33m.[39mrestoreAllMocks()[33m;[39m[22m
+[2m     [90m 37 |[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 38 |[39m     [36mconst[39m config [33m=[39m [33mJSON[39m[33m.[39mparse(fs[33m.[39mreadFileSync(path[33m.[39mjoin([33mTEST_DIR[39m[33m,[39m [32m'.devfoundry'[39m[33m,[39m [32m'config.json'[39m)[33m,[39m [32m'utf8'[39m))[33m;[39m[22m
+[2m     [90m    |[39m                                  [31m[1m^[22m[2m[39m[22m
+[2m     [90m 39 |[39m     expect(config[33m.[39mcapacityProfile)[33m.[39mtoBe([32m'gpu-heavy'[39m)[33m;[39m[22m
+[2m     [90m 40 |[39m     expect(out[33m.[39mjoin([32m'\n'[39m))[33m.[39mtoContain([32m'Set capacityProfile='[39m)[33m;[39m[22m
+[2m     [90m 41 |[39m     expect(out[33m.[39mjoin([32m'\n'[39m))[33m.[39mtoContain([32m'Persisted to'[39m)[33m;[39m[0m[22m
+[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:38:34)[22m[2m[22m
+
+[1m[31m  [1m● [22m[1mconfig command › should list persisted keys[39m[22m
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoContain[2m([22m[32mexpected[39m[2m) // indexOf[22m
+
+    Expected substring: [32m"a=1"[39m
+    Received string:    [31m"Persisted configuration:[39m
+    [31m  capacityProfile=gpu-heavy"[39m
+[2m[22m
+[2m    [0m [90m 75 |[39m     parse(createConfigCommand()[33m,[39m [[32m'list'[39m])[33m;[39m[22m
+[2m     [90m 76 |[39m     jest[33m.[39mrestoreAllMocks()[33m;[39m[22m
+[2m    [31m[1m>[22m[2m[39m[90m 77 |[39m     expect(out[33m.[39mjoin([32m'\n'[39m))[33m.[39mtoContain([32m'a=1'[39m)[33m;[39m[22m
+[2m     [90m    |[39m                            [31m[1m^[22m[2m[39m[22m
+[2m     [90m 78 |[39m     expect(out[33m.[39mjoin([32m'\n'[39m))[33m.[39mtoContain([32m'b=2'[39m)[33m;[39m[22m
+[2m     [90m 79 |[39m   })[33m;[39m[22m
+[2m     [90m 80 |[39m })[33m;[39m[0m[22m
+[2m[22m
+[2m      [2mat Object.<anonymous> ([22m[2m[0m[36m__tests__/commands.test.ts[39m[0m[2m:77:28)[22m[2m[22m
+
+[1mTest Suites: [22m[1m[31m1 failed[39m[22m, 1 total
+[1mTests:       [22m[1m[31m2 failed[39m[22m, [1m[32m5 passed[39m[22m, 7 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        1.585 s, estimated 3 s
+[2mRan all test suites[22m[2m.[22m
+npm ERR! Lifecycle script `test` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: cli@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/cli 

@@ -1,0 +1,16 @@
+
+> worker@0.1.0 build
+> tsc --build
+
+src/worker.ts(188,73): error TS2554: Expected 1 arguments, but got 2.
+src/worker.ts(188,78): error TS2339: Property 'repoPath' does not exist on type 'Task'.
+src/worker.ts(213,73): error TS2554: Expected 1 arguments, but got 2.
+src/worker.ts(213,78): error TS2339: Property 'repoPath' does not exist on type 'Task'.
+src/worker.ts(269,42): error TS2339: Property 'runShellCommand' does not exist on type 'OpenCodeAdapter'.
+src/worker.ts(283,42): error TS2339: Property 'runShellCommand' does not exist on type 'OpenCodeAdapter'.
+src/worker.ts(303,42): error TS2339: Property 'runShellCommand' does not exist on type 'OpenCodeAdapter'.
+src/worker.ts(323,42): error TS2339: Property 'runShellCommand' does not exist on type 'OpenCodeAdapter'.
+npm ERR! Lifecycle script `build` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: worker@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/worker 

@@ -55,6 +55,7 @@ export interface Task {
   retryCount: number;
   checkpoint?: TaskCheckpoint;
   outcome?: TaskOutcome;
+  repoPath?: string;
 }
 
 export interface TaskCheckpoint {

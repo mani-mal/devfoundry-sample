@@ -30,7 +30,7 @@ program
 
 program.addCommand(createToolsCommand(contextForge));
 program.addCommand(createTaskCommand(core));
-program.addCommand(createSkillCommand());
+program.addCommand(createSkillCommand(core));
 program.addCommand(createConfigCommand());
 
 program

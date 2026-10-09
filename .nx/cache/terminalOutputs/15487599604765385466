@@ -1,0 +1,181 @@
+
+> cli@0.1.0 test
+> jest --passWithNoTests
+
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2m__tests__/[22m[1mcommands.test.ts[22m
+  [1m● [22mTest suite failed to run
+
+    [96m__tests__/commands.test.ts[0m:[93m9[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m9[0m describe('config command', () => {
+    [7m [0m [91m~~~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m12[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeAll'.
+
+    [7m12[0m   beforeAll(() => {
+    [7m  [0m [91m  ~~~~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m17[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'afterAll'.
+
+    [7m17[0m   afterAll(() => {
+    [7m  [0m [91m  ~~~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m22[0m:[93m3[0m - [91merror[0m[90m TS2304: [0mCannot find name 'beforeEach'.
+
+    [7m22[0m   beforeEach(() => {
+    [7m  [0m [91m  ~~~~~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m32[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m32[0m   it('should set and persist a value', () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m34[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m34[0m     jest.spyOn(console, 'log').mockImplementation((m: string) => out.push(m));
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m36[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m36[0m     jest.restoreAllMocks();
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m39[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m39[0m     expect(config.capacityProfile).toBe('gpu-heavy');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m40[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m40[0m     expect(out.join('\n')).toContain('Set capacityProfile=');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m41[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m41[0m     expect(out.join('\n')).toContain('Persisted to');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m44[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m44[0m   it('should get a persisted value', () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m51[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m51[0m     jest.spyOn(console, 'log').mockImplementation((m: string) => out.push(m));
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m53[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m53[0m     jest.restoreAllMocks();
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m54[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m54[0m     expect(out[0]).toBe('gpu-heavy');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m57[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m57[0m   it('should fall back to env for get', () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m60[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m60[0m     jest.spyOn(console, 'log').mockImplementation((m: string) => out.push(m));
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m62[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m62[0m     jest.restoreAllMocks();
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m63[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m63[0m     expect(out[0]).toBe('local-fast');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m67[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m67[0m   it('should list persisted keys', () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m74[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m74[0m     jest.spyOn(console, 'log').mockImplementation((m: string) => out.push(m));
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m76[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m76[0m     jest.restoreAllMocks();
+    [7m  [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m77[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m77[0m     expect(out.join('\n')).toContain('a=1');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m78[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m78[0m     expect(out.join('\n')).toContain('b=2');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m82[0m:[93m1[0m - [91merror[0m[90m TS2593: [0mCannot find name 'describe'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m82[0m describe('skill command', () => {
+    [7m  [0m [91m~~~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m83[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m83[0m   it('should have list and install subcommands', () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m86[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m86[0m     expect(names).toContain('list');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m87[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m87[0m     expect(names).toContain('install');
+    [7m  [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m90[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m90[0m   it('should install with default options and report the digest', async () => {
+    [7m  [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m96[0m:[93m15[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m96[0m               expect(text).toContain('INSERT INTO skills');
+    [7m  [0m [91m              ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m97[0m:[93m15[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m97[0m               expect(params?.[1]).toMatch(/^[0-9a-f]{64}$/);
+    [7m  [0m [91m              ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m98[0m:[93m15[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m98[0m               expect(params?.[2]).toBe('version-control');
+    [7m  [0m [91m              ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m107[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m107[0m     jest.spyOn(console, 'log').mockImplementation((m: string) => out.push(m));
+    [7m   [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m112[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m112[0m     jest.restoreAllMocks();
+    [7m   [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m114[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m114[0m     expect(out.join('\n')).toContain('Skill installed: version-control@2.0.0 (approved)');
+    [7m   [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m115[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m115[0m     expect(out.join('\n')).toContain('digest=');
+    [7m   [0m [91m    ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m118[0m:[93m3[0m - [91merror[0m[90m TS2593: [0mCannot find name 'it'. Do you need to install type definitions for a test runner? Try `npm i --save-dev @types/jest` or `npm i --save-dev @types/mocha` and then add 'jest' or 'mocha' to the types field in your tsconfig.
+
+    [7m118[0m   it('should error when no database is configured', async () => {
+    [7m   [0m [91m  ~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m119[0m:[93m20[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m119[0m     const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    [7m   [0m [91m                   ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m120[0m:[93m21[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m120[0m     const exitSpy = jest.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    [7m   [0m [91m                    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m126[0m:[93m11[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m126[0m     await expect(
+    [7m   [0m [91m          ~~~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m130[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'jest'.
+
+    [7m130[0m     jest.restoreAllMocks();
+    [7m   [0m [91m    ~~~~[0m
+    [96m__tests__/commands.test.ts[0m:[93m131[0m:[93m5[0m - [91merror[0m[90m TS2304: [0mCannot find name 'expect'.
+
+    [7m131[0m     expect(errSpy).toHaveBeenCalled();
+    [7m   [0m [91m    ~~~~~~[0m
+
+[1mTest Suites: [22m[1m[31m1 failed[39m[22m, 1 total
+[1mTests:       [22m0 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        1.594 s
+[2mRan all test suites[22m[2m.[22m
+npm ERR! Lifecycle script `test` failed with error: 
+npm ERR! Error: command failed 
+npm ERR!   in workspace: cli@0.1.0 
+npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/cli 
