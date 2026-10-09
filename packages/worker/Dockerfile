@@ -57,9 +57,13 @@ RUN apk add --no-cache openssl-dev libpq-dev && \
 # Keep each package's dist in place: worker output at /app/dist,
 # deps under /app/packages/* so node_modules symlinks resolve
 COPY --from=builder /app/packages/worker/dist ./dist
+COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/packages/integrations/routeforge/package.json ./packages/integrations/routeforge/package.json
 COPY --from=builder /app/packages/integrations/routeforge/dist ./packages/integrations/routeforge/dist
+COPY --from=builder /app/packages/integrations/opencode/package.json ./packages/integrations/opencode/package.json
 COPY --from=builder /app/packages/integrations/opencode/dist ./packages/integrations/opencode/dist
+COPY --from=builder /app/packages/integrations/context-forge/package.json ./packages/integrations/context-forge/package.json
 COPY --from=builder /app/packages/integrations/context-forge/dist ./packages/integrations/context-forge/dist
 COPY --from=builder /app/node_modules ./node_modules
 
