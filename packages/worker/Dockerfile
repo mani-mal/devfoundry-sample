@@ -3,6 +3,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Use HTTP repos (lab environment does not trust the Alpine CDN TLS chain)
+RUN sed -i 's/https/http/g' /etc/apk/repositories
+
 # Install build dependencies
 RUN apk add --no-cache \
     python3 \
