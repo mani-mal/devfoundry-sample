@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS context_chunks (
   location VARCHAR(255) NOT NULL,
   revision VARCHAR(64) NOT NULL,
   text TEXT NOT NULL,
-  embedding vector(768),
+  embedding JSONB,
   embedding_model VARCHAR(100),
   embedding_version VARCHAR(50),
   full_text_indexed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -221,9 +221,9 @@ SELECT
     WHEN t.status IN ('Failed', 'Cancelled') THEN FALSE
     ELSE NULL
   END AS completed_successfully,
-  COUNT(to.id) OVER (PARTITION BY t.id) AS outcome_count
+  COUNT("to".id) OVER (PARTITION BY t.id) AS outcome_count
 FROM tasks t
-LEFT JOIN task_outcomes to ON t.id = to.task_id;
+LEFT JOIN task_outcomes "to" ON t.id = to.task_id;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
