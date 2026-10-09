@@ -13,15 +13,18 @@ RUN apk add --no-cache \
     openssl-dev \
     libpq-dev
 
-# Copy manifests (skip root lockfile: file: deps out of sync)
+# Copy manifests first for layer caching
 COPY package.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/core/tsconfig.json packages/core/
 COPY packages/worker/package.json packages/worker/
 COPY packages/worker/tsconfig.json packages/worker/
 COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/
+COPY packages/integrations/routeforge/tsconfig.json packages/integrations/routeforge/
 COPY packages/integrations/opencode/package.json packages/integrations/opencode/
+COPY packages/integrations/opencode/tsconfig.json packages/integrations/opencode/
 COPY packages/integrations/context-forge/package.json packages/integrations/context-forge/
+COPY packages/integrations/context-forge/tsconfig.json packages/integrations/context-forge/
 
 # Install workspace dependencies (dev included: TypeScript is needed to build)
 RUN npm install --workspaces --include-workspace-root
