@@ -1,0 +1,816 @@
+---
+# DevFoundry Kubernetes Manifests
+# Namespace: runai-dev-foundry
+# Deployment date: 7 October 2026
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: runai-dev-foundry
+---
+# PostgreSQL StatefulSet with PVC
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: devfoundry
+            - name: POSTGRES_PASSWORD
+              value: devfoundry
+            - name: POSTGRES_DB
+              value: devfoundry
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: pure-nfs1
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+# DevFoundry API Deployment (CPU-only, port 3000)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devfoundry-api
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devfoundry-api
+  template:
+    metadata:
+      labels:
+        app: devfoundry-api
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: devfoundry-api
+          image: ghcr.io/mani-mal/dev-foundry-api:v1.1.6
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://devfoundry:devfoundry@postgres:5432/devfoundry
+            - name: ROUTEFORGE_URL
+              value: http://routeforge:8000
+            - name: CONTEXFORGE_URL
+              value: http://contextforge:4444
+            - name: LANGFUSE_URL
+              value: http://langfuse:3000
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: JWT_SECRET_KEY
+            - name: PLATFORM_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: PLATFORM_ADMIN_EMAIL
+            - name: PLATFORM_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: PLATFORM_ADMIN_PASSWORD
+            - name: PORT
+              value: "3000"
+            - name: HOST
+              value: "0.0.0.0"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devfoundry-api
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-api
+spec:
+  type: NodePort
+  selector:
+    app: devfoundry-api
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+# DevFoundry Worker Deployment (CPU-only)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devfoundry-worker
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devfoundry-worker
+  template:
+    metadata:
+      labels:
+        app: devfoundry-worker
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: devfoundry-worker
+          image: ghcr.io/mani-mal/dev-foundry-worker:latest
+          ports:
+            - name: http
+              containerPort: 3002
+          env:
+            - name: DATABASE_URL
+              value: postgresql://devfoundry:devfoundry@postgres:5432/devfoundry
+            - name: ROUTEFORGE_URL
+              value: http://routeforge:8000
+            - name: CONTEXFORGE_URL
+              value: http://contextforge:4444
+            - name: LANGFUSE_URL
+              value: http://langfuse:3000
+            - name: WORKER_ID
+              value: worker-1
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devfoundry-worker
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-worker
+spec:
+  type: ClusterIP
+  selector:
+    app: devfoundry-worker
+  ports:
+    - name: http
+      port: 3002
+      targetPort: 3002
+---
+# ContextForge Deployment (Python/FastAPI, port 4444)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contextforge
+  namespace: runai-dev-foundry
+  labels:
+    app: contextforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: contextforge
+  template:
+    metadata:
+      labels:
+        app: contextforge
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: contextforge
+          image: ghcr.io/mani-mal/dev-foundry-contextforge:latest
+          ports:
+            - name: http
+              containerPort: 4444
+          env:
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: JWT_SECRET_KEY
+            - name: AUTH_ENCRYPTION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: AUTH_ENCRYPTION_SECRET
+            - name: BASIC_AUTH_USER
+              value: admin
+            - name: BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: BASIC_AUTH_PASSWORD
+            - name: PLATFORM_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: PLATFORM_ADMIN_EMAIL
+            - name: PLATFORM_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: PLATFORM_ADMIN_PASSWORD
+            - name: PLATFORM_ADMIN_FULL_NAME
+              value: "Admin User"
+            - name: DATABASE_URL
+              value: postgresql+psycopg://devfoundry:devfoundry@postgres:5432/devfoundry
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "4444"
+            - name: MCPGATEWAY_UI_ENABLED
+              value: "true"
+            - name: MCPGATEWAY_ADMIN_API_ENABLED
+              value: "true"
+            - name: AUTH_REQUIRED
+              value: "true"
+            - name: SSRF_ALLOW_PRIVATE_NETWORKS
+              value: "true"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contextforge
+  namespace: runai-dev-foundry
+  labels:
+    app: contextforge
+spec:
+  type: ClusterIP
+  selector:
+    app: contextforge
+  ports:
+    - name: http
+      port: 4444
+      targetPort: 4444
+---
+# RouteForge Deployment (CPU-only, port 8000)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routeforge
+  namespace: runai-dev-foundry
+  labels:
+    app: routeforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: routeforge
+  template:
+    metadata:
+      labels:
+        app: routeforge
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: routeforge
+          image: ghcr.io/mani-mal/dev-foundry-routeforge:latest
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: PORT
+              value: "8000"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: routeforge
+  namespace: runai-dev-foundry
+  labels:
+    app: routeforge
+spec:
+  type: ClusterIP
+  selector:
+    app: routeforge
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+---
+# Langfuse Deployment (CPU-only, port 3000)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langfuse
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse
+  template:
+    metadata:
+      labels:
+        app: langfuse
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: langfuse
+          image: langfuse/langfuse:2
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: DATABASE_URL
+              value: postgresql://langfuse:langfuse@langfuse-postgres:5432/langfuse
+            - name: DATABASE_HOST
+              value: langfuse-postgres
+            - name: DATABASE_USER
+              value: langfuse
+            - name: DATABASE_PASSWORD
+              value: langfuse
+            - name: DATABASE_NAME
+              value: langfuse
+            - name: LANGFUSE_ENABLE_CLICKHOUSE_MIGRATION
+              value: "false"
+            - name: NEXTAUTH_URL
+              value: http://langfuse:3000
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: NEXTAUTH_SECRET
+            - name: AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: AUTH_SECRET
+            - name: SALT
+              value: devfoundry-salt-for-langfuse-v2
+            - name: LANGFUSE_UI_ENABLED
+              value: "true"
+            - name: LANGFUSE_API_ENABLED
+              value: "true"
+            - name: TELEMETRY_ENABLED
+              value: "false"
+          resources:
+            requests:
+              cpu: "200m"
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langfuse
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse
+spec:
+  type: ClusterIP
+  selector:
+    app: langfuse
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+# Langfuse PostgreSQL StatefulSet (separate DB for Langfuse)
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: langfuse-postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse-postgres
+spec:
+  serviceName: langfuse-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-postgres
+  template:
+    metadata:
+      labels:
+        app: langfuse-postgres
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: langfuse
+            - name: POSTGRES_PASSWORD
+              value: langfuse
+            - name: POSTGRES_DB
+              value: langfuse
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: langfuse-postgres-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: langfuse-postgres-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: pure-nfs1
+        resources:
+          requests:
+            storage: 10Gi
+---
+# ClickHouse Deployment for Langfuse V3
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: langfuse-clickhouse-config
+  namespace: runai-dev-foundry
+data:
+  config.xml: |
+    <?xml version="1.0"?>
+    <clickhouse>
+        <listen_host>0.0.0.0</listen_host>
+        <logger>
+            <level>information</level>
+        </logger>
+    </clickhouse>
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: langfuse-clickhouse
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse-clickhouse
+spec:
+  serviceName: langfuse-clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langfuse-clickhouse
+  template:
+    metadata:
+      labels:
+        app: langfuse-clickhouse
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:24.3
+          ports:
+            - name: http
+              containerPort: 8123
+            - name: tcp
+              containerPort: 9000
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: langfuse-clickhouse-data
+              mountPath: /var/lib/clickhouse
+          readinessProbe:
+            tcpSocket:
+              port: 8123
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: langfuse-clickhouse-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: pure-nfs1
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langfuse-clickhouse
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse-clickhouse
+spec:
+  type: ClusterIP
+  selector:
+    app: langfuse-clickhouse
+  ports:
+    - name: http
+      port: 8123
+      targetPort: 8123
+    - name: tcp
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langfuse-postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: langfuse-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: langfuse-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+# DevFoundry Web Console Deployment (port 3000)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devfoundry-web
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: devfoundry-web
+  template:
+    metadata:
+      labels:
+        app: devfoundry-web
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: devfoundry-web
+          image: ghcr.io/mani-mal/dev-foundry-web:latest
+          ports:
+            - name: http
+              containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 128Mi
+            limits:
+              cpu: "500m"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devfoundry-web
+  namespace: runai-dev-foundry
+  labels:
+    app: devfoundry-web
+spec:
+  type: NodePort
+  selector:
+    app: devfoundry-web
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30080
+---
+# DevFoundry Secrets (create before deployment)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: devfoundry-secrets
+  namespace: runai-dev-foundry
+type: Opaque
+data:
+  JWT_SECRET_KEY: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWp3dC1zZWNyZXQta2V5LTMyLWNoYXJz
+  AUTH_ENCRYPTION_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWF1dGgtZW5jcnlwdGlvbi1zZWNyZXQta2V5
+  BASIC_AUTH_PASSWORD: YWRtaW4xMjNzZWN1cmU=
+  PLATFORM_ADMIN_EMAIL: YWRtaW5AZGV2Zm91bmRyeS5sb2NhbA==
+  PLATFORM_ADMIN_PASSWORD: YWRtaW4xMjNzZWN1cmU=
+  NEXTAUTH_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWxhbmdmdXNlLW5leHRhdXRoLXNlY3JldC1rZXk=
+  AUTH_SECRET: dGhpcy1pcy1hLXZlcnktc2VjdXJlLWF1dGgtc2VjcmV0LWtleS12YWx1ZQ==
+  CLICKHOUSE_PASSWORD: ZGV2Zm91bmRyeS1jaGlja2xob3VzZS1wYXNzd29yZA==

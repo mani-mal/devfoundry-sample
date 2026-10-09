@@ -1,87 +1,21 @@
 {
   "run": {
-    "command": "nx run-many --target=test",
-    "startTime": "2026-10-07T16:55:54.508Z",
-    "endTime": "2026-10-07T16:56:10.026Z",
+    "command": "nx run @dev-foundry/core:build",
+    "startTime": "2026-10-08T00:11:40.250Z",
+    "endTime": "2026-10-08T00:11:43.745Z",
     "inner": false
   },
   "tasks": [
     {
-      "taskId": "cli:test",
-      "target": "test",
-      "projectName": "cli",
-      "hash": "8233079200889927328",
-      "startTime": "2026-10-07T16:55:54.524Z",
-      "endTime": "2026-10-07T16:55:54.550Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "integrations-context-forge:test",
-      "target": "test",
-      "projectName": "integrations-context-forge",
-      "hash": "8044731778819082967",
-      "startTime": "2026-10-07T16:55:54.555Z",
-      "endTime": "2026-10-07T16:55:54.558Z",
-      "params": "",
-      "cacheStatus": "local-cache-hit",
-      "status": 0
-    },
-    {
-      "taskId": "integrations-opencode:test",
-      "target": "test",
-      "projectName": "integrations-opencode",
-      "hash": "7345898802667274957",
-      "startTime": "2026-10-07T16:55:54.561Z",
-      "endTime": "2026-10-07T16:55:59.412Z",
+      "taskId": "@dev-foundry/core:build",
+      "target": "build",
+      "projectName": "@dev-foundry/core",
+      "hash": "2603624593240764064",
+      "startTime": "2026-10-08T00:11:40.261Z",
+      "endTime": "2026-10-08T00:11:43.744Z",
       "params": "",
       "cacheStatus": "cache-miss",
-      "status": 0
-    },
-    {
-      "taskId": "integrations-routeforge:test",
-      "target": "test",
-      "projectName": "integrations-routeforge",
-      "hash": "13180096350132769445",
-      "startTime": "2026-10-07T16:55:54.524Z",
-      "endTime": "2026-10-07T16:55:59.489Z",
-      "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 0
-    },
-    {
-      "taskId": "@dev-foundry/api:test",
-      "target": "test",
-      "projectName": "@dev-foundry/api",
-      "hash": "14153874630225009303",
-      "startTime": "2026-10-07T16:55:59.490Z",
-      "endTime": "2026-10-07T16:56:03.369Z",
-      "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 0
-    },
-    {
-      "taskId": "worker:test",
-      "target": "test",
-      "projectName": "worker",
-      "hash": "1864241223902133360",
-      "startTime": "2026-10-07T16:55:59.414Z",
-      "endTime": "2026-10-07T16:56:03.622Z",
-      "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 0
-    },
-    {
-      "taskId": "core:test",
-      "target": "test",
-      "projectName": "core",
-      "hash": "5668535677742690225",
-      "startTime": "2026-10-07T16:55:54.523Z",
-      "endTime": "2026-10-07T16:56:10.025Z",
-      "params": "",
-      "cacheStatus": "cache-miss",
-      "status": 0
+      "status": 1
     }
   ]
 }

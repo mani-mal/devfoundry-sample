@@ -23,7 +23,7 @@ export class DevFoundryCore {
   }
 
   private parseDatabaseUrl(url: string): Database {
-    const match = url.match(/postgres:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
+    const match = url.match(/postgres(?:ql)?:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/);
     if (!match) {
       throw new Error('Invalid database URL');
     }

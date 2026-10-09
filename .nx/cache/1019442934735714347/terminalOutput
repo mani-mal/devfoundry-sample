@@ -1,0 +1,4 @@
+
+> @dev-foundry/integrations-opencode@0.1.0 build
+> tsc --build
+

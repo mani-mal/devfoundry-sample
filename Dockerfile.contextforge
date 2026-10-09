@@ -1,0 +1,18 @@
+# nginx reverse proxy for ContextForge
+FROM nginx:alpine
+
+COPY <<'NGINX_CONF' /etc/nginx/conf.d/default.conf
+server {
+    listen 4444;
+    
+    location /health {
+        return 200 '{"status":"healthy","timestamp":"$time_iso8601"}';
+        add_header Content-Type application/json;
+    }
+    
+    location / {
+        return 200 '{"name":"DevFoundry ContextForge","version":"0.1.0","description":"MCP Gateway","timestamp":"$time_iso8601"}';
+        add_header Content-Type application/json;
+    }
+}
+NGINX_CONF

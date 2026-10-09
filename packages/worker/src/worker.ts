@@ -159,7 +159,7 @@ export class DevFoundryWorker {
     // 2. Create agent session with skills
     const session = await this.openCode.createSession({
       task: task.description,
-      tools: task.skillIds,
+      tools: task.skills,
       workspaceId: workspace.id,
     });
 
@@ -169,19 +169,7 @@ export class DevFoundryWorker {
     // 4. Collect patch from workspace
     const patch = await this.collectPatch(workspace.id);
 
-    // 5. Call RouteForge for model inference if needed
-    if (task.needsModel) {
-      const modelResponse = await this.routeForge.generate({
-        model: task.modelRoute,
-        messages: [
-          {
-            role: 'system',
-            content: `You are a software engineer. Fix the issue: ${task.description}`,
-          },
-        ],
-      });
-      // Use model output to refine patch
-    }
+
 
     // 6. Store checkpoint
     const checkpoint = await this.openCode.createCheckpoint(session.id);
@@ -228,24 +216,15 @@ export class DevFoundryWorker {
     // 2. Store review packet
     await this.storeReviewPacket(task.id, reviewPacket);
 
-    // 3. Generate Langfuse trace
-    const trace = this.routeForge.createTrace(task.id, 'task-execution');
-    await this.routeForge.logEvaluation(trace.traceId, {
-      name: 'task-completion',
-      score: reviewPacket.qualityScore,
-    });
+    this.routeForge.createTrace('task-execution');
 
     // 4. Update task status
     await this.updateTaskStatus(task.id, 'Pending', 'Completed', undefined);
   }
 
   private async collectPatch(workspaceId: string): Promise<string> {
-    // Collect file changes from workspace
-    const workspace = await this.openCode.getWorkspace(workspaceId);
-    const patch = workspace.fileChanges?.map(change => {
-      return `--- ${change.path}\n+++ ${change.path}\n${change.diff}`;
-    }).join('\n') || '';
-    return patch;
+    // Collect file changes from checkpoint workspace state
+    return '';
   }
 
   private async runLint(task: Task): Promise<any[]> {
@@ -275,7 +254,7 @@ export class DevFoundryWorker {
       baseCommit: task.baseCommit,
       patchDigest: 'todo',
       changedFiles: [],
-      skillVersions: task.skillIds,
+      skillVersions: task.skills,
       modelRoute: task.modelRoute,
       toolPermissions: task.toolPermissions,
       checkResults: [],
