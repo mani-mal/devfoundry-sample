@@ -26,10 +26,15 @@ RUN npm install
 
 # Copy source code
 COPY packages/worker/src ./src
+COPY packages/worker/tsconfig.json ./tsconfig.json
 COPY packages/core/src ./core/src
+COPY packages/core/tsconfig.json ./core/tsconfig.json
 COPY packages/integrations/routeforge/src ./routeforge/src
+COPY packages/integrations/routeforge/tsconfig.json ./routeforge/tsconfig.json
 COPY packages/integrations/opencode/src ./opencode/src
+COPY packages/integrations/opencode/tsconfig.json ./opencode/tsconfig.json
 COPY packages/integrations/context-forge/src ./contextforge/src
+COPY packages/integrations/context-forge/tsconfig.json ./contextforge/tsconfig.json
 
 # Install dependencies for the source dependencies and build them first
 WORKDIR /app/core
