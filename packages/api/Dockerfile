@@ -3,31 +3,54 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-COPY packages/api/package*.json ./
-RUN npm install --no-audit --no-fund
+# Use HTTP repos (lab environment does not trust the Alpine CDN TLS chain)
+RUN sed -i 's/https/http/g' /etc/apk/repositories
 
-COPY packages/api/tsconfig.json ./
-COPY packages/api/src ./src
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl-dev \
+    libpq-dev
 
-RUN npm run build
+# Copy manifests first for layer caching
+COPY package.json ./
+COPY packages/core/package.json packages/core/
+COPY packages/core/tsconfig.json packages/core/
+COPY packages/api/package.json packages/api/
+COPY packages/api/tsconfig.json packages/api/
 
-# Production
+# Install workspace dependencies (dev included: TypeScript is needed to build)
+RUN npm install --workspaces --include-workspace-root
+
+# Copy source
+COPY packages/core/src packages/core/src
+COPY packages/api/src packages/api/src
+
+# Build bottom-up
+RUN npx tsc --build packages/core && \
+    npx tsc --build packages/api
+
 FROM node:20-alpine
 
 WORKDIR /app
 
-RUN addgroup -g 1001 -S nodejs && \
+# Use HTTP repos (lab environment does not trust the Alpine CDN TLS chain)
+RUN sed -i 's/https/http/g' /etc/apk/repositories
+
+RUN apk add --no-cache openssl-dev libpq-dev && \
+    addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-COPY --from=builder /app/dist ./dist
-COPY packages/api/package*.json ./
-
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
-
-RUN chown -R nodejs:nodejs /app
-
-EXPOSE 3000
+# Keep each package's dist in place: api output at /app/dist,
+# deps under /app/packages/* so node_modules symlinks resolve
+COPY --from=builder /app/packages/api/dist ./dist
+COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
+COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/node_modules ./node_modules
 
 USER nodejs
+
+EXPOSE 3000
 
 CMD ["node", "dist/index.js"]
