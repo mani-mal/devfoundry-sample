@@ -114,6 +114,51 @@ export const apiClient = {
     return response.data;
   },
 
+  getTools: async (params?: { enabled?: boolean; kind?: string }) => {
+    const response = await api.get('/tools', { params });
+    return response.data as { tools: Array<{ id: string; name: string; kind: string; description?: string; scopes: string[]; enabled: boolean; transport?: string }> };
+  },
+
+  searchTools: async (q: string) => {
+    const response = await api.get('/tools/search', { params: { q } });
+    return response.data as { tools: Array<{ id: string; name: string; description?: string; scopes: string[]; enabled: boolean }> };
+  },
+
+  setToolEnabled: async (id: string, enabled: boolean) => {
+    const response = await api.post(`/tools/${id}/${enabled ? 'enable' : 'disable'}`);
+    return response.data;
+  },
+
+  getSkills: async (params?: { status?: string }) => {
+    const response = await api.get('/skills', { params });
+    return response.data as { skills: Array<{ id: string; name: string; version: string; digest: string; description?: string; approvalStatus: string }> };
+  },
+
+  setSkillStatus: async (id: string, status: string) => {
+    const response = await api.patch(`/skills/${id}/status`, { status });
+    return response.data;
+  },
+
+  getContextStats: async () => {
+    const response = await api.get('/context/stats');
+    return response.data as { nodes: number; edges: number; chunks: number };
+  },
+
+  getContextNodes: async (params?: { kind?: string; limit?: number }) => {
+    const response = await api.get('/context/nodes', { params });
+    return response.data as { nodes: Array<{ id: string; kind: string; sourceId: string; metadata: Record<string, unknown> }> };
+  },
+
+  searchContext: async (q: string) => {
+    const response = await api.get('/context/search', { params: { q } });
+    return response.data as { results: Array<{ id: string; location: string; text: string }> };
+  },
+
+  getMemory: async (params?: { scope?: string; promoted?: boolean }) => {
+    const response = await api.get('/memory', { params });
+    return response.data as { records: Array<{ id: string; scope: string; type: string; content: string; promoted: boolean }> };
+  },
+
   getApplianceHealth: async () => {
     const response = await healthApi.get('/health');
     return response.data;

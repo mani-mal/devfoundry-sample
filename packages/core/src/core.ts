@@ -1,4 +1,8 @@
 import { Database } from './database';
+import { ContextStore } from './context-store';
+import { MemoryStore } from './memory-store';
+import { SkillStore } from './skill-store';
+import { ToolRegistry } from './tool-registry';
 
 export interface CoreOptions {
   databaseUrl: string;
@@ -59,5 +63,21 @@ export class DevFoundryCore {
 
   getLangfuseUrl(): string | undefined {
     return this.langfuseUrl;
+  }
+
+  getContextStore(): ContextStore {
+    return new ContextStore(this.database);
+  }
+
+  getMemoryStore(): MemoryStore {
+    return new MemoryStore(this.database);
+  }
+
+  getSkillStore(): SkillStore {
+    return new SkillStore(this.database);
+  }
+
+  getToolRegistry(): ToolRegistry {
+    return new ToolRegistry(this.database);
   }
 }

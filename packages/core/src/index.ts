@@ -1,4 +1,8 @@
 export { Database, createSchema, DatabaseConfig } from './database';
+export { ContextStore, ContextNode, ContextEdge, ContextChunk } from './context-store';
+export { MemoryStore, MemoryRecord } from './memory-store';
+export { SkillStore, Skill } from './skill-store';
+export { ToolRegistry, ApprovedTool } from './tool-registry';
 export { DevFoundryCore, CoreOptions } from './core';
 export * from './types';
 export { ValidationPipeline, ValidationOptions } from './validation';

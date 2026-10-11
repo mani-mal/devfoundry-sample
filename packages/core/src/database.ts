@@ -26,8 +26,8 @@ export class Database {
   }
 
   async query<T extends {} = {}>(text: string, params?: unknown[]): Promise<T[]> {
-    const result = await this.pool.query<T>(text, params);
-    return result.rows;
+    const result = await this.pool.query(text, params as never[]);
+    return result.rows as T[];
   }
 
   async beginTransaction(): Promise<Client> {
