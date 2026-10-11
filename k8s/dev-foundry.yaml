@@ -852,7 +852,7 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-web
-          image: ghcr.io/mani-mal/dev-foundry-web:v1.2.0
+          image: ghcr.io/mani-mal/dev-foundry-web:v1.2.1
           ports:
             - name: http
               containerPort: 3000
