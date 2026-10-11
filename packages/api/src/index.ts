@@ -158,6 +158,31 @@ export class ApiServer {
     };
   }
 
+  private async probeService(
+    name: string,
+    url: string,
+    path: string,
+    timeoutMs = 3000
+  ): Promise<{ name: string; status: string; latencyMs?: number; detail?: Record<string, unknown> }> {
+    const started = Date.now();
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(`${url}${path}`, { signal: controller.signal });
+      clearTimeout(timer);
+      const latencyMs = Date.now() - started;
+      let detail: Record<string, unknown> = {};
+      try {
+        detail = (await res.json()) as Record<string, unknown>;
+      } catch {
+        detail = {};
+      }
+      return { name, status: res.ok ? 'ok' : 'error', latencyMs, detail };
+    } catch (err) {
+      return { name, status: 'unavailable', detail: { error: (err as Error).message } };
+    }
+  }
+
   private setupRoutes(): void {
     this.app.use(express.json());
 
@@ -172,14 +197,40 @@ export class ApiServer {
       } catch {
         dbStatus = 'unavailable';
       }
+
+      const uptime = Math.floor((Date.now() - this.startTime) / 1000);
+
+      const serviceUrls: Array<{ name: string; env: string; fallback: string; path: string }> = [
+        { name: 'routeforge', env: 'ROUTEFORGE_URL', fallback: 'http://routeforge:8000', path: '/health' },
+        { name: 'contextForge', env: 'CONTEXFORGE_URL', fallback: 'http://contextforge:4444', path: '/health' },
+        { name: 'openCode', env: 'OPENCODE_URL', fallback: 'http://opencode:4096', path: '/' },
+      ];
+      const probes = await Promise.all(
+        serviceUrls.map((s) => this.probeService(s.name, process.env[s.env] || s.fallback, s.path))
+      );
+
+      let workerStatus = 'unavailable';
+      let workerDetail: Record<string, unknown> = {};
+      try {
+        const rows = await this.pool.query(
+          `SELECT COUNT(*)::int AS c FROM tasks WHERE phase IN ('Submitted','Qualified','Running','Validating')`
+        );
+        workerStatus = 'ok';
+        workerDetail = { queueDepth: rows[0]?.c ?? 0 };
+      } catch {
+        workerStatus = 'unavailable';
+      }
+
       const total = os.totalmem();
       const free = os.freemem();
       res.json({
         status: 'ok',
-        uptime: Math.floor((Date.now() - this.startTime) / 1000),
+        uptime,
         services: {
-          api: { status: 'ok', uptime: Math.floor((Date.now() - this.startTime) / 1000) },
+          api: { status: 'ok', uptime },
           database: { status: dbStatus },
+          worker: { status: workerStatus, ...workerDetail },
+          ...Object.fromEntries(probes.map((p) => [p.name, { status: p.status, latencyMs: p.latencyMs, detail: p.detail }])),
         },
         resources: {
           cpu: { usage: Math.min(100, (os.loadavg()[0] / os.cpus().length) * 100) },

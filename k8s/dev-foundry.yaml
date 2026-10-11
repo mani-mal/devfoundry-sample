@@ -134,7 +134,7 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-api
-          image: ghcr.io/mani-mal/dev-foundry-api:v1.2.0
+          image: ghcr.io/mani-mal/dev-foundry-api:v1.2.1
           imagePullPolicy: Always
           ports:
             - name: http
@@ -146,6 +146,8 @@ spec:
               value: http://routeforge:8000
             - name: CONTEXFORGE_URL
               value: http://contextforge:4444
+            - name: OPENCODE_URL
+              value: http://opencode:4096
             - name: LANGFUSE_URL
               value: http://langfuse:3000
             - name: JWT_SECRET_KEY

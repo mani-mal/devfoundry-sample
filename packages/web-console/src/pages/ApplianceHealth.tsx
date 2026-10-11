@@ -2,17 +2,19 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { apiClient } from '../lib/api';
-import { 
-  Cpu, 
-  MemoryStick, 
-  HardDrive, 
-  Activity, 
+import {
+  Cpu,
+  MemoryStick,
+  HardDrive,
+  Activity,
   Server,
   Thermometer,
   Zap,
   CheckCircle,
   AlertCircle,
-  Clock
+  Clock,
+  Wrench,
+  Code2
 } from 'lucide-react';
 
 interface ServiceStatus {
@@ -69,6 +71,9 @@ export default function ApplianceHealth() {
     gpu: undefined,
   });
   const [hardwareProfile, setHardwareProfile] = useState<any>(null);
+  const [serviceDetails, setServiceDetails] = useState<Record<string, { detail?: Record<string, unknown>; latencyMs?: number } | undefined>>({});
+  const [componentCounts, setComponentCounts] = useState<{ tools: number; toolsEnabled: number; skills: number; skillsApproved: number; contextNodes: number } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,45 +85,65 @@ export default function ApplianceHealth() {
   const fetchHealthData = async () => {
     try {
       const health = await apiClient.getApplianceHealth();
-      
-       setServices([
-         { 
-           name: 'API Service', 
-           status: health.services?.api?.status || 'ok', 
-           uptime: health.services?.api?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-         { 
-           name: 'Worker Service', 
-           status: health.services?.worker?.status || 'ok', 
-           uptime: health.services?.worker?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-         { 
-           name: 'PostgreSQL', 
-           status: health.services?.database?.status || 'connected', 
-           uptime: health.services?.database?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-         { 
-           name: 'RouteForge', 
-           status: health.services?.routeforge?.status || 'ok', 
-           uptime: health.services?.routeforge?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-         { 
-           name: 'ContextForge', 
-           status: health.services?.contextForge?.status || 'ok', 
-           uptime: health.services?.contextForge?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-         { 
-           name: 'Langfuse', 
-           status: health.services?.langfuse?.status || 'ok', 
-           uptime: health.services?.langfuse?.uptime || 0,
-           lastCheck: new Date().toISOString() 
-         },
-       ]);
+
+      const svc = (key: string, fallback: string) => {
+        const s = (health.services as Record<string, { status?: string }> | undefined)?.[key];
+        return s?.status || fallback;
+      };
+      const svcDetail = (key: string) =>
+        (health.services as Record<string, { detail?: Record<string, unknown>; latencyMs?: number }> | undefined)?.[key];
+
+      setServices([
+        {
+          name: 'API Service',
+          status: health.services?.api?.status || 'ok',
+          uptime: health.services?.api?.uptime || 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'Worker Service',
+          status: svc('worker', 'ok'),
+          uptime: 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'PostgreSQL',
+          status: health.services?.database?.status || 'connected',
+          uptime: health.services?.database?.uptime || 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'RouteForge (model gateway)',
+          status: svc('routeforge', 'ok'),
+          uptime: 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'ContextForge (MCP gateway)',
+          status: svc('contextForge', 'ok'),
+          uptime: 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'OpenCode (harness)',
+          status: svc('openCode', 'ok'),
+          uptime: 0,
+          lastCheck: new Date().toISOString(),
+        },
+        {
+          name: 'Langfuse',
+          status: health.services?.langfuse?.status || 'ok',
+          uptime: health.services?.langfuse?.uptime || 0,
+          lastCheck: new Date().toISOString(),
+        },
+      ]);
+
+      setServiceDetails({
+        worker: svcDetail('worker'),
+        routeforge: svcDetail('routeforge'),
+        contextForge: svcDetail('contextForge'),
+        openCode: svcDetail('openCode'),
+      });
 
       setResources({
         cpu: health.resources?.cpu?.usage || 0,
@@ -134,10 +159,39 @@ export default function ApplianceHealth() {
       });
 
       setLoading(false);
+      setLoadError(null);
     } catch (error) {
       setLoading(false);
+      setLoadError((error as Error).message);
     }
   };
+
+  const fetchComponentCounts = async () => {
+    try {
+      const [tools, skills, stats] = await Promise.all([
+        apiClient.getTools().catch(() => null),
+        apiClient.getSkills().catch(() => null),
+        apiClient.getContextStats().catch(() => null),
+      ]);
+      if (tools || skills || stats) {
+        setComponentCounts({
+          tools: tools?.tools?.length ?? 0,
+          toolsEnabled: tools?.tools?.filter((t) => t.enabled).length ?? 0,
+          skills: skills?.skills?.length ?? 0,
+          skillsApproved: skills?.skills?.filter((s) => s.approvalStatus === 'approved' || s.approvalStatus === 'published').length ?? 0,
+          contextNodes: stats?.nodes ?? 0,
+        });
+      }
+    } catch {
+      // non-fatal: counts stay null
+    }
+  };
+
+  useEffect(() => {
+    void fetchComponentCounts();
+    const interval = setInterval(fetchComponentCounts, 15000);
+    return () => clearInterval(interval);
+  }, []);
 
   const normalizeStatus = (status: string): 'healthy' | 'unhealthy' | 'degraded' => {
     switch (status) {
@@ -188,6 +242,40 @@ export default function ApplianceHealth() {
     return `${(seconds / 3600).toFixed(1)}h`;
   };
 
+  const serviceDetailText = (service: ServiceStatus): string => {
+    const key = service.name.startsWith('RouteForge')
+      ? 'routeforge'
+      : service.name.startsWith('ContextForge')
+        ? 'contextForge'
+        : service.name.startsWith('OpenCode')
+          ? 'openCode'
+          : service.name.startsWith('Worker')
+            ? 'worker'
+            : '';
+    if (!key) {
+      if (service.name.startsWith('API')) return 'port 3000';
+      if (service.name === 'PostgreSQL') return 'postgres:5432';
+      if (service.name === 'Langfuse') return 'langfuse:3000';
+      return '';
+    }
+    const d = serviceDetails[key];
+    if (!d) return '';
+    const parts: string[] = [];
+    if (d.latencyMs !== undefined) parts.push(`${d.latencyMs}ms`);
+    const detail = d.detail as Record<string, unknown> | undefined;
+    if (detail) {
+      if (typeof detail.backend === 'string') parts.push(`backend=${detail.backend}`);
+      if (typeof detail.models === 'number') parts.push(`${detail.models} models`);
+      if (typeof detail.queueDepth === 'number') parts.push(`queue=${detail.queueDepth}`);
+      if (detail.mcp_runtime && typeof detail.mcp_runtime === 'object') {
+        const mode = (detail.mcp_runtime as Record<string, unknown>).effective_mode;
+        if (typeof mode === 'string') parts.push(`mcp=${mode}`);
+      }
+      if (typeof detail.error === 'string') parts.push(String(detail.error).substring(0, 60));
+    }
+    return parts.join(' · ');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -208,6 +296,11 @@ export default function ApplianceHealth() {
             <p className="text-dashboard-muted">System resources, services, and hardware status</p>
           </div>
           <div className="flex items-center gap-2">
+            {loadError && (
+              <div className="px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                {loadError}
+              </div>
+            )}
             <div className="flex items-center gap-2 bg-dashboard-card px-4 py-2 rounded-lg border border-dashboard-border">
               <div className="h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></div>
               <span className="text-sm font-medium text-dashboard-text">Online</span>
@@ -396,6 +489,53 @@ export default function ApplianceHealth() {
           </Card>
         )}
 
+        <Card variant="elevated" className="mb-6">
+          <CardHeader>
+            <CardTitle>
+              <Wrench className="h-5 w-5 text-purple-400" />
+              Platform Components
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {componentCounts ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 bg-dashboard-card/50 rounded-xl border border-dashboard-border/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Wrench className="h-5 w-5 text-purple-400" />
+                    <p className="text-sm font-medium text-dashboard-muted">MCP Tools</p>
+                  </div>
+                  <p className="text-2xl font-semibold text-dashboard-text">
+                    {componentCounts.toolsEnabled} enabled
+                  </p>
+                  <p className="text-sm text-dashboard-muted">{componentCounts.tools} registered</p>
+                </div>
+                <div className="p-6 bg-dashboard-card/50 rounded-xl border border-dashboard-border/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Code2 className="h-5 w-5 text-primary-400" />
+                    <p className="text-sm font-medium text-dashboard-muted">Skills Catalog</p>
+                  </div>
+                  <p className="text-2xl font-semibold text-dashboard-text">
+                    {componentCounts.skillsApproved} approved
+                  </p>
+                  <p className="text-sm text-dashboard-muted">{componentCounts.skills} installed</p>
+                </div>
+                <div className="p-6 bg-dashboard-card/50 rounded-xl border border-dashboard-border/50">
+                  <div className="flex items-center gap-3 mb-2">
+                    <HardDrive className="h-5 w-5 text-emerald-400" />
+                    <p className="text-sm font-medium text-dashboard-muted">Context Graph</p>
+                  </div>
+                  <p className="text-2xl font-semibold text-dashboard-text">
+                    {componentCounts.contextNodes} nodes
+                  </p>
+                  <p className="text-sm text-dashboard-muted">indexed</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-dashboard-muted">Component counts unavailable</p>
+            )}
+          </CardContent>
+        </Card>
+
         <Card variant="elevated">
           <CardHeader>
             <CardTitle>
@@ -410,6 +550,7 @@ export default function ApplianceHealth() {
                   <tr>
                     <th className="text-left py-4 px-6 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Service</th>
                     <th className="text-left py-4 px-6 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Status</th>
+                    <th className="text-left py-4 px-6 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Detail</th>
                     <th className="text-left py-4 px-6 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Uptime</th>
                     <th className="text-left py-4 px-6 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Last Check</th>
                   </tr>
@@ -424,15 +565,20 @@ export default function ApplianceHealth() {
                         </div>
                       </td>
                        <td className="py-4 px-6">
-                         <Badge 
+                         <Badge
                            variant={
-                             normalizeStatus(service.status) === 'healthy' ? 'success' : 
+                             normalizeStatus(service.status) === 'healthy' ? 'success' :
                              normalizeStatus(service.status) === 'degraded' ? 'warning' : 'danger'
                            }
                          >
                            {normalizeStatus(service.status).charAt(0).toUpperCase() + normalizeStatus(service.status).slice(1)}
                          </Badge>
                        </td>
+                      <td className="py-4 px-6">
+                        <span className="text-sm text-dashboard-muted">
+                          {serviceDetailText(service)}
+                        </span>
+                      </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-2 text-sm text-dashboard-text-secondary">
                           <Clock className="h-4 w-4" />
