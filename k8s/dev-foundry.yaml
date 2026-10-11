@@ -134,7 +134,7 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-api
-          image: ghcr.io/mani-mal/dev-foundry-api:v1.1.6
+          image: ghcr.io/mani-mal/dev-foundry-api:v1.2.0
           imagePullPolicy: Always
           ports:
             - name: http
@@ -850,7 +850,7 @@ spec:
             value: "1"
       containers:
         - name: devfoundry-web
-          image: ghcr.io/mani-mal/dev-foundry-web:v1.1.1
+          image: ghcr.io/mani-mal/dev-foundry-web:v1.2.0
           ports:
             - name: http
               containerPort: 3000
