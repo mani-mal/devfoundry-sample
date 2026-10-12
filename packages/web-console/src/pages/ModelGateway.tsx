@@ -48,7 +48,7 @@ interface PolicyForm {
 const emptyModelForm: OnboardModelForm = {
   slug: '',
   displayName: '',
-  tier: 'balanced',
+  tier: 'mid',
   endpoint: '',
   priceInput: '',
   priceOutput: '',
@@ -174,7 +174,7 @@ export default function ModelGateway() {
     setModelForm({
       slug: model.slug ?? '',
       displayName: model.display_name ?? '',
-      tier: model.tier ?? 'balanced',
+      tier: model.tier ?? 'mid',
       endpoint: model.endpoint ?? '',
       priceInput: model.price_input != null ? String(model.price_input) : '',
       priceOutput: model.price_output != null ? String(model.price_output) : '',
@@ -339,9 +339,9 @@ export default function ModelGateway() {
                       value={modelForm.tier}
                       onChange={(e) => setModelForm((f) => ({ ...f, tier: e.target.value }))}
                     >
-                      <option value="fast">fast</option>
-                      <option value="balanced">balanced</option>
-                      <option value="premium">premium</option>
+                      <option value="cheap">cheap</option>
+                      <option value="mid">mid</option>
+                      <option value="frontier">frontier</option>
                     </Select>
                     <Input
                       label="Endpoint"
@@ -421,7 +421,7 @@ export default function ModelGateway() {
                           <p className="text-xs text-dashboard-muted">{model.slug}</p>
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant={model.tier === 'premium' ? 'primary' : model.tier === 'fast' ? 'info' : 'secondary'}>
+                          <Badge variant={model.tier === 'frontier' ? 'primary' : model.tier === 'cheap' ? 'info' : 'secondary'}>
                             {model.tier || '—'}
                           </Badge>
                         </td>
@@ -653,7 +653,7 @@ export default function ModelGateway() {
                     label="Allowed Tiers (comma-separated)"
                     value={policyForm.allowedTiers}
                     onChange={(e) => setPolicyForm((f) => ({ ...f, allowedTiers: e.target.value }))}
-                    placeholder="fast, balanced"
+                    placeholder="cheap, mid, frontier"
                   />
                   <Input
                     label="Allowed Providers (comma-separated)"

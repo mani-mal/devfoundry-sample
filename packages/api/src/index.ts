@@ -148,7 +148,7 @@ export class ApiServer {
           await admin.onboardModel({
             slug: 'glm-5.3-flash',
             display_name: 'GLM 5.3 Flash (on-prem)',
-            tier: 'balanced',
+            tier: 'mid',
             endpoint: 'http://routeforge:8000/v1',
             price_input: 0,
             price_output: 0,
