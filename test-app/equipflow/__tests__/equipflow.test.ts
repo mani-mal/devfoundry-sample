@@ -122,7 +122,7 @@ describe('POST /orgs', () => {
       adminPassword: 's3cret',
     });
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Already exists');
+    expect(res.body.error).toBe('Slug already exists');
   });
 });
 
@@ -986,5 +986,163 @@ describe('work orders', () => {
       .delete(`/workorders/${wo.id}`)
       .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`);
     expect(res.status).toBe(204);
+  });
+});
+
+describe('live bug regressions', () => {
+  it('BUG1: malformed JSON body returns 400 (not 500)', async () => {
+    const res = await request(app)
+      .post('/orgs')
+      .set('Content-Type', 'application/json')
+      .send('{broken');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid JSON body');
+  });
+
+  it('BUG2: slug with space returns 400 Invalid slug format', async () => {
+    const res = await request(app).post('/orgs').send({
+      name: 'Space Org',
+      slug: 'has space',
+      adminEmail: 'space@hasspace.test',
+      adminName: 'Space Root',
+      adminPassword: 's3cret',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid slug format');
+  });
+
+  it('BUG2: uppercase variant of existing slug returns 409', async () => {
+    const res = await request(app).post('/orgs').send({
+      name: 'Acme Upper',
+      slug: 'ACME',
+      adminEmail: 'upper@acme.test',
+      adminName: 'Acme Upper',
+      adminPassword: 's3cret',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Slug already exists');
+  });
+
+  it('BUG3: email case-variant duplicate returns 409 (org signup)', async () => {
+    const res = await request(app).post('/orgs').send({
+      name: 'Acme Two',
+      slug: 'acme-two',
+      adminEmail: 'Root@acme.test',
+      adminName: 'Acme Root Two',
+      adminPassword: 's3cret',
+    });
+    expect(res.status).toBe(409);
+  });
+
+  it('BUG3: email case-variant duplicate returns 409 (POST /users)', async () => {
+    const res = await request(app)
+      .post('/users')
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({
+        email: 'Admin@orga.test',
+        name: 'Case Dup',
+        role: 'technician',
+        password: 'password1',
+      });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('Already exists');
+  });
+
+  it('BUG3: mixed-case email is stored as given (not lowercased)', async () => {
+    const res = await request(app)
+      .post('/users')
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({
+        email: 'MixedCase@orga.test',
+        name: 'Mixed Case',
+        role: 'technician',
+        password: 'password1',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.user.email).toBe('MixedCase@orga.test');
+  });
+
+  it('BUG4: authenticated manager token on POST /orgs returns 403', async () => {
+    const manager = await seedUser(orgA.id, 'bug4mgr@orga.test', 'Bug4 Mgr', 'manager', 'pw');
+    const res = await request(app)
+      .post('/orgs')
+      .set('Authorization', `Bearer ${tokenFor(manager, orgA.id)}`)
+      .send({
+        name: 'Sneaky Org',
+        slug: 'sneaky-org',
+        adminEmail: 'root@sneakyorg.test',
+        adminName: 'Sneaky Root',
+        adminPassword: 's3cret',
+      });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('Sign out to create a new organization');
+  });
+
+  it('BUG4: unauthenticated POST /orgs still returns 201', async () => {
+    const res = await request(app).post('/orgs').send({
+      name: 'Open Org',
+      slug: 'open-org',
+      adminEmail: 'root@openorg.test',
+      adminName: 'Open Root',
+      adminPassword: 's3cret',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.org).toMatchObject({ slug: 'open-org' });
+  });
+
+  it('BUG5: PUT site with empty city returns 400', async () => {
+    const res = await request(app)
+      .put(`/sites/${siteA.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ city: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid value for city');
+  });
+
+  it('BUG5: PUT site with whitespace-only name returns 400', async () => {
+    const res = await request(app)
+      .put(`/sites/${siteA.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ name: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid value for name');
+  });
+
+  it('BUG5: PUT equipment with empty name returns 400', async () => {
+    const created = await request(app)
+      .post('/equipment')
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ siteId: siteA.id, name: 'Bug5 Unit', serial: 'SN-BUG5-1' });
+    const res = await request(app)
+      .put(`/equipment/${created.body.equipment.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ name: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Invalid value for name');
+  });
+
+  it('BUG5: PUT site with empty region sets region to null (200)', async () => {
+    const site = await seedSite(orgA.id, 'Bug5 Region Site');
+    const withRegion = await request(app)
+      .put(`/sites/${site.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ region: 'East' });
+    expect(withRegion.status).toBe(200);
+    expect(withRegion.body.site.region).toBe('East');
+    const res = await request(app)
+      .put(`/sites/${site.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ region: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.site.region).toBeNull();
+  });
+
+  it('BUG5: PUT site with undefined fields makes no change (still 200)', async () => {
+    const res = await request(app)
+      .put(`/sites/${siteA.id}`)
+      .set('Authorization', `Bearer ${tokenFor(adminA, orgA.id)}`)
+      .send({ city: 'Regressionville' });
+    expect(res.status).toBe(200);
+    expect(res.body.site.city).toBe('Regressionville');
   });
 });

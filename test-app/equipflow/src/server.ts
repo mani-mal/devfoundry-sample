@@ -22,9 +22,18 @@ app.use(workordersRouter);
 
 interface PgError extends Error {
   code?: string;
+  type?: string;
 }
 
 app.use((err: PgError, _req: Request, res: Response, _next: NextFunction) => {
+  if (
+    err &&
+    ((err instanceof SyntaxError && 'body' in err) ||
+      err.type === 'entity.parse.failed')
+  ) {
+    res.status(400).json({ error: 'Invalid JSON body' });
+    return;
+  }
   if (err && err.code === '23505') {
     res.status(409).json({ error: 'Already exists' });
     return;
@@ -34,7 +43,7 @@ app.use((err: PgError, _req: Request, res: Response, _next: NextFunction) => {
     return;
   }
   if (err && err.code === '23503') {
-    res.status(404).json({ error: 'Not found' });
+    res.status(409).json({ error: 'Conflict' });
     return;
   }
   if (err && err.code === '23514') {

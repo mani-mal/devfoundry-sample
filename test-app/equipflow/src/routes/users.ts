@@ -59,6 +59,14 @@ router.post(
         res.status(400).json({ error: 'Invalid role' });
         return;
       }
+      const emailExists = await query<{ id: string }>(
+        'SELECT 1 FROM users WHERE org_id = $1 AND LOWER(email) = LOWER($2)',
+        [req.user.orgId, email]
+      );
+      if (emailExists.rows.length > 0) {
+        res.status(409).json({ error: 'Already exists' });
+        return;
+      }
       const passwordHash = hashPassword(password);
       const result = await query<UserRow>(
         'INSERT INTO users (org_id, email, name, role, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING id, org_id, email, name, role, created_at',

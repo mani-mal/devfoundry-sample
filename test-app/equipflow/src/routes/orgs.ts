@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { query } from '../db';
-import { authMiddleware, hashPassword, signToken } from '../auth';
+import { authMiddleware, verifyToken, hashPassword, signToken } from '../auth';
+
+const SLUG_PATTERN = /^[a-z0-9](-?[a-z0-9])*$/;
 
 const router = Router();
 
@@ -33,6 +35,30 @@ router.post(
       };
       if (!name || !slug || !adminEmail || !adminName || !adminPassword) {
         res.status(400).json({ error: 'Missing required fields' });
+        return;
+      }
+      const orgExists = await query<{ id: string }>(
+        'SELECT 1 FROM orgs WHERE LOWER(slug) = LOWER($1)',
+        [slug]
+      );
+      if (orgExists.rows.length > 0) {
+        res.status(409).json({ error: 'Slug already exists' });
+        return;
+      }
+      if (typeof slug !== 'string' || slug.length < 2 || slug.length > 63 || !SLUG_PATTERN.test(slug)) {
+        res.status(400).json({ error: 'Invalid slug format' });
+        return;
+      }
+      if (verifyToken(req.headers.authorization)) {
+        res.status(403).json({ error: 'Sign out to create a new organization' });
+        return;
+      }
+      const emailExists = await query<{ id: string }>(
+        'SELECT 1 FROM users WHERE LOWER(email) = LOWER($1)',
+        [adminEmail]
+      );
+      if (emailExists.rows.length > 0) {
+        res.status(409).json({ error: 'Already exists' });
         return;
       }
       const passwordHash = hashPassword(adminPassword);

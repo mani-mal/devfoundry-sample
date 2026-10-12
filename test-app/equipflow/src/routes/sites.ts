@@ -21,6 +21,10 @@ function missingUser(res: Response): boolean {
   return true;
 }
 
+function invalidStringField(value: unknown): boolean {
+  return typeof value !== 'string' || value.trim() === '';
+}
+
 router.get(
   '/sites',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -111,16 +115,32 @@ router.put(
       const sets: string[] = [];
       const params: unknown[] = [];
       if (name !== undefined) {
+        if (invalidStringField(name)) {
+          res.status(400).json({ error: 'Invalid value for name' });
+          return;
+        }
         sets.push(`name = $${params.push(name)}`);
       }
       if (address !== undefined) {
+        if (invalidStringField(address)) {
+          res.status(400).json({ error: 'Invalid value for address' });
+          return;
+        }
         sets.push(`address = $${params.push(address)}`);
       }
       if (city !== undefined) {
+        if (invalidStringField(city)) {
+          res.status(400).json({ error: 'Invalid value for city' });
+          return;
+        }
         sets.push(`city = $${params.push(city)}`);
       }
       if (region !== undefined) {
-        sets.push(`region = $${params.push(region)}`);
+        if (region === '' || (typeof region === 'string' && region.trim() === '')) {
+          sets.push(`region = $${params.push(null)}`);
+        } else {
+          sets.push(`region = $${params.push(region)}`);
+        }
       }
       if (sets.length === 0) {
         res.status(400).json({ error: 'No fields to update' });

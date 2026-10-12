@@ -30,6 +30,10 @@ function missingUser(res: Response): boolean {
   return true;
 }
 
+function invalidStringField(value: unknown): boolean {
+  return typeof value !== 'string' || value.trim() === '';
+}
+
 router.get(
   '/equipment',
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -148,6 +152,10 @@ router.put(
       const sets: string[] = [];
       const params: unknown[] = [];
       if (name !== undefined) {
+        if (invalidStringField(name)) {
+          res.status(400).json({ error: 'Invalid value for name' });
+          return;
+        }
         sets.push(`name = $${params.push(name)}`);
       }
       if (model !== undefined) {

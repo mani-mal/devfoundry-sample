@@ -139,7 +139,7 @@ spec:
             value: "1"
       containers:
         - name: equipflow
-          image: ghcr.io/mani-mal/equipflow:v0.1.0
+          image: ghcr.io/mani-mal/equipflow:v0.1.2
           imagePullPolicy: Always
           ports:
             - name: http

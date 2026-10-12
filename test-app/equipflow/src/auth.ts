@@ -61,6 +61,22 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction):
   }
 }
 
+export function verifyToken(header: string | undefined): AuthUser | null {
+  if (!header || !header.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = header.slice('Bearer '.length).trim();
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as AuthUser;
+    if (!payload || !payload.userId || !payload.orgId) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export function requireRole(...roles: AuthUser['role'][]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user || !roles.includes(req.user.role)) {
