@@ -502,10 +502,10 @@ export class ApiServer {
         const updateResult = await this.pool.query(
           `UPDATE tasks
            SET status = $2, phase = $2, outcome = $3,
-               completed_at = CASE WHEN $2 = 'Completed' THEN NOW() ELSE completed_at END
+               completed_at = CASE WHEN $4 THEN NOW() ELSE completed_at END
            WHERE id = $1
            RETURNING *`,
-          [req.params.id, status, JSON.stringify(outcome)]
+          [req.params.id, status, JSON.stringify(outcome), status === 'Completed']
         );
 
         await this.pool.query(
