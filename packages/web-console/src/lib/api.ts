@@ -209,6 +209,80 @@ export const apiClient = {
     return response.data;
   },
 
+  getReviewPacket: async (taskId: string) => {
+    try {
+      const response = await api.get(`/tasks/${taskId}/review-packet`);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
+  },
+
+  getAdmission: async () => {
+    const response = await api.get('/admission');
+    return response.data as {
+      limits: { cpu: number; ram: number; disk: number };
+      queue: { depth: number; awaitingReview: number };
+      resources: { cpu: { usage: number }; memory: { usage: number } };
+    };
+  },
+
+  getAnalyticsOutcomes: async (params?: { days?: number; projectId?: string }) => {
+    const response = await api.get('/analytics/outcomes', { params });
+    return response.data as {
+      total_tasks: number;
+      completed_count: number;
+      failed_count: number;
+      cancelled_count: number;
+      pending_count: number;
+      avg_retries: number;
+      avg_duration_s: number;
+    };
+  },
+
+  getAnalyticsPhases: async () => {
+    const response = await api.get('/analytics/phases');
+    return response.data as { phases: Array<{ phase: string; count: number }> };
+  },
+
+  getAttempts: async (taskId: string) => {
+    const response = await api.get(`/tasks/${taskId}/attempts`);
+    return response.data as { attempts: Array<{ attempt_id: string; success: boolean; reason?: string; created_at: string }> };
+  },
+
+  cancelTask: async (taskId: string) => {
+    const response = await api.post(`/tasks/${taskId}/cancel`);
+    return response.data;
+  },
+
+  approveTask: async (taskId: string, disposition: 'approve' | 'reject', reason?: string) => {
+    const response = await api.post(`/tasks/${taskId}/approve`, { disposition, reason });
+    return response.data;
+  },
+
+  retryTask: async (taskId: string) => {
+    const response = await api.post(`/tasks/${taskId}/retry`);
+    return response.data;
+  },
+
+  pauseTask: async (taskId: string) => {
+    const response = await api.post(`/tasks/${taskId}/pause`);
+    return response.data;
+  },
+
+  resumeTask: async (taskId: string) => {
+    const response = await api.post(`/tasks/${taskId}/resume`);
+    return response.data;
+  },
+
+  getWorkspace: async (workspaceId: string) => {
+    const response = await api.get(`/workspaces/${workspaceId}`);
+    return response.data;
+  },
+
   login: async (email: string, password: string) => {
     const response = await healthApi.post('/auth/login', { email, password });
     if (response.data.token) {

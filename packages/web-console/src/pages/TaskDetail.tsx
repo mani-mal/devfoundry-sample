@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { apiClient } from '../lib/api';
 import { EvidenceItem, TaskCheckpoint, TaskPhase, TaskOutcome, TaskStatus } from '../types';
 
@@ -26,11 +27,22 @@ export default function TaskDetail() {
   const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [actionError, setActionError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+  const [reviewReason, setReviewReason] = useState('');
+  const [showReviewPacket, setShowReviewPacket] = useState(false);
+  const [reviewPacket, setReviewPacket] = useState<any>(null);
+  const [packetLoaded, setPacketLoaded] = useState(false);
+  const [packetLoading, setPacketLoading] = useState(false);
+  const [attempts, setAttempts] = useState<Array<{ attempt_id: string; success: boolean; reason?: string; created_at: string }>>([]);
+  const [workspaceStatus, setWorkspaceStatus] = useState<string | null>(null);
+  const [workspaceChecking, setWorkspaceChecking] = useState(false);
 
   useEffect(() => {
     if (taskId) {
       fetchTask();
       fetchEvidence();
+      fetchAttempts();
     }
   }, [taskId]);
 
@@ -54,35 +66,69 @@ export default function TaskDetail() {
     }
   };
 
-  const handleCancel = async () => {
+  const fetchAttempts = async () => {
+    try {
+      const data = await apiClient.getAttempts(taskId!);
+      setAttempts(data.attempts || []);
+    } catch (error) {
+      console.error('Failed to fetch attempts:', error);
+    }
+  };
+
+  const runAction = async (fn: () => Promise<unknown>) => {
+    setActionError('');
+    setActionLoading(true);
+    try {
+      await fn();
+      await fetchTask();
+      await fetchAttempts();
+    } catch (err) {
+      setActionError((err as any).response?.data?.error || (err as Error).message || 'Action failed');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
     if (!window.confirm('Are you sure you want to cancel this task?')) return;
+    void runAction(() => apiClient.cancelTask(taskId!));
+  };
 
+  const handleApprove = (disposition: 'approve' | 'reject') => {
+    void runAction(() => apiClient.approveTask(taskId!, disposition, reviewReason || undefined));
+    setReviewReason('');
+  };
+
+  const handleRetry = () => void runAction(() => apiClient.retryTask(taskId!));
+  const handlePause = () => void runAction(() => apiClient.pauseTask(taskId!));
+  const handleResume = () => void runAction(() => apiClient.resumeTask(taskId!));
+
+  const handleLoadPacket = async () => {
+    setPacketLoading(true);
     try {
-      await apiClient.updateTask(taskId!, { status: 'Cancelled', phase: 'Cancelled' });
-      navigate('/tasks');
-    } catch (error) {
-      console.error('Failed to cancel task:', error);
+      const data = await apiClient.getReviewPacket(taskId!);
+      setReviewPacket(data?.packet ?? null);
+      setPacketLoaded(true);
+    } catch (err) {
+      console.error('Failed to load review packet:', err);
+    } finally {
+      setPacketLoading(false);
     }
   };
 
-  const handleResume = async () => {
+  const handleCheckWorkspace = async () => {
+    if (!task.workspaceId) return;
+    setWorkspaceChecking(true);
     try {
-      await apiClient.updateTask(taskId!, { status: 'Pending', phase: 'Qualified' });
-      fetchTask();
-    } catch (error) {
-      console.error('Failed to resume task:', error);
-    }
-  };
-
-  const handleRetry = async () => {
-    try {
-      await apiClient.updateTask(taskId!, { 
-        status: 'Pending', 
-        phase: 'Submitted'
-      });
-      fetchTask();
-    } catch (error) {
-      console.error('Failed to retry task:', error);
+      const data = await apiClient.getWorkspace(task.workspaceId);
+      setWorkspaceStatus(data.workspace?.status || 'unknown');
+    } catch (err) {
+      const msg = (err as any).response?.status === 404
+        ? 'Workspace not found'
+        : ((err as any).response?.data?.error || 'OpenCode unavailable');
+      setWorkspaceStatus(msg);
+    } finally {
+      setWorkspaceChecking(false);
     }
   };
 
@@ -135,6 +181,12 @@ export default function TaskDetail() {
           <Button variant="secondary" onClick={() => navigate('/tasks')}>Back to Tasks</Button>
         </div>
       </header>
+
+      {actionError && (
+        <div className="mx-6 mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+          <p className="text-sm text-red-400">{actionError}</p>
+        </div>
+      )}
 
       <main className="p-6 space-y-6">
         {/* Task Header */}
@@ -222,21 +274,33 @@ export default function TaskDetail() {
               )}
             </div>
 
-            {task.phase === 'Running' || task.phase === 'Validating' || task.phase === 'Paused' ? (
-              <div className="mt-6 pt-6 border-t border-dashboard-border">
-                <Button variant="danger" className="w-full" onClick={handleCancel}>Cancel Task</Button>
-              </div>
-            ) : task.phase === 'Cancelled' || task.phase === 'Failed' ? (
-              <div className="mt-6 pt-6 border-t border-dashboard-border">
-                <Button variant="primary" className="w-full" onClick={handleRetry}>Retry Task</Button>
-              </div>
-            ) : null}
-
-            {task.phase === 'Paused' && (
-              <div className="mt-4">
-                <Button variant="secondary" className="w-full" onClick={handleResume}>Resume</Button>
-              </div>
-            )}
+            <div className="mt-6 pt-6 border-t border-dashboard-border space-y-2">
+              {!['Completed', 'Failed', 'Cancelled'].includes(task.status) && (
+                <Button variant="danger" className="w-full" disabled={actionLoading} onClick={handleCancel}>Cancel Task</Button>
+              )}
+              {task.phase === 'AwaitingReview' && (
+                <>
+                  <Input
+                    placeholder="Review reason (optional)"
+                    value={reviewReason}
+                    onChange={(e) => setReviewReason(e.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button variant="primary" className="flex-1" disabled={actionLoading} onClick={() => handleApprove('approve')}>Approve</Button>
+                    <Button variant="danger" className="flex-1" disabled={actionLoading} onClick={() => handleApprove('reject')}>Reject</Button>
+                  </div>
+                </>
+              )}
+              {task.status === 'Failed' && (
+                <Button variant="primary" className="w-full" disabled={actionLoading} onClick={handleRetry}>Retry Task</Button>
+              )}
+              {task.phase === 'Running' && (
+                <Button variant="secondary" className="w-full" disabled={actionLoading} onClick={handlePause}>Pause</Button>
+              )}
+              {task.status === 'Paused' && (
+                <Button variant="secondary" className="w-full" disabled={actionLoading} onClick={handleResume}>Resume</Button>
+              )}
+            </div>
           </Card>
         </div>
 
@@ -320,6 +384,110 @@ export default function TaskDetail() {
             </div>
           </Card>
         )}
+
+        {/* Review Packet */}
+        <Card title="Review Packet">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-dashboard-text-secondary">
+                Consolidated review evidence generated when the task enters review.
+              </p>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={packetLoading}
+                onClick={() => {
+                  setShowReviewPacket(!showReviewPacket);
+                  if (!packetLoaded && !showReviewPacket) void handleLoadPacket();
+                }}
+              >
+                {showReviewPacket ? 'Hide' : 'Load Review Packet'}
+              </Button>
+            </div>
+            {showReviewPacket && (
+              packetLoaded ? (
+                reviewPacket ? (
+                  <pre className="text-xs text-dashboard-text bg-dashboard-bg rounded-md p-4 border border-dashboard-border overflow-auto max-h-96">
+                    {JSON.stringify(reviewPacket, null, 2)}
+                  </pre>
+                ) : (
+                  <p className="text-sm text-dashboard-muted">No review packet generated yet</p>
+                )
+              ) : (
+                <p className="text-sm text-dashboard-muted">Loading…</p>
+              )
+            )}
+          </div>
+        </Card>
+
+        {/* Attempt History */}
+        <Card title="Attempt History">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-dashboard-card/50 border-b border-dashboard-border">
+                <tr>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Attempt</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Result</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Reason</th>
+                  <th className="text-left py-3 px-4 text-xs font-semibold text-dashboard-muted uppercase tracking-wider">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dashboard-border">
+                {attempts.length > 0 ? (
+                  attempts.map((attempt) => (
+                    <tr key={attempt.attempt_id} className="hover:bg-dashboard-card/30 transition-colors">
+                      <td className="py-3 px-4">
+                        <span className="text-sm font-medium text-dashboard-text">#{attempt.attempt_id.slice(0, 8)}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant={attempt.success ? 'success' : 'danger'}>
+                          {attempt.success ? '✓ Success' : '✗ Failed'}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-dashboard-text-secondary">{attempt.reason || '—'}</span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-dashboard-muted">
+                          {new Date(attempt.created_at).toLocaleString()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-sm text-dashboard-muted">
+                      No attempts recorded yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        {/* Workspace */}
+        <Card title="Workspace">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-dashboard-text-secondary">Workspace ID</p>
+              <p className="text-dashboard-text font-medium mt-1">{task.workspaceId || '—'}</p>
+              {workspaceStatus && (
+                <p className="text-sm text-primary-300 mt-2">
+                  Status: {workspaceStatus}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!task.workspaceId || workspaceChecking}
+              onClick={handleCheckWorkspace}
+            >
+              Check Workspace
+            </Button>
+          </div>
+        </Card>
       </main>
     </div>
   );

@@ -10,6 +10,7 @@ const TaskDetail = lazy(() => import('./pages/TaskDetail'))
 const ProjectConfig = lazy(() => import('./pages/ProjectConfig'))
 const ApplianceHealth = lazy(() => import('./pages/ApplianceHealth'))
 const ModelGateway = lazy(() => import('./pages/ModelGateway'))
+const Quality = lazy(() => import('./pages/Quality'))
 
 function PageLoader() {
   return (
@@ -61,6 +62,7 @@ function App() {
             <Route path="/project-config" element={<ProjectConfig />} />
             <Route path="/appliance-health" element={<ApplianceHealth />} />
             <Route path="/model-gateway" element={<ModelGateway />} />
+            <Route path="/quality" element={<Quality />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>

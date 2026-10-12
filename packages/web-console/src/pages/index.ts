@@ -5,3 +5,4 @@ export { default as TaskDetail } from './TaskDetail';
 export { default as ProjectConfig } from './ProjectConfig';
 export { default as ApplianceHealth } from './ApplianceHealth';
 export { default as ModelGateway } from './ModelGateway';
+export { default as Quality } from './Quality';
