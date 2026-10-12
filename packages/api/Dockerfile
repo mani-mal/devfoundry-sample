@@ -19,6 +19,8 @@ COPY packages/core/package.json packages/core/
 COPY packages/core/tsconfig.json packages/core/
 COPY packages/api/package.json packages/api/
 COPY packages/api/tsconfig.json packages/api/
+COPY packages/integrations/routeforge/package.json packages/integrations/routeforge/
+COPY packages/integrations/routeforge/tsconfig.json packages/integrations/routeforge/
 
 # Install workspace dependencies (dev included: TypeScript is needed to build)
 RUN npm install --workspaces --include-workspace-root
@@ -26,9 +28,11 @@ RUN npm install --workspaces --include-workspace-root
 # Copy source
 COPY packages/core/src packages/core/src
 COPY packages/api/src packages/api/src
+COPY packages/integrations/routeforge/src packages/integrations/routeforge/src
 
 # Build bottom-up
-RUN npx tsc --build packages/core && \
+RUN npx tsc --build packages/integrations/routeforge && \
+    npx tsc --build packages/core && \
     npx tsc --build packages/api
 
 FROM node:20-alpine
@@ -47,6 +51,8 @@ RUN apk add --no-cache openssl-dev libpq-dev && \
 COPY --from=builder /app/packages/api/dist ./dist
 COPY --from=builder /app/packages/core/package.json ./packages/core/package.json
 COPY --from=builder /app/packages/core/dist ./packages/core/dist
+COPY --from=builder /app/packages/integrations/routeforge/package.json ./packages/integrations/routeforge/package.json
+COPY --from=builder /app/packages/integrations/routeforge/dist ./packages/integrations/routeforge/dist
 COPY --from=builder /app/node_modules ./node_modules
 
 USER nodejs
