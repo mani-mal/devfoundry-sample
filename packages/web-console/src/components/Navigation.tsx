@@ -11,6 +11,7 @@ export default function Navigation() {
     { name: 'Tasks', path: '/tasks' },
     { name: 'Project Config', path: '/project-config' },
     { name: 'Appliance Health', path: '/appliance-health' },
+    { name: 'Models', path: '/model-gateway' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

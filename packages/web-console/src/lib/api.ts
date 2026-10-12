@@ -164,6 +164,51 @@ export const apiClient = {
     return response.data;
   },
 
+  getGatewayModels: async () => {
+    const response = await api.get('/gateway/models');
+    return response.data as { models: any[] };
+  },
+
+  onboardGatewayModel: async (m: Record<string, unknown>) => {
+    const response = await api.post('/gateway/models', m);
+    return response.data;
+  },
+
+  editGatewayModel: async (slug: string, m: Record<string, unknown>) => {
+    const response = await api.put(`/gateway/models/${slug}`, m);
+    return response.data;
+  },
+
+  deleteGatewayModel: async (slug: string) => {
+    const response = await api.delete(`/gateway/models/${slug}`);
+    return response.data;
+  },
+
+  getGatewayApplications: async () => {
+    const response = await api.get('/gateway/applications');
+    return response.data as { applications: any[] };
+  },
+
+  createGatewayApplication: async (a: Record<string, unknown>) => {
+    const response = await api.post('/gateway/applications', a);
+    return response.data;
+  },
+
+  createGatewayApplicationToken: async (id: string, name?: string) => {
+    const response = await api.post(`/gateway/applications/${id}/tokens`, { name });
+    return response.data;
+  },
+
+  revokeGatewayToken: async (tokenId: string) => {
+    const response = await api.post(`/gateway/tokens/${tokenId}/revoke`);
+    return response.data;
+  },
+
+  setGatewayPolicy: async (id: string, p: Record<string, unknown>) => {
+    const response = await api.put(`/gateway/applications/${id}/policy`, p);
+    return response.data;
+  },
+
   login: async (email: string, password: string) => {
     const response = await healthApi.post('/auth/login', { email, password });
     if (response.data.token) {

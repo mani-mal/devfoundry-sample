@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 import { ContextStore, MemoryStore, SkillStore, ToolRegistry } from '@dev-foundry/core';
+import { RouteForgeAdminClient } from '@dev-foundry/integrations-routeforge';
 
 export class ApiServer {
   private app: express.Express;
@@ -13,6 +14,18 @@ export class ApiServer {
   private memoryStore: MemoryStore;
   private skillStore: SkillStore;
   private toolRegistry: ToolRegistry;
+  private adminClient: RouteForgeAdminClient | null = null;
+
+  private getRouteForgeAdmin(): RouteForgeAdminClient {
+    if (!this.adminClient) {
+      this.adminClient = new RouteForgeAdminClient({
+        baseUrl: process.env.ROUTEFORGE_URL || 'http://routeforge:8000',
+        email: process.env.ROUTEFORGE_ADMIN_EMAIL || 'admin@routeforge.local',
+        password: process.env.ROUTEFORGE_ADMIN_PASSWORD || 'changeme',
+      });
+    }
+    return this.adminClient;
+  }
 
   constructor(port: number = 3000, databaseUrl?: string) {
     this.app = express();
@@ -125,6 +138,26 @@ export class ApiServer {
         await this.contextStore.createEdge({ sourceId: docNode.id, destinationId: repoNode.id, relationType: 'describes', scope: tenantId, revision: 'HEAD', aclId, provenance: { seeded: true } });
         await this.contextStore.addChunk({ contextNodeId: repoNode.id, location: 'DEVFOUNDRY_ARCHITECTURE.md', revision: 'HEAD', text: 'DevFoundry is an on-premises software factory: request -> isolated patch -> clean validation -> review packet -> optional draft PR.' });
         await this.contextStore.addChunk({ contextNodeId: svcNode.id, location: 'k8s/dev-foundry.yaml', revision: 'HEAD', text: 'RouteForge model gateway runs on port 8000 behind fail-closed app-token auth.' });
+      }
+
+      try {
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        const models = await admin.listModels();
+        if (Array.isArray(models) && models.length === 0) {
+          await admin.onboardModel({
+            slug: 'glm-5.3-flash',
+            display_name: 'GLM 5.3 Flash (on-prem)',
+            tier: 'balanced',
+            endpoint: 'http://routeforge:8000/v1',
+            price_input: 0,
+            price_output: 0,
+            enabled: true,
+            notes: 'Seeded by DevFoundry; on-prem resident model',
+          });
+        }
+      } catch {
+        // gateway may be unavailable at startup; non-fatal
       }
     } catch (err) {
       console.error('[api] Seed failed (non-fatal):', err instanceof Error ? err.message : err);
@@ -664,6 +697,182 @@ export class ApiServer {
         const skill = await this.skillStore.approveByDigest(digest);
         if (!skill) return res.status(404).json({ error: 'No skill with that digest' });
         res.json(skill);
+      } catch (err) { next(err); }
+    });
+
+    // Model gateway admin (RouteForge) routes
+    this.app.get('/api/gateway/models', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json({ models: await admin.listModels() });
+      } catch (err) { next(err); }
+    });
+
+    this.app.post('/api/gateway/models', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const body = req.body || {};
+        if (!body.slug || !body.displayName || !body.tier || !body.endpoint || body.priceInput === undefined || body.priceOutput === undefined) {
+          return res.status(400).json({ error: 'slug, displayName, tier, endpoint, priceInput and priceOutput are required' });
+        }
+        const priceInput = Number(body.priceInput);
+        const priceOutput = Number(body.priceOutput);
+        if (Number.isNaN(priceInput) || Number.isNaN(priceOutput)) {
+          return res.status(400).json({ error: 'priceInput and priceOutput must be numbers' });
+        }
+        const model: Record<string, unknown> = {
+          slug: body.slug,
+          display_name: body.displayName,
+          tier: body.tier,
+          endpoint: body.endpoint,
+          price_input: priceInput,
+          price_output: priceOutput,
+        };
+        if (body.apiKeyEnv !== undefined) model.api_key_env = body.apiKeyEnv;
+        if (body.priceCachedInput !== undefined) model.price_cached_input = body.priceCachedInput;
+        if (body.quality !== undefined) model.quality = body.quality;
+        if (body.contextWindow !== undefined) model.context_window = body.contextWindow;
+        if (body.allowedAppIds !== undefined) model.allowed_app_ids = body.allowedAppIds;
+        if (body.notes !== undefined) model.notes = body.notes;
+        if (body.enabled !== undefined) model.enabled = body.enabled;
+        if (body.region !== undefined) model.region = body.region;
+        if (body.promptRetention !== undefined) model.prompt_retention = body.promptRetention;
+        if (body.acceptsRawSensitive !== undefined) model.accepts_raw_sensitive = body.acceptsRawSensitive;
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.status(201).json(await admin.onboardModel(model as never));
+      } catch (err) { next(err); }
+    });
+
+    this.app.put('/api/gateway/models/:slug', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const slug = String(req.params.slug || '');
+        if (!slug) return res.status(400).json({ error: 'slug is required' });
+        const body = req.body || {};
+        if (!body.slug || !body.displayName || !body.tier || !body.endpoint || body.priceInput === undefined || body.priceOutput === undefined) {
+          return res.status(400).json({ error: 'slug, displayName, tier, endpoint, priceInput and priceOutput are required' });
+        }
+        const priceInput = Number(body.priceInput);
+        const priceOutput = Number(body.priceOutput);
+        if (Number.isNaN(priceInput) || Number.isNaN(priceOutput)) {
+          return res.status(400).json({ error: 'priceInput and priceOutput must be numbers' });
+        }
+        const model: Record<string, unknown> = {
+          slug: body.slug,
+          display_name: body.displayName,
+          tier: body.tier,
+          endpoint: body.endpoint,
+          price_input: priceInput,
+          price_output: priceOutput,
+        };
+        if (body.apiKeyEnv !== undefined) model.api_key_env = body.apiKeyEnv;
+        if (body.priceCachedInput !== undefined) model.price_cached_input = body.priceCachedInput;
+        if (body.quality !== undefined) model.quality = body.quality;
+        if (body.contextWindow !== undefined) model.context_window = body.contextWindow;
+        if (body.allowedAppIds !== undefined) model.allowed_app_ids = body.allowedAppIds;
+        if (body.notes !== undefined) model.notes = body.notes;
+        if (body.enabled !== undefined) model.enabled = body.enabled;
+        if (body.region !== undefined) model.region = body.region;
+        if (body.promptRetention !== undefined) model.prompt_retention = body.promptRetention;
+        if (body.acceptsRawSensitive !== undefined) model.accepts_raw_sensitive = body.acceptsRawSensitive;
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json(await admin.editModel(slug, model as never));
+      } catch (err) { next(err); }
+    });
+
+    this.app.delete('/api/gateway/models/:slug', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const slug = String(req.params.slug || '');
+        if (!slug) return res.status(400).json({ error: 'slug is required' });
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        await admin.deleteModel(slug);
+        res.json({ deleted: true, slug });
+      } catch (err) { next(err); }
+    });
+
+    this.app.get('/api/gateway/applications', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json({ applications: await admin.listApplications() });
+      } catch (err) { next(err); }
+    });
+
+    this.app.post('/api/gateway/applications', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const body = req.body || {};
+        if (!body.id || !body.name) {
+          return res.status(400).json({ error: 'id and name are required' });
+        }
+        const app: Record<string, unknown> = { id: body.id, name: body.name };
+        if (body.ownerEmail !== undefined) app.owner_email = body.ownerEmail;
+        if (body.defaultResidency !== undefined) app.default_residency = body.defaultResidency;
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.status(201).json(await admin.createApplication(app as never));
+      } catch (err) { next(err); }
+    });
+
+    this.app.get('/api/gateway/applications/:id', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json(await admin.getApplication(String(req.params.id)));
+      } catch (err) { next(err); }
+    });
+
+    this.app.patch('/api/gateway/applications/:id', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const body = req.body || {};
+        const update: Record<string, unknown> = {};
+        if (body.name !== undefined) update.name = body.name;
+        if (body.ownerEmail !== undefined) update.owner_email = body.ownerEmail;
+        if (body.status !== undefined) update.status = body.status;
+        if (body.defaultResidency !== undefined) update.default_residency = body.defaultResidency;
+        if (Object.keys(update).length === 0) {
+          return res.status(400).json({ error: 'No updatable fields provided' });
+        }
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json(await admin.updateApplication(String(req.params.id), update as never));
+      } catch (err) { next(err); }
+    });
+
+    this.app.post('/api/gateway/applications/:id/tokens', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { name } = req.body || {};
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.status(201).json(await admin.createApplicationToken(String(req.params.id), name ? String(name) : undefined));
+      } catch (err) { next(err); }
+    });
+
+    this.app.post('/api/gateway/tokens/:tokenId/revoke', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json(await admin.revokeToken(String(req.params.tokenId)));
+      } catch (err) { next(err); }
+    });
+
+    this.app.put('/api/gateway/applications/:id/policy', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const body = req.body || {};
+        const policy: Record<string, unknown> = {};
+        if (body.allowedTiers !== undefined) policy.allowed_tiers = body.allowedTiers;
+        if (body.allowedProviders !== undefined) policy.allowed_providers = body.allowedProviders;
+        if (body.allowedModels !== undefined) policy.allowed_models = body.allowedModels;
+        if (body.residency !== undefined) policy.residency = body.residency;
+        if (body.maxSpendUsdPerDay !== undefined) policy.max_spend_usd_per_day = body.maxSpendUsdPerDay;
+        if (body.maxCostUsdPerRequest !== undefined) policy.max_cost_usd_per_request = body.maxCostUsdPerRequest;
+        if (Object.keys(policy).length === 0) {
+          return res.status(400).json({ error: 'No policy fields provided' });
+        }
+        const admin = this.getRouteForgeAdmin();
+        await admin.login();
+        res.json(await admin.setPolicy(String(req.params.id), policy as never));
       } catch (err) { next(err); }
     });
 

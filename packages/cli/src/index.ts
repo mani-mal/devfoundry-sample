@@ -7,12 +7,15 @@ import { createToolsCommand } from './commands/tools.js';
 import { createTaskCommand } from './commands/task.js';
 import { createSkillCommand } from './commands/skill.js';
 import { createConfigCommand } from './commands/config.js';
+import { createModelsCommand } from './commands/models.js';
+import { createGatewayCommand } from './commands/gateway.js';
 
 const program = new Command();
 
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://devfoundry:devfoundry@localhost:5432/devfoundry';
 const ROUTEFORGE_URL = process.env.ROUTEFORGE_URL || 'http://localhost:8000';
 const CONTEXTFORGE_URL = process.env.CONTEXTFORGE_URL || 'http://localhost:8001';
+const DEVFOUNDRY_URL = process.env.DEVFOUNDRY_URL || 'http://localhost:3000';
 
 const core = new DevFoundryCore({
   databaseUrl: DATABASE_URL,
@@ -32,6 +35,8 @@ program.addCommand(createToolsCommand(contextForge));
 program.addCommand(createTaskCommand(core));
 program.addCommand(createSkillCommand(core));
 program.addCommand(createConfigCommand());
+program.addCommand(createModelsCommand(DEVFOUNDRY_URL));
+program.addCommand(createGatewayCommand(DEVFOUNDRY_URL));
 
 program
   .command('health')
