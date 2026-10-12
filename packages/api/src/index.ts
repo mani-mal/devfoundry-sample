@@ -438,6 +438,304 @@ export class ApiServer {
       }
     });
 
+    // Task actions and workspace routes
+    this.app.post('/api/tasks/:id/cancel', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await this.pool.query('SELECT status, phase, workspace_id FROM tasks WHERE id = $1', [req.params.id]);
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        const task = result.rows[0];
+        if (['Completed', 'Failed', 'Cancelled'].includes(String(task.status))) {
+          return res.status(400).json({ error: 'Task already terminal' });
+        }
+
+        const updateResult = await this.pool.query(
+          `UPDATE tasks
+           SET status = 'Cancelled', phase = 'Cancelled', updated_at = NOW(),
+               completed_at = COALESCE(completed_at, NOW())
+           WHERE id = $1
+           RETURNING *`,
+          [req.params.id]
+        );
+
+        const workspaceId = task.workspace_id;
+        if (workspaceId) {
+          try {
+            const opencodeUrl = process.env.OPENCODE_URL || 'http://opencode:4096';
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2000);
+            try {
+              await fetch(`${opencodeUrl}/session/${String(workspaceId)}/abort`, { method: 'POST', signal: controller.signal });
+            } finally {
+              clearTimeout(timer);
+            }
+          } catch {
+            // best-effort abort; non-fatal
+          }
+        }
+
+        res.json(this.mapTask(updateResult.rows[0]));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.post('/api/tasks/:id/approve', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const exists = await this.pool.query('SELECT phase FROM tasks WHERE id = $1', [req.params.id]);
+        if (exists.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        if (String(exists.rows[0].phase) !== 'AwaitingReview') {
+          return res.status(400).json({ error: 'Task is not awaiting review' });
+        }
+
+        const { disposition, reason } = (req.body || {}) as { disposition?: 'approve' | 'reject'; reason?: string };
+        const effectiveDisposition = disposition || 'approve';
+
+        const outcome = effectiveDisposition === 'reject'
+          ? { success: false, reason: reason || 'Rejected at review' }
+          : { success: true, reason: reason || 'Approved at review' };
+
+        const status = effectiveDisposition === 'reject' ? 'Failed' : 'Completed';
+        const updateResult = await this.pool.query(
+          `UPDATE tasks
+           SET status = $2, phase = $2, outcome = $3,
+               completed_at = CASE WHEN $2 = 'Completed' THEN NOW() ELSE completed_at END
+           WHERE id = $1
+           RETURNING *`,
+          [req.params.id, status, JSON.stringify(outcome)]
+        );
+
+        await this.pool.query(
+          `INSERT INTO task_outcomes (id, task_id, attempt_id, success, reason, evidence, trace_references)
+           VALUES ($1, $2, $3, $4, $5, '[]'::jsonb, '[]'::jsonb)`,
+          [uuidv4(), req.params.id, uuidv4(), outcome.success, outcome.reason]
+        );
+
+        res.json(this.mapTask(updateResult.rows[0]));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.post('/api/tasks/:id/retry', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const exists = await this.pool.query('SELECT id, status FROM tasks WHERE id = $1', [req.params.id]);
+        if (exists.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        if (String(exists.rows[0].status) !== 'Failed') {
+          return res.status(400).json({ error: 'Only failed tasks can be retried' });
+        }
+        const updateResult = await this.pool.query(
+          `UPDATE tasks
+           SET status = 'Pending', phase = 'Submitted', retry_count = retry_count + 1,
+               outcome = NULL, completed_at = NULL, updated_at = NOW()
+           WHERE id = $1
+           RETURNING *`,
+          [req.params.id]
+        );
+        res.json(this.mapTask(updateResult.rows[0]));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.post('/api/tasks/:id/pause', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const exists = await this.pool.query('SELECT id, status, phase FROM tasks WHERE id = $1', [req.params.id]);
+        if (exists.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        if (String(exists.rows[0].status) !== 'Pending' || String(exists.rows[0].phase) !== 'Running') {
+          return res.status(400).json({ error: 'Only running tasks can be paused' });
+        }
+        const updateResult = await this.pool.query(
+          `UPDATE tasks SET status = 'Paused', phase = 'Paused', updated_at = NOW() WHERE id = $1 RETURNING *`,
+          [req.params.id]
+        );
+        res.json(this.mapTask(updateResult.rows[0]));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.post('/api/tasks/:id/resume', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const exists = await this.pool.query('SELECT id, status FROM tasks WHERE id = $1', [req.params.id]);
+        if (exists.rows.length === 0) {
+          return res.status(404).json({ error: 'Task not found' });
+        }
+        if (String(exists.rows[0].status) !== 'Paused') {
+          return res.status(400).json({ error: 'Task is not paused' });
+        }
+        const updateResult = await this.pool.query(
+          `UPDATE tasks SET status = 'Pending', phase = 'Qualified', updated_at = NOW() WHERE id = $1 RETURNING *`,
+          [req.params.id]
+        );
+        res.json(this.mapTask(updateResult.rows[0]));
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/workspaces/:id', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const opencodeUrl = process.env.OPENCODE_URL || 'http://opencode:4096';
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 3000);
+        let opencodeRes: Awaited<ReturnType<typeof fetch>>;
+        try {
+          opencodeRes = await fetch(`${opencodeUrl}/session/${String(req.params.id)}`, { signal: controller.signal });
+        } finally {
+          clearTimeout(timer);
+        }
+        if (!opencodeRes.ok) {
+          return res.status(404).json({ error: 'Workspace not found' });
+        }
+        const session = await opencodeRes.json();
+        res.json({ workspace: session });
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          return res.status(502).json({ error: 'OpenCode unavailable' });
+        }
+        next(err);
+      }
+    });
+
+    // Quality and admission routes
+    this.app.get('/api/tasks/:id/review-packet', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await this.pool.query(
+          `SELECT payload, created_at FROM event_log
+           WHERE event_type = 'review_packet_generated' AND entity_type = 'task' AND entity_id = $1
+           ORDER BY created_at DESC LIMIT 1`,
+          [req.params.id]
+        );
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Review packet not found' });
+        }
+        res.json({ packet: result.rows[0].payload, generatedAt: result.rows[0].created_at });
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/analytics/outcomes', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { tenantId, projectId } = req.query;
+        const days = Math.min(parseInt(String(req.query.days || '30'), 10) || 30, 365);
+
+        const params: unknown[] = [String(days)];
+        const conditions: string[] = [];
+        const addCondition = (col: string, value: unknown) => {
+          params.push(value);
+          conditions.push(`${col} = $${params.length}`);
+        };
+
+        if (tenantId) addCondition('tenant_id::text', tenantId);
+        if (projectId) addCondition('project_id::text', projectId);
+
+        const filters = conditions.length ? ` AND ${conditions.join(' AND ')}` : '';
+
+        const result = await this.pool.query(
+          `SELECT
+             COUNT(*)::int AS total_tasks,
+             SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END)::int AS completed_count,
+             SUM(CASE WHEN status = 'Failed' THEN 1 ELSE 0 END)::int AS failed_count,
+             SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END)::int AS cancelled_count,
+             SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END)::int AS pending_count,
+             AVG(retry_count) AS avg_retries,
+             AVG(EXTRACT(EPOCH FROM (completed_at - started_at))) AS avg_duration_s
+           FROM tasks WHERE created_at >= NOW() - ($1 || ' days')::interval${filters}`,
+          params
+        );
+        res.json(result.rows[0] || {});
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/analytics/phases', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const { tenantId, projectId } = req.query;
+
+        const conditions: string[] = [];
+        const params: unknown[] = [];
+        const addCondition = (col: string, value: unknown) => {
+          params.push(value);
+          conditions.push(`${col} = $${params.length}`);
+        };
+
+        if (tenantId) addCondition('tenant_id::text', tenantId);
+        if (projectId) addCondition('project_id::text', projectId);
+
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+        const result = await this.pool.query(
+          `SELECT phase, COUNT(*)::int AS count FROM tasks ${where} GROUP BY phase ORDER BY count DESC`,
+          params
+        );
+        res.json({ phases: result.rows });
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/admission', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const queue = await this.pool.query(
+          `SELECT COUNT(*)::int AS c FROM tasks WHERE phase IN ('Submitted','Qualified','Running','Validating')`
+        );
+        const awaiting = await this.pool.query(
+          `SELECT COUNT(*)::int AS c FROM tasks WHERE phase = 'AwaitingReview'`
+        );
+        res.json({
+          limits: {
+            cpu: Number(process.env.ADMISSION_CPU_LIMIT || '8'),
+            ram: Number(process.env.ADMISSION_RAM_LIMIT || '16'),
+            disk: Number(process.env.ADMISSION_DISK_LIMIT || '100'),
+          },
+          queue: { depth: queue.rows[0]?.c ?? 0, awaitingReview: awaiting.rows[0]?.c ?? 0 },
+          resources: {
+            cpu: { usage: Math.min(100, (os.loadavg()[0] / os.cpus().length) * 100) },
+            memory: { usage: Math.round(((os.totalmem() - os.freemem()) / os.totalmem()) * 100) },
+          },
+        });
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/outcomes/:taskId', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await this.pool.query(
+          'SELECT * FROM task_outcomes WHERE task_id = $1 ORDER BY created_at DESC LIMIT 1',
+          [req.params.taskId]
+        );
+        if (result.rows.length === 0) {
+          return res.status(404).json({ error: 'Outcome not found' });
+        }
+        res.json({ outcome: result.rows[0] });
+      } catch (err) {
+        next(err);
+      }
+    });
+
+    this.app.get('/api/tasks/:id/attempts', async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await this.pool.query(
+          'SELECT attempt_id, success, reason, created_at FROM task_outcomes WHERE task_id = $1 ORDER BY created_at ASC',
+          [req.params.id]
+        );
+        res.json({ attempts: result.rows });
+      } catch (err) {
+        next(err);
+      }
+    });
+
     this.app.get('/api/tasks/:id/outcomes', async (req: Request, res: Response, next: NextFunction) => {
       try {
         const result = await this.pool.query(
