@@ -1,0 +1,184 @@
+---
+# EquipFlow Kubernetes Manifests
+# Namespace: runai-dev-foundry
+# Deployment date: 12 October 2026
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: equipflow-secrets
+  namespace: runai-dev-foundry
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql://equipflow:equipflow@equipflow-postgres:5432/equipflow
+  JWT_SECRET: equipflow-staging-secret
+---
+# EquipFlow PostgreSQL StatefulSet with PVC (port 5432)
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: equipflow-postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: equipflow-postgres
+spec:
+  serviceName: equipflow-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: equipflow-postgres
+  template:
+    metadata:
+      labels:
+        app: equipflow-postgres
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: equipflow
+            - name: POSTGRES_PASSWORD
+              value: equipflow
+            - name: POSTGRES_DB
+              value: equipflow
+          resources:
+            requests:
+              cpu: "500m"
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: equipflow-pgdata
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: equipflow-pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: pure-nfs1
+        resources:
+          requests:
+            storage: 5Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: equipflow-postgres
+  namespace: runai-dev-foundry
+  labels:
+    app: equipflow-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: equipflow-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+# EquipFlow API Deployment (CPU-only, port 4600)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: equipflow
+  namespace: runai-dev-foundry
+  labels:
+    app: equipflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: equipflow
+  template:
+    metadata:
+      labels:
+        app: equipflow
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.present
+                    operator: DoesNotExist
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "1"
+      containers:
+        - name: equipflow
+          image: ghcr.io/mani-mal/equipflow:v0.1.0
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 4600
+          envFrom:
+            - secretRef:
+                name: equipflow-secrets
+          resources:
+            requests:
+              cpu: "100m"
+              memory: 128Mi
+            limits:
+              cpu: "500m"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4600
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4600
+            initialDelaySeconds: 30
+            periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: equipflow
+  namespace: runai-dev-foundry
+  labels:
+    app: equipflow
+spec:
+  type: ClusterIP
+  selector:
+    app: equipflow
+  ports:
+    - name: http
+      port: 4600
+      targetPort: 4600
