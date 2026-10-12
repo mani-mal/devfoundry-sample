@@ -504,6 +504,18 @@ spec:
               value: "/app"
             - name: DATABASE_URL
               value: "sqlite+aiosqlite:////tmp/routeforge.db"
+            - name: SP_ONPREM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: SP_ONPREM_API_KEY
+            - name: ADMIN_EMAIL
+              value: admin@routeforge.local
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devfoundry-secrets
+                  key: ROUTEFORGE_ADMIN_PASSWORD
           resources:
             requests:
               cpu: "200m"
