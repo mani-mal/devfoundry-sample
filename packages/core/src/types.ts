@@ -60,9 +60,12 @@ export interface Task {
 
 export interface TaskCheckpoint {
   snapshotId: string;
+  workspaceId?: string;
   workspaceState: WorkspaceState;
   sessionState: SessionState;
   timestamp: Date;
+  repairAttempt?: number;
+  lastFailure?: string;
 }
 
 export interface TaskOutcome {

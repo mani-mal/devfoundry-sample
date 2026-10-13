@@ -560,7 +560,12 @@ export class DevFoundryWorker {
 
   private async generateReviewPacket(task: Task): Promise<any> {
     // Generate the review packet from the checkpoint + validation state
-    const patch = await this.collectPatch(task.workspaceId ?? '');
+    // task.workspaceId is the DevFoundry workspace id, not an OpenCode
+    // session — the checkpoint's workspaceId (an OpenCode session id) is
+    // what collectPatch needs.
+    const patch = await this.collectPatch(
+      task.checkpoint?.workspaceId ?? task.workspaceId ?? ''
+    );
     const changedFiles = task.checkpoint?.workspaceState?.fileChanges ?? [];
 
     return {
