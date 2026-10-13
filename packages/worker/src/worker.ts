@@ -94,7 +94,7 @@ export class DevFoundryWorker {
       const result = await client.query<Task>(
         `
         SELECT * FROM tasks
-        WHERE status = $1 AND phase IN ($2, $3, $4, $5, $6)
+        WHERE status = $1 AND phase IN ($2, $3, $4, $5, $6, $7)
         ORDER BY created_at ASC
         LIMIT 10
         `,
