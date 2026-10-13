@@ -98,7 +98,7 @@ export class DevFoundryWorker {
         ORDER BY created_at ASC
         LIMIT 10
         `,
-        ['Pending', 'Submitted', 'Qualified', 'Running', 'Validating', 'Paused']
+        ['Pending', 'Submitted', 'Qualified', 'Running', 'Validating', 'Paused', 'AwaitingReview']
       );
       return result.rows;
     } finally {
