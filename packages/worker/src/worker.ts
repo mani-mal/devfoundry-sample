@@ -185,7 +185,7 @@ export class DevFoundryWorker {
     // 3. Execute task with OpenCode and actively wait for the agent to finish
     const input = this.buildAgentInput(task);
     await this.openCode
-      .sendInput(session.id, input, task.modelRoute)
+      .sendInput(session.id, input, this.resolveModelSlug(task.modelRoute))
       .then(() => this.awaitAgentCompletion(session.id))
       .catch((err) => {
         this.logger.warn('Harness task execution failed (non-fatal)', {
@@ -213,6 +213,20 @@ export class DevFoundryWorker {
    * Build the agent input. After a failed validation attempt, include the
    * failure evidence so the agent repairs its previous work.
    */
+  /** Resolve a tier name (cheap|mid|frontier) to the gateway model slug via
+   * ROUTEFORGE_TIER_MODEL_MAP env (JSON); non-tier ids pass through as-is. */
+  private resolveModelSlug(modelRoute: string | undefined): string | undefined {
+    if (!modelRoute) return undefined;
+    const raw = process.env.ROUTEFORGE_TIER_MODEL_MAP;
+    if (!raw) return modelRoute;
+    try {
+      const map = JSON.parse(raw) as Record<string, string>;
+      return map[modelRoute] ?? modelRoute;
+    } catch {
+      return modelRoute;
+    }
+  }
+
   private buildAgentInput(task: Task): string {
     const { lastFailure } = this.getRepairState(task);
     if (lastFailure) {
@@ -305,7 +319,7 @@ export class DevFoundryWorker {
 
     const input = this.buildAgentInput(task);
     await this.openCode
-      .sendInput(session.id, input, task.modelRoute)
+      .sendInput(session.id, input, this.resolveModelSlug(task.modelRoute))
       .then(() => this.awaitAgentCompletion(session.id))
       .catch((err) => {
         this.logger.warn('Harness task execution failed (non-fatal)', {
