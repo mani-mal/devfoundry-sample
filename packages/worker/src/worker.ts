@@ -94,11 +94,11 @@ export class DevFoundryWorker {
       const result = await client.query<Task>(
         `
         SELECT * FROM tasks
-        WHERE status = $1 AND phase IN ($2, $3, $4, $5, $6, $7)
+        WHERE status = $1 AND phase IN ($2, $3, $4, $5, $6)
         ORDER BY created_at ASC
         LIMIT 10
         `,
-        ['Pending', 'Submitted', 'Qualified', 'Running', 'Validating', 'AwaitingReview', 'Paused']
+        ['Pending', 'Submitted', 'Qualified', 'Running', 'Validating', 'Paused']
       );
       return result.rows;
     } finally {
@@ -169,26 +169,30 @@ export class DevFoundryWorker {
       baseCommit: task.baseCommit,
       environment: {
         DATABASE_URL: process.env.DATABASE_URL || '',
-        ROUTEFORGE_URL: process.env.ROUTEFORGE_URL || '',
+        ROUTEFORGE_URL: process.env.ROUTEFORGE_URL || 'http://routeforge:8000',
         CONTEXFORGE_URL: process.env.CONTEXFORGE_URL || '',
       },
     });
 
-    // 2. Create agent session with skills
+    // 2. Create agent session with skills, pointing at the task's allowed model
     const session = await this.openCode.createSession({
       task: task.description,
       tools: task.skills,
       workspaceId: workspace.id,
+      model: task.modelRoute,
     });
 
-    // 3. Execute task with OpenCode (fire-and-forget: the harness runs
-    // asynchronously; validation later queries it through the shell)
-    this.openCode.sendInput(session.id, task.description).catch((err) => {
-      this.logger.warn('Harness task execution failed (non-fatal)', {
-        taskId: task.id,
-        error: (err as Error).message,
+    // 3. Execute task with OpenCode and actively wait for the agent to finish
+    const input = this.buildAgentInput(task);
+    await this.openCode
+      .sendInput(session.id, input)
+      .then(() => this.awaitAgentCompletion(session.id))
+      .catch((err) => {
+        this.logger.warn('Harness task execution failed (non-fatal)', {
+          taskId: task.id,
+          error: (err as Error).message,
+        });
       });
-    });
 
     // 4. Store checkpoint and move to validation
     const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
@@ -200,8 +204,91 @@ export class DevFoundryWorker {
         workspaceState: checkpoint.workspaceState,
         sessionState: checkpoint.sessionState,
         timestamp: new Date(),
+        ...this.getRepairState(task),
       },
     });
+  }
+
+  /**
+   * Build the agent input. After a failed validation attempt, include the
+   * failure evidence so the agent repairs its previous work.
+   */
+  private buildAgentInput(task: Task): string {
+    const { lastFailure } = this.getRepairState(task);
+    if (lastFailure) {
+      return (
+        `${task.description}\n\nPrevious attempt failed validation:\n${lastFailure}\n` +
+        'Fix the reported issues in your previous changes.'
+      );
+    }
+    return task.description;
+  }
+
+  /**
+   * Read repair-loop state tracked in the task checkpoint JSONB
+   * ({ repairAttempt: n, lastFailure: ... }) written by handleValidatingPhase.
+   */
+  private getRepairState(task: Task): { repairAttempt?: number; lastFailure?: string } {
+    const checkpoint = task.checkpoint as unknown as
+      | { repairAttempt?: number; lastFailure?: string }
+      | undefined;
+    if (!checkpoint || typeof checkpoint !== 'object') return {};
+    return {
+      ...(typeof checkpoint.repairAttempt === 'number' ? { repairAttempt: checkpoint.repairAttempt } : {}),
+      ...(typeof checkpoint.lastFailure === 'string' ? { lastFailure: checkpoint.lastFailure } : {}),
+    };
+  }
+
+  /**
+   * Actively wait for the agent to finish its work: poll the session every 5s
+   * (bounded, max 60 polls = 5 min per attempt). Done when file changes are
+   * stable across two consecutive polls (same digest twice) and the session
+   * reports completed/idle — or when no session status info is available,
+   * digest stability alone is done. The bounded timeout elapses as final
+   * fallback. Never throws; polls that fail log and continue.
+   */
+  private async awaitAgentCompletion(sessionId: string): Promise<void> {
+    const maxPolls = 60;
+    const pollIntervalMs = 5000;
+    let lastDigest: string | null = null;
+    let stableCount = 0;
+
+    for (let poll = 0; poll < maxPolls; poll++) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      try {
+        const result = await this.openCode.runShellCommand(
+          sessionId,
+          'git status --porcelain && git diff --numstat'
+        );
+        const digest = computePatchDigest(result.status === 'completed' ? result.output : '');
+        stableCount = digest === lastDigest ? stableCount + 1 : 0;
+        lastDigest = digest;
+        if (stableCount < 1) {
+          continue;
+        }
+
+        let sessionStatus: string | undefined;
+        try {
+          const session = await this.openCode.getSession(sessionId);
+          sessionStatus = typeof session.status === 'string' ? session.status : undefined;
+        } catch {
+          sessionStatus = undefined;
+        }
+        if (
+          sessionStatus === undefined ||
+          sessionStatus === 'completed' ||
+          sessionStatus === 'idle'
+        ) {
+          return;
+        }
+      } catch (error) {
+        this.logger.warn('Agent completion poll failed (non-fatal)', {
+          sessionId,
+          error: (error as Error).message,
+        });
+      }
+    }
+    this.logger.warn('Agent completion wait timed out (continuing)', { sessionId });
   }
 
   private async handleRunningPhase(task: Task): Promise<void> {
@@ -212,14 +299,19 @@ export class DevFoundryWorker {
       task: task.description,
       tools: task.skills,
       workspaceId: task.workspaceId,
+      model: task.modelRoute,
     });
 
-    await this.openCode.sendInput(session.id, task.description).catch((err) => {
-      this.logger.warn('Harness task execution failed (non-fatal)', {
-        taskId: task.id,
-        error: (err as Error).message,
+    const input = this.buildAgentInput(task);
+    await this.openCode
+      .sendInput(session.id, input)
+      .then(() => this.awaitAgentCompletion(session.id))
+      .catch((err) => {
+        this.logger.warn('Harness task execution failed (non-fatal)', {
+          taskId: task.id,
+          error: (err as Error).message,
+        });
       });
-    });
 
     const checkpoint = await this.openCode.createCheckpoint(session.id, task.repoPath ?? '/app');
 
@@ -230,12 +322,16 @@ export class DevFoundryWorker {
         workspaceState: checkpoint.workspaceState,
         sessionState: checkpoint.sessionState,
         timestamp: new Date(),
+        ...this.getRepairState(task),
       },
     });
   }
 
   private async handleValidatingPhase(task: Task): Promise<void> {
     this.logger.info('Validating task', { taskId: task.id });
+
+    // 0. Collect the candidate patch FIRST
+    const patch = await this.collectPatch(task.workspaceId);
 
     // 1. Run build/lint checks
     const lintResults = await this.runLint(task);
@@ -254,11 +350,63 @@ export class DevFoundryWorker {
     ];
 
     await this.storeEvidence(task.id, evidence);
+
+    // 5. Bounded repair loop: empty patch or failing checks re-enter Running
+    // at most 2 times; afterwards proceed to AwaitingReview with gaps as-is.
+    const patchEmpty = patch.trim() === '';
+    const checkFailures = [
+      ...lintResults.filter((e: { passed?: boolean }) => e.passed === false),
+      ...testResults.filter((e: { passed?: boolean }) => e.passed === false),
+      ...securityResults.filter((e: { passed?: boolean }) => e.passed === false),
+    ];
+    const needsRepair = patchEmpty || checkFailures.length > 0;
+    const repairAttempt = this.getRepairState(task).repairAttempt ?? 0;
+
+    if (needsRepair && repairAttempt < 2) {
+      const lastFailure = patchEmpty
+        ? 'Agent produced no file changes (empty patch).'
+        : checkFailures
+            .map((e: { type?: string; content?: string }) => `${e.type}: ${e.content}`)
+            .join('\n');
+      this.logger.info('Validation failed, re-entering repair', {
+        taskId: task.id,
+        repairAttempt: String(repairAttempt + 1),
+        patchEmpty: String(patchEmpty),
+        checkFailureCount: String(checkFailures.length),
+      });
+      await this.updateTaskStatus(task.id, 'Pending', 'Running', undefined, {
+        retry_count: task.retryCount + 1,
+        checkpoint: {
+          repairAttempt: repairAttempt + 1,
+          lastFailure,
+        },
+      });
+      return;
+    }
+
+    if (needsRepair) {
+      this.logger.warn('Repair budget exhausted, proceeding to review with gaps', {
+        taskId: task.id,
+        repairAttempt: String(repairAttempt),
+        patchEmpty: String(patchEmpty),
+        checkFailureCount: String(checkFailures.length),
+      });
+    }
+
     await this.updateTaskStatus(task.id, 'Pending', 'AwaitingReview', undefined);
   }
 
   private async handleAwaitingReviewPhase(task: Task): Promise<void> {
     this.logger.info('Awaiting review for task', { taskId: task.id });
+
+    // Evidence gate: generate the review packet once per task. If an
+    // earlier attempt already stored it, skip (packet + trace reference are
+    // durable; AwaitingReview is not re-polled by fetchPendingTasks).
+    const alreadyGenerated = await this.hasReviewPacket(task.id);
+    if (alreadyGenerated) {
+      this.logger.info('Review packet already generated, skipping', { taskId: task.id });
+      return;
+    }
 
     // 1. Generate review packet
     const reviewPacket = await this.generateReviewPacket(task);
@@ -272,6 +420,25 @@ export class DevFoundryWorker {
 
     // Terminal outcome stays AwaitingReview until human disposition.
     // Per the task lifecycle, the human disposition moves it to Completed.
+  }
+
+  /** Check event_log for an existing review packet for this task. */
+  private async hasReviewPacket(taskId: string): Promise<boolean> {
+    const client = await this.database.pool.connect();
+    try {
+      const result = await client.query(
+        `SELECT 1 FROM event_log
+         WHERE event_type = 'review_packet_generated' AND entity_type = 'task' AND entity_id = $1
+         LIMIT 1`,
+        [taskId]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      this.logger.warn('Could not query review packet state', { error });
+      return false;
+    } finally {
+      client.release();
+    }
   }
 
   private async collectPatch(workspaceId: string): Promise<string> {

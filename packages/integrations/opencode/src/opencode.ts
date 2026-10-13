@@ -55,6 +55,7 @@ export interface OpenCodeTaskRequest {
   context?: Record<string, unknown>;
   workspaceId?: string;
   checkpointId?: string;
+  model?: string;
 }
 
 export interface OpenCodeFileChange {
@@ -119,12 +120,20 @@ export class OpenCodeAdapter {
 
   /**
    * Create a new agent session (POST /session).
+   *
+   * When `request.model` is set, the session create payload points the session
+   * at the allowed model as `{ model: { providerID, modelID } }` — provider is
+   * fixed to 'routeforge' (RouteForge is DevFoundry's model gateway) and the
+   * id is the task's RouteForge tier name or model id, passed through as-is.
    */
   async createSession(request: OpenCodeTaskRequest): Promise<OpenCodeSession> {
     try {
       const body: Record<string, unknown> = {};
       if (request.task) {
         body.title = request.task;
+      }
+      if (request.model) {
+        body.model = { providerID: 'routeforge', modelID: request.model };
       }
       const response = await this.client.post<OpenCodeSession>('/session', body);
       return response.data;
