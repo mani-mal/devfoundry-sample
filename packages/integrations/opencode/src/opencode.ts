@@ -157,11 +157,12 @@ export class OpenCodeAdapter {
   /**
    * Send text input to a session (POST /session/:id/message).
    */
-  async sendInput(sessionId: string, input: string): Promise<OpenCodeEvent[]> {
+  async sendInput(sessionId: string, input: string, model?: string): Promise<OpenCodeEvent[]> {
     try {
       const response = await this.client.post(
         `/session/${sessionId}/message`,
         {
+          ...(model ? { modelID: model, providerID: 'routeforge' } : {}),
           parts: [{ type: 'text', text: input }],
         },
         { timeout: this.config.timeout || 120000 }

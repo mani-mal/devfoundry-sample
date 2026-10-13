@@ -185,7 +185,7 @@ export class DevFoundryWorker {
     // 3. Execute task with OpenCode and actively wait for the agent to finish
     const input = this.buildAgentInput(task);
     await this.openCode
-      .sendInput(session.id, input)
+      .sendInput(session.id, input, task.modelRoute)
       .then(() => this.awaitAgentCompletion(session.id))
       .catch((err) => {
         this.logger.warn('Harness task execution failed (non-fatal)', {
@@ -259,7 +259,7 @@ export class DevFoundryWorker {
       try {
         const result = await this.openCode.runShellCommand(
           sessionId,
-          'git status --porcelain && git diff --numstat'
+          'git status --porcelain 2>/dev/null; git diff --numstat 2>/dev/null; find . -maxdepth 2 -type f -mmin -3 2>/dev/null | sort | head -30'
         );
         const digest = computePatchDigest(result.status === 'completed' ? result.output : '');
         stableCount = digest === lastDigest ? stableCount + 1 : 0;
@@ -305,7 +305,7 @@ export class DevFoundryWorker {
 
     const input = this.buildAgentInput(task);
     await this.openCode
-      .sendInput(session.id, input)
+      .sendInput(session.id, input, task.modelRoute)
       .then(() => this.awaitAgentCompletion(session.id))
       .catch((err) => {
         this.logger.warn('Harness task execution failed (non-fatal)', {
@@ -446,12 +446,15 @@ export class DevFoundryWorker {
   }
 
   private async collectPatch(workspaceId: string): Promise<string> {
-    // Collect the candidate patch from the checkpoint workspace state
+    // Collect the candidate patch from the checkpoint workspace state.
+    // Git diff when the workspace is a git checkout; git-less fallback lists
+    // recently created/modified files so non-git workspaces still produce
+    // candidate-change evidence.
     if (!workspaceId) return '';
     try {
       const result = await this.openCode.runShellCommand(
         workspaceId,
-        'git diff && git status --porcelain'
+        'git diff 2>/dev/null && git status --porcelain 2>/dev/null; find . -maxdepth 2 -type f -mmin -30 2>/dev/null | grep -v node_modules | sort | head -30'
       );
       return result.status === 'completed' ? result.output : '';
     } catch {
