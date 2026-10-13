@@ -229,7 +229,8 @@ export class DevFoundryWorker {
    * ({ repairAttempt: n, lastFailure: ... }) written by handleValidatingPhase.
    */
   private getRepairState(task: Task): { repairAttempt?: number; lastFailure?: string } {
-    const checkpoint = task.checkpoint as unknown as
+    const raw = task as unknown as { checkpoint?: unknown; checkpoint_json?: unknown };
+    const checkpoint = (raw.checkpoint ?? raw.checkpoint_json) as unknown as
       | { repairAttempt?: number; lastFailure?: string }
       | undefined;
     if (!checkpoint || typeof checkpoint !== 'object') return {};
@@ -375,7 +376,10 @@ export class DevFoundryWorker {
         checkFailureCount: String(checkFailures.length),
       });
       await this.updateTaskStatus(task.id, 'Pending', 'Running', undefined, {
-        retry_count: task.retryCount + 1,
+        retry_count:
+          (typeof task.retryCount === 'number'
+            ? task.retryCount
+            : (task as unknown as { retry_count?: number }).retry_count ?? 0) + 1,
         checkpoint: {
           repairAttempt: repairAttempt + 1,
           lastFailure,
