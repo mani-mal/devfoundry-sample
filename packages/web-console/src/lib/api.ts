@@ -116,7 +116,7 @@ export const apiClient = {
 
   getTools: async (params?: { enabled?: boolean; kind?: string }) => {
     const response = await api.get('/tools', { params });
-    return response.data as { tools: Array<{ id: string; name: string; kind: string; description?: string; scopes: string[]; enabled: boolean; transport?: string }> };
+    return response.data as { tools: Array<{ id: string; name: string; kind: string; description?: string; endpoint?: string; scopes: string[]; enabled: boolean; transport?: string }> };
   },
 
   searchTools: async (q: string) => {
@@ -126,6 +126,47 @@ export const apiClient = {
 
   setToolEnabled: async (id: string, enabled: boolean) => {
     const response = await api.post(`/tools/${id}/${enabled ? 'enable' : 'disable'}`);
+    return response.data;
+  },
+
+  createTool: async (tool: {
+    name: string;
+    kind?: string;
+    description?: string;
+    endpoint?: string;
+    transport?: string;
+    scopes?: string[];
+    enabled?: boolean;
+  }) => {
+    const response = await api.post('/tools', tool);
+    return response.data;
+  },
+
+  updateTool: async (id: string, updates: {
+    name?: string;
+    kind?: string;
+    description?: string;
+    endpoint?: string;
+    transport?: string;
+    scopes?: string[];
+  }) => {
+    const response = await api.patch(`/tools/${id}`, updates);
+    return response.data;
+  },
+
+  deleteTool: async (id: string) => {
+    const response = await api.delete(`/tools/${id}`);
+    return response.data;
+  },
+
+  installSkill: async (skill: {
+    name: string;
+    path: string;
+    gitRepository: string;
+    version?: string;
+    description?: string;
+  }) => {
+    const response = await api.post('/skills', skill);
     return response.data;
   },
 
