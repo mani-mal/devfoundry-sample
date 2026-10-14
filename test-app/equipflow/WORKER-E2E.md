@@ -40,3 +40,16 @@ psql-free sqlite one-shot (see git history of this file) inserts
 onboarded_models row, then POST /admin/applications + PUT .../policy +
 POST .../tokens with the admin cookie (admin@routeforge.local/changeme), then
 patch the token into deploy/opencode OPENCODE_CONFIG_CONTENT.
+
+## VS Code extension verification (2026-10-13)
+- vsce package (node 20 shim, --no-dependencies) -> devfoundry-vscode-0.1.0.vsix
+  (15 files, 18.71 KB); installed into Windows VS Code 1.139.1 via
+  `code --install-extension` (mani-mal.devfoundry-vscode@0.1.0).
+- Headless extension-host smoke (@vscode/test-electron, vscode-linux-x64
+  1.141.1, extensionDevelopmentPath): activation fires, all 8 explicit commands
+  registered (connect, runTask, cancelTask, retryTask, reviewDiff, searchContext,
+  createWorkspace, openConsole) + 10 tree-view auto commands, tasks tree
+  created. SMOKE PASS.
+- Test runner kept at /tmp/opencode/vsce-test/{smoke.js,suite.js}; node 20
+  binary at /tmp/opencode/node20/node_modules/node/bin/node (vsce needs
+  styleText, node 18 lacks it).
