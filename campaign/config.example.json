@@ -1,0 +1,18 @@
+{
+  "devfoundry_url": "http://10.89.195.201:30861",
+  "devfoundry_email_placeholder": "<operator-email>",
+  "password_source": "<operator-controlled-secret-file-or-env>",
+  "campaign_id": "opsledger-run-001",
+  "project_placeholder": "<df-project-name>",
+  "repo_placeholder": "<df-repo-name-or-url>",
+  "base_branch": "main",
+  "mode": "implement",
+  "autonomy": "workspace",
+  "environment": "polyglot",
+  "request_char_limit": 20000,
+  "patch_line_target": 400,
+  "task_timeout_seconds": 1800,
+  "validation_timeout_seconds": 300,
+  "default_list_size": 25,
+  "max_list_size": 100
+}
