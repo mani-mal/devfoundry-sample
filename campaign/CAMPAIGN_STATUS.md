@@ -25,7 +25,7 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 
 | Item | Observed | Status |
 | --- | --- | --- |
-| DevFoundry server health | `GET http://10.89.195.201:30861/healthz` → `{"status":"ok"}` | ok (live observed) |
+| DevFoundry server health | `GET http://<devfoundry-host>:30861/healthz` → `{"status":"ok"}` | ok (live observed; real URL kept in gitignored `campaign/config.local.json`) |
 | API `GET /v1/me` with stored token | `{"error":{"code":"unauthenticated",...}}` — stored token invalid/expired/revoked | **blocker: login required** |
 | `devfoundry` CLI on laptop | not installed (`which devfoundry` empty) | **blocker: driver will use documented HTTP API** |
 | Python (laptop) | 3.12.3 — matches qualified baseline | ok |

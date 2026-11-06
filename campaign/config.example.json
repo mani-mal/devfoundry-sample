@@ -1,5 +1,5 @@
 {
-  "devfoundry_url": "http://10.89.195.201:30861",
+  "devfoundry_url": "http://<devfoundry-host>:30861",
   "devfoundry_email_placeholder": "<operator-email>",
   "password_source": "<operator-controlled-secret-file-or-env>",
   "campaign_id": "opsledger-run-001",

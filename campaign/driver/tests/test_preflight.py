@@ -12,7 +12,7 @@ from campaign.driver import preflight
 
 def write_config(path: Path, **overrides) -> Path:
     config = {
-        "devfoundry_url": "http://10.89.195.201:30861",
+        "devfoundry_url": "http://<devfoundry-host>:30861",
         "devfoundry_email_placeholder": "<operator-email>",
         "password_source": "<operator-controlled-secret-file-or-env>",
         "campaign_id": "opsledger-run-001",
@@ -66,7 +66,7 @@ class TestPreflight(unittest.TestCase):
             ],
         )
         url_check = self.by_name(checks, "devfoundry_url")
-        self.assertEqual(url_check.observed, "http://10.89.195.201:30861")
+        self.assertEqual(url_check.observed, "http://<devfoundry-host>:30861")
 
     def test_placeholder_password_source_unknown_with_note(self):
         checks = preflight.collect_static_preflight(self.config_path, self.root)

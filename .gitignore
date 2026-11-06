@@ -13,3 +13,4 @@ campaign/reports/
 campaign/evidence/
 __pycache__/
 *.pyc
+campaign/config.local.json
