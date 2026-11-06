@@ -2,6 +2,8 @@
 
 ## Changes from OpenCode (bootstrap, November 6, 2026)
 
+> Root of this repository was the DevFoundry lab seed repository (`# Sample — a seed repository for DevFoundry lab tests`), merged with the OpsLedger bootstrap per owner instruction.
+
 This repository received its initial OpsLedger bootstrap from the OpenCode
 session running the DevFoundry campaign `opsledger-run-001`. The changes in
 this commit are:
