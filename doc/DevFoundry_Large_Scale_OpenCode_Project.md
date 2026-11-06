@@ -87,7 +87,7 @@ These are supplied baseline facts from the attachment. Confirm the installed rel
 
 The guide also says developers can decide their own tasks while instructing users not to approve their own work. Keep the stricter campaign rule of independent human review. Record the installed authorization behavior separately instead of claiming the product necessarily enforces separation of duties.
 
-The supplied LAN URL is `http://10.89.195.201:30861`. Treat it as an operator-provided candidate, not a verified endpoint. Keep it in local configuration as `DEVFOUNDRY_URL`; do not put authentication data in task requests or public files.
+The supplied LAN URL is kept in the operator's local configuration (redacted here; see `campaign/config.local.json`, gitignored). Treat it as an operator-provided candidate, not a verified endpoint. Keep it in local configuration as `DEVFOUNDRY_URL`; do not put authentication data in task requests or public files.
 
 ## 4. Reuse decisions and scope boundaries
 
