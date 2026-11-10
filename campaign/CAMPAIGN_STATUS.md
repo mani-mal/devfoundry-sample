@@ -23,6 +23,7 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | B05 | Driver journal schema, task template, request renderer, dry-run adapter + tests | done | 53 driver tests pass |
 | T001 | Core errors + injectable UTC clock | **done (local, 2026-11-10)** | `campaign/reports/T001-local.md`; gate exit 0 (32 Python + 2 JS tests) |
 | T001-review | Post-build issue list | **done (2026-11-10)** | `campaign/reports/T001-issues.md` — 1 code defect (pre-1000-year RFC3339), 4 repo/env issues, B07/B08 platform blockers unchanged |
+| T001-triage | Issues classified per spec §18.2; DevFoundry bug report drafted | **done (2026-11-10)** | `campaign/reports/T001-devfoundry-bug-report.md` — A: 5 repo items, B: task layer, C: 3 candidate DevFoundry platform issues (C1 env/toolchain guard = medium) |
 | B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
 | B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
 | B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
