@@ -1,13 +1,18 @@
 # CAMPAIGN_STATUS.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-06 · Workspace: `/home/manimal/projects/dev-foundry-test`
+Campaign: `opsledger-run-001` · Updated: 2026-11-10 · Workspace: `/home/manimal/projects/devfoundry-sample`
+
+> 2026-11-10: WSL was reinstalled after a crash; workspace moved to
+> `devfoundry-sample`. Environment re-qualified (Python 3.12.16 via uv + Node
+> 22.23.4). T001 implemented directly (local); platform submission still
+> blocked on credentials. See `campaign/reports/T001-local.md`.
 
 This file is the campaign checkpoint. It contains observed facts and blockers only —
 no credentials. Raw evidence lives in `campaign/journal/` (private local evidence).
 
 ## Current checkpoint
 
-**B01–B05 complete locally. B06 pending (human boundary). B07/B08 + T001 blocked on credentials and base propagation.**
+**B01–B05 complete locally. T001 implemented locally (gate green). B06 pending (human boundary). B07/B08 platform submission blocked on credentials.**
 
 | ID | Work | State | Evidence |
 | --- | --- | --- | --- |
@@ -16,26 +21,26 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | B03 | Minimal package, CLI `--help`, README, AGENTS, test packages, JS baseline module/test | done | 5 Python tests + 2 JS tests pass |
 | B04 | Fixed `check.sh` validation gate | done | byte-exact from spec §9.2; honest local result below |
 | B05 | Driver journal schema, task template, request renderer, dry-run adapter + tests | done | 53 driver tests pass |
-| B06 | Human review of bootstrap + initial remote publication | **pending** | needs owner decision (below) |
-| B07 | Register repo (if needed), readiness | **pending** | needs registered base + project |
-| B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs base on remote |
-| T001 | Core errors + injectable UTC clock (first DevFoundry task) | **blocked** | request drafted in `campaign/requests/T001.draft.md` |
+| T001 | Core errors + injectable UTC clock | **done (local, 2026-11-10)** | `campaign/reports/T001-local.md`; gate exit 0 (32 Python + 2 JS tests) |
+| B06 | Human review of bootstrap + initial remote publication | **partially cleared** | remote `origin` exists (`github.com/mani-mal/devfoundry-sample`, pushed through 936d69d); T001 commit awaits owner push authorization |
+| B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
+| B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
 
-## Observed facts (B01 preflight, 2026-11-06, this laptop)
+## Observed facts (B01 preflight, 2026-11-06; re-verified 2026-11-10 after WSL reinstall)
 
 | Item | Observed | Status |
 | --- | --- | --- |
-| DevFoundry server health | `GET http://<devfoundry-host>:30861/healthz` → `{"status":"ok"}` | ok (live observed; real URL kept in gitignored `campaign/config.local.json`) |
+| DevFoundry server health | `GET http://<devfoundry-host>:30861/healthz` → `{"status":"ok"}` | ok (live observed 2026-11-06; `campaign/config.local.json` lost in WSL reinstall — recreate from `campaign/config.example.json`) |
 | API `GET /v1/me` with stored token | `{"error":{"code":"unauthenticated",...}}` — stored token invalid/expired/revoked | **blocker: login required** |
 | `devfoundry` CLI on laptop | not installed (`which devfoundry` empty) | **blocker: driver will use documented HTTP API** |
-| Python (laptop) | 3.12.3 — matches qualified baseline | ok |
-| Node (laptop) | 18.19.1 — qualified pod requires 22 | known limitation; gate honestly fails Node-22 step locally |
-| SQLite | 3.45.1 | ok |
+| Python (laptop, 2026-11-10) | 3.14.4 system; **3.12.16 via uv** (`~/.local/share/uv/python/cpython-3.12.16-linux-x86_64-gnu/bin`) — gate needs the uv 3.12 on PATH | ok with uv 3.12 |
+| Node (laptop, 2026-11-10) | 22.23.4 (was 18 before the reinstall) | ok — full gate now runs locally |
+| SQLite | 3.46.1 | ok |
 | git | 2.43.0 | ok |
 | `gh` | installed, logged in as `mani-mal` (token redacted; protocol https) | ok — can create public GitHub repo when authorized |
-| git remotes (this workspace) | none (`git remote -v` empty) | **blocker: publication path needs a remote** |
-| Working tree | legacy dev-foundry build files tracked-but-deleted (` D` entries); new bootstrap files untracked | note: legacy deletions left untouched, preserved |
-| Campaign scaffold | `campaign/` complete; static preflight 4 ok / 1 unknown (password_source) | ok |
+| git remotes (this workspace, 2026-11-10) | `origin` → `https://github.com/mani-mal/devfoundry-sample.git`, branch pushed through 936d69d | **old blocker cleared**; T001 commit awaits owner push |
+| Working tree | clean before T001; legacy seed files (packages/, Dockerfile*, docs/tech, test-app/) still tracked | note: public history per owner-instructed merge commit 936d69d |
+| Campaign scaffold | `campaign/` complete; journal re-initialized after crash (empty, append-only) | ok |
 
 Qualified environment facts are recorded per spec §12.1: laptop values are noted;
 pod values (Python 3.12/pytest 8.3.5, Node 22/npm, make) come from the DevFoundry guide
@@ -43,45 +48,50 @@ pod values (Python 3.12/pytest 8.3.5, Node 22/npm, make) come from the DevFoundr
 
 ## Blockers (exact, with who can clear them)
 
-1. **DevFoundry credentials unavailable.** Stored DF token is unauthenticated; password
-   source must be operator-supplied (`--password-stdin` flow per guide §3).
-   Who: owner. Needed for: B07, B08, T001.
+1. **DevFoundry credentials unavailable.** Stored DF token is unauthenticated;
+   the gitignored `campaign/config.local.json` with the live URL/token was lost
+   in the 2026-11-10 WSL reinstall. Password source must be operator-supplied
+   (`--password-stdin` flow per guide §3).
+   Who: owner. Needed for: B07, B08 (platform submission of T001 and later tasks).
 2. **Project/repository identity unknown.** `DF_PROJECT`, `DF_REPO`, registration state,
    default environment/pack for the project unknown (no CLI/API session).
    Who: owner (`devfoundry projects`, `devfoundry repos`). Needed for: T001 submission.
-3. **No git remote for this workspace.** Bootstrap (check.sh etc.) must be published to a
-   public GitHub repository (e.g. `opsledger-benchmark` per spec §6.2) and registered in
-   the project before any DevFoundry task — validation base must contain `check.sh`.
-   Who: owner authorization required (B06 boundary — never push without it).
-   `gh` is available to create the repo when authorized.
-4. **Laptop Node 18** — `bash check.sh` honestly fails locally at the Node-22 check
-   (all preceding Python steps pass). The qualified pod (Node 22) is the completion
-   environment; local direct runs: Python suite OK, JS suite OK.
+3. **T001 commit awaits owner push authorization (B06 boundary).** The remote exists
+   and the bootstrap is published through 936d69d; the T001 commit is local only.
+   Who: owner authorization required — never push without it.
 
 ## Boundary statement (B06)
 
-Per the spec instruction block: no push, no publication, no approval of the bootstrap
-has been performed. The bootstrap awaits owner review. Required next human actions:
-(1) review the new bootstrap files, (2) authorize repo creation/push + supply the
-public GitHub repository name, (3) supply DF account email + password source for
-`devfoundry login ... --password-stdin`, (4) name the DF project and repo to use.
+Per the spec instruction block: no push, no publication, no approval of the
+T001 commit has been performed. The bootstrap itself is published through
+commit 936d69d (owner-instructed merge). Required next human actions:
+(1) review the T001 files, (2) authorize the T001 push, (3) supply DF account
+email + password source for `devfoundry login ... --password-stdin`
+(config.local.json was lost in the WSL reinstall), (4) name the DF project
+and repo to use.
 
-## Local test results (honest, 2026-11-06)
+## Local test results (honest, 2026-11-10, after WSL reinstall)
 
-- `python3 -m unittest discover -s tests -p "test_*.py" -t .` → Ran 5 tests, OK
-- `python3 -m unittest discover -s campaign/driver/tests -p "test_*.py" -t .` → Ran 53 tests, OK
+Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
+
+- `bash check.sh` → exit 0, `OPSLEDGER_FAST_GATE_OK` — first fully green local
+  gate (Node 22 now available; before the reinstall the laptop had Node 18)
+- Python: Ran 32 tests, OK (7 bootstrap + 14 errors + 13 clock)
+- `python3.12 -m unittest tests.unit.test_core_errors tests.unit.test_clock -v` → Ran 27 tests, OK
+- `python3.12 -m unittest discover -s campaign/driver/tests -p "test_*.py" -t .` → Ran 53 tests, OK
 - `node --test tests/js/format.test.mjs` → tests 2, pass 2, fail 0, skipped 0
 - `node --check web/js/app.mjs` → OK
-- `bash check.sh` → exit 1, `Node 22 required by qualified baseline`
-  (Python compile + unittest steps passed before it; expected on Node-18 laptop)
-- Contamination: zero non-placeholder secret matches in new files; no campaign dirs
-  outside `campaign/`; nothing committed or pushed.
+- Contamination: zero non-placeholder secret matches in new files; no campaign
+  dirs outside `campaign/`; journal re-initialized after crash; nothing pushed.
 
 ## Next eligible work (once blockers clear)
 
-1. Owner review + push bootstrap → record remote base SHA + check.sh digest (B06).
-2. Login, confirm project/repo/env/pack; register repo if needed; readiness (B07).
+1. Owner review + push T001 commit → record remote base SHA + check.sh digest (B06).
+2. Recreate `campaign/config.local.json`, login, confirm project/repo/env/pack;
+   register repo if needed; readiness (B07).
 3. Tiny onboarding task + clean-checkout validation (B08).
-4. Render T001 from the verified base (draft in `campaign/requests/T001.draft.md`),
+4. Render T002 (SQLite connection factory + transaction context) from the
+   implemented clock/error API per spec §11 (`render T002 against the
+   implemented clock/error API rather than guessing its interface in advance`),
    `submit --preview`, then submit with `--mode implement --autonomy workspace
    --environment polyglot`; journal events; independent acceptance; review handoff.

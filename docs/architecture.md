@@ -47,3 +47,41 @@ flowchart TD
 
 All module directories are orientation for later tasks; the bootstrap ships
 only `opsledger/__init__.py` and `opsledger/__main__.py`.
+
+## Core foundation (T001)
+
+### Error types (`opsledger/core/errors.py`)
+
+All application errors derive from `ApplicationError(Exception)`:
+
+- `ApplicationError(message, *, code=None, fields=None)` — base class with
+  `code` (stable machine-readable string, default `"application_error"`),
+  public `message` (via `str(error)`), and optional safe `fields` dict
+  (field name -> public reason). `to_payload()` returns the public JSON
+  envelope: `{"code", "message"}` plus `"fields"` when present.
+- `ValidationError` — default code `validation_error`; caller input failed
+  validation.
+- `NotFoundError` — default code `not_found`; record missing in scope.
+- `PermissionDeniedError` — default code `permission_denied`; caller lacks
+  membership or role.
+- `ConflictError` — default code `conflict`; request conflicts with current
+  state.
+
+Messages never contain tracebacks or internal details. Subclass codes may
+be overridden per raise site (`NotFoundError("x", code="work_order_not_found")`).
+
+### UTC clocks (`opsledger/core/clock.py`)
+
+- `Clock` — protocol: `now() -> datetime` (timezone-aware UTC) and
+  `timestamp() -> str` (second-precision RFC3339 ending in `Z`).
+- `RealClock` — wall clock; always reports timezone-aware UTC.
+- `FixedClock(instant)` — deterministic test clock; the instant is
+  normalized to UTC and truncated to second precision, so repeated reads
+  are identical.
+- `format_rfc3339(value)` — serializes an aware datetime as
+  `2026-01-01T00:00:00Z` (UTC, `Z` suffix, second precision).
+- `require_aware_utc(value)` — returns `value` converted to UTC; rejects
+  naive datetimes with `ValidationError` (`validation_error`).
+
+Later business services take a `Clock` (injected; `FixedClock` in tests)
+and serialize all stored timestamps through `format_rfc3339`.
