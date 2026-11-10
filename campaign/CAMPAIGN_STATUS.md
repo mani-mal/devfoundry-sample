@@ -22,7 +22,7 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | B04 | Fixed `check.sh` validation gate | done | byte-exact from spec §9.2; honest local result below |
 | B05 | Driver journal schema, task template, request renderer, dry-run adapter + tests | done | 53 driver tests pass |
 | T001 | Core errors + injectable UTC clock | **done (local, 2026-11-10)** | `campaign/reports/T001-local.md`; gate exit 0 (32 Python + 2 JS tests) |
-| B06 | Human review of bootstrap + initial remote publication | **partially cleared** | remote `origin` exists (`github.com/mani-mal/devfoundry-sample`, pushed through 936d69d); T001 commit awaits owner push authorization |
+| B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
 | B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
 | B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
 
@@ -55,20 +55,19 @@ pod values (Python 3.12/pytest 8.3.5, Node 22/npm, make) come from the DevFoundr
    Who: owner. Needed for: B07, B08 (platform submission of T001 and later tasks).
 2. **Project/repository identity unknown.** `DF_PROJECT`, `DF_REPO`, registration state,
    default environment/pack for the project unknown (no CLI/API session).
-   Who: owner (`devfoundry projects`, `devfoundry repos`). Needed for: T001 submission.
-3. **T001 commit awaits owner push authorization (B06 boundary).** The remote exists
-   and the bootstrap is published through 936d69d; the T001 commit is local only.
-   Who: owner authorization required — never push without it.
+   Who: owner (`devfoundry projects`, `devfoundry repos`). Needed for: T001 platform submission.
 
 ## Boundary statement (B06)
 
-Per the spec instruction block: no push, no publication, no approval of the
-T001 commit has been performed. The bootstrap itself is published through
-commit 936d69d (owner-instructed merge). Required next human actions:
-(1) review the T001 files, (2) authorize the T001 push, (3) supply DF account
-email + password source for `devfoundry login ... --password-stdin`
-(config.local.json was lost in the WSL reinstall), (4) name the DF project
-and repo to use.
+B06 is now **complete** (2026-11-10): the owner authorized publication using the
+git credential from `/home/manimal/sec.txt`; commit `e35dd81` was pushed to
+`origin/main` (fast-forward from `936d69d`, no merge conflicts — local was
+strictly ahead). The push used a temporary in-process credential helper so the
+token never landed in argv, shell history, or this repository.
+
+Remaining human actions (platform only): (1) supply DF account email + password
+source for `devfoundry login ... --password-stdin` (`campaign/config.local.json`
+was lost in the WSL reinstall), (2) name the DF project and repo to use.
 
 ## Local test results (honest, 2026-11-10, after WSL reinstall)
 
@@ -86,7 +85,7 @@ Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
 
 ## Next eligible work (once blockers clear)
 
-1. Owner review + push T001 commit → record remote base SHA + check.sh digest (B06).
+1. ~~Owner review + push T001 commit~~ → done 2026-11-10: `e35dd81` on `origin/main`, remote base SHA recorded (B06 complete).
 2. Recreate `campaign/config.local.json`, login, confirm project/repo/env/pack;
    register repo if needed; readiness (B07).
 3. Tiny onboarding task + clean-checkout validation (B08).
