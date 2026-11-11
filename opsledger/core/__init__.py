@@ -1,7 +1,8 @@
-"""Core foundation for OpsLedger services (T001).
+"""Core foundation for OpsLedger services (T001, T002).
 
-Ships the shared application error types and the UTC clocks used by every
-later business module.
+Ships the shared application error types, the UTC clocks, and the SQLite
+connection factory and transaction context used by every later business
+module.
 """
 
 from .clock import (
@@ -19,17 +20,20 @@ from .errors import (
     PermissionDeniedError,
     ValidationError,
 )
+from .db import connect, transaction
 
 __all__ = [
     "ApplicationError",
     "Clock",
     "ConflictError",
+    "connect",
     "FixedClock",
     "NotFoundError",
     "PermissionDeniedError",
     "RFC3339_Z_FORMAT",
     "RealClock",
     "ValidationError",
+    "transaction",
     "format_rfc3339",
     "require_aware_utc",
 ]

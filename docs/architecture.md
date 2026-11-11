@@ -85,3 +85,33 @@ be overridden per raise site (`NotFoundError("x", code="work_order_not_found")`)
 
 Later business services take a `Clock` (injected; `FixedClock` in tests)
 and serialize all stored timestamps through `format_rfc3339`.
+
+## Persistence foundation (T002)
+
+### SQLite connections (`opsledger/core/db.py`)
+
+- `connect(path)` — opens a SQLite connection (a `sqlite3.Connection`
+  subclass) to `path` with the OpsLedger profile: `foreign_keys=ON`,
+  `journal_mode=WAL`, `synchronous=NORMAL`, and
+  `row_factory=sqlite3.Row`. Connections are never shared across threads:
+  use each connection on its creating thread only (`check_same_thread=True`
+  is kept, so SQLite enforces this).
+- `transaction(conn)` — context manager that runs a block inside one
+  `BEGIN IMMEDIATE` transaction. On clean exit the transaction is
+  committed; on any exception it is rolled back and the original error is
+  re-raised. Nested use raises `ConflictError` with stable code
+  `"conflict"` and a public message.
+
+Usage:
+
+```python
+from opsledger.core.db import connect, transaction
+
+conn = connect(path)
+with transaction(conn) as tx:
+    tx.execute("INSERT ...")
+```
+
+sqlite3 database errors (`IntegrityError`, `OperationalError`) propagate
+unchanged from `transaction()` blocks: they are never swallowed and never
+wrapped into application errors. All SQL is parameterized.
