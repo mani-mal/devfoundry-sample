@@ -1,7 +1,12 @@
 # CAMPAIGN_STATUS.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-10 · Workspace: `/home/manimal/projects/devfoundry-sample`
+Campaign: `opsledger-run-001` · Updated: 2026-11-11 · Workspace: `/home/manimal/projects/devfoundry-sample`
 
+> 2026-11-11: T002 approved by owner; patch landed on `main` (`46825d3`).
+> BUG-005/006 + F-607/F-120 verified against lab `0.1.0-b902183`. T003
+> submitted as the regression run and awaiting review. See
+> `campaign/reports/bug-verification-2026-11-11.md`.
+>
 > 2026-11-10: WSL was reinstalled after a crash; workspace moved to
 > `devfoundry-sample`. Environment re-qualified (Python 3.12.16 via uv + Node
 > 22.23.4). T001 implemented directly (local); platform submission still
@@ -25,7 +30,9 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | T001-review | Post-build issue list | **done (2026-11-10)** | `campaign/reports/T001-issues.md` — 1 code defect (pre-1000-year RFC3339), 4 repo/env issues, B07/B08 platform blockers unchanged |
 | T001-triage | Issues classified per spec §18.2; DevFoundry bug report drafted | **done (2026-11-10)** | `campaign/reports/T001-devfoundry-bug-report.md` — A: 5 repo items, B: task layer, C: 3 candidate DevFoundry platform issues (C1 env/toolchain guard = medium) |
 | BUG-verify | BUG-001..004 verified against lab after CLI reinstall from fix branch | **done (2026-11-10)** | `campaign/reports/bug-verification-2026-11-10.md` — BUG-002 fully fixed; BUG-001 fixed in behavior (exit 1 vs 3 deviation filed as BUG-001a); attempt metadata confirmed (1 per implement task); 3 new papercuts filed |
-| T002 | SQLite connection factory + transaction context (first submitted DevFoundry task) | **awaiting_review (2026-11-10)** | `tsk-45ce00920c8943e08e19f2a8f0ff7b60` — validation passed on base 3113b87, 4 files / 359 lines, 1 attempt, protected paths untouched; first submission failed on missing `--base main` (NEW-001, operator error, preserved) |
+| T002 | SQLite connection factory + transaction context (first submitted DevFoundry task) | **completed/accepted (2026-11-11)** | `tsk-45ce00920c8943e08e19f2a8f0ff7b60` — owner-approved (diff 1a21d2c); publish refused (workspace autonomy has no publication path; NEW-004); patch applied locally from the review packet, gate OK, committed `46825d3`, pushed. First submission failed on missing `--base main` (NEW-001, operator error, preserved) |
+| BUG-verify-2 | BUG-005/006 + F-607/F-120 verified against lab 0.1.0-b902183 | **done (2026-11-11)** | `campaign/reports/bug-verification-2026-11-11.md` — BUG-005 PASS (exit 3, 403 policy_denied); BUG-006 PASS (exact cancelled wording; console by source, browser extension not connected); F-607 PASS (attempt 1 of 3); F-120 PASS on submit, preview silent (F-120b); BUG-128 not triggered; NEW-004 (no publication path for workspace tasks) |
+| T003 | Migration runner + migration history checksums (regression run) | **awaiting_review (2026-11-11)** | `tsk-66b5305a74b14c38a8c7d59cc7c81107` — validation passed on base 46825d3, 4 files / ~640 lines, 1 attempt, 0 findings, protected paths untouched; patch matches T003 acceptance |
 | B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
 | B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
 | B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
@@ -52,14 +59,19 @@ pod values (Python 3.12/pytest 8.3.5, Node 22/npm, make) come from the DevFoundr
 
 ## Blockers (exact, with who can clear them)
 
-1. **DevFoundry credentials unavailable.** Stored DF token is unauthenticated;
+1. **DevFoundry credentials unavailable.** ~~Stored DF token is unauthenticated;
    the gitignored `campaign/config.local.json` with the live URL/token was lost
-   in the 2026-11-10 WSL reinstall. Password source must be operator-supplied
-   (`--password-stdin` flow per guide §3).
-   Who: owner. Needed for: B07, B08 (platform submission of T001 and later tasks).
-2. **Project/repository identity unknown.** `DF_PROJECT`, `DF_REPO`, registration state,
-   default environment/pack for the project unknown (no CLI/API session).
-   Who: owner (`devfoundry projects`, `devfoundry repos`). Needed for: T001 platform submission.
+   in the 2026-11-10 WSL reinstall.~~ **Resolved 2026-11-11:** CLI installed
+   from the devfoundry checkout; admin signed in via `--password-stdin`
+   (password recovered from the lab's own kubectl secret, never printed;
+   session token in `~/.config/devfoundry/credentials`, mode 0600).
+   B07/B08 platform work is unblocked; T002/T003 submitted through DevFoundry.
+2. ~~Project/repository identity unknown.~~ **Resolved 2026-11-11:** project
+   `lab-sample` = `prj-f22f12d0ccb646aeaa4d4ed6156c13c0`; repo
+   `repo-8824a58532574f6ba9608f9ada55db14` (registered default branch is the
+   `checked` seed — **always pass `--base main`**; DevFoundry cannot change a
+   registered repo's branch yet, F-121); default environment `polyglot`
+   (env-cc6d85e4d582495b830ffeffa11ea7b4); default pack `issue-resolver 0.1.0`.
 
 ## Boundary statement (B06)
 
@@ -93,8 +105,15 @@ Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
 2. Recreate `campaign/config.local.json`, login, confirm project/repo/env/pack;
    register repo if needed; readiness (B07).
 3. Tiny onboarding task + clean-checkout validation (B08).
-4. Render T002 (SQLite connection factory + transaction context) from the
-   implemented clock/error API per spec §11 (`render T002 against the
-   implemented clock/error API rather than guessing its interface in advance`),
-   `submit --preview`, then submit with `--mode implement --autonomy workspace
-   --environment polyglot`; journal events; independent acceptance; review handoff.
+4. ~~Render T002~~ → done 2026-11-11: submitted, validated, **owner-approved**
+   (diff 1a21d2c); publication refused (workspace autonomy; NEW-004); patch
+   applied locally and committed `46825d3` on `origin/main`.
+5. T003 regression run: submitted 2026-11-11, `awaiting_review`
+   (`tsk-66b5305a74b14c38a8c7d59cc7c81107`). On owner approval, apply the
+   patch from the review packet locally (workspace autonomy has no platform
+   publication — NEW-004), commit, push, then proceed to T004 (organizations/
+   users/membership schema) and T005 (HTTP router) in spec order.
+6. Owner decisions pending on repo issues A2–A4 (delete ~780 legacy seed files
+   vs amend README; untrack `campaign/` vs amend docs) and on the NEW-004
+   publication-path question (submit future review-worthy tasks with
+   `--autonomy draft_pr`, or allow post-approval promotion).
