@@ -169,3 +169,59 @@ from opsledger.core.migrations import migrate
 
 migrate(conn, "opsledger/migrations")
 ```
+
+## HTTP foundation (T005)
+
+### Router (`opsledger/http/router.py`)
+
+- `Router(*, body_limit_bytes=1048576)` — exact-path router. Configured
+  limit bounds request bodies (default 1 MiB).
+- `Router.add(path, methods, handler)` — registers `handler` for an exact
+  `path` with the allowed method set (a single method or a list; case is
+  normalized). Duplicate registration raises `RouterError`.
+- `Router.dispatch(method, path)` — returns `(allow_header_or_None,
+  matching_route_or_None)`; the transport layer turns a route-less result
+  into 404 and an allow-header result into 405 with an ``Allow`` header.
+- `Request` — frozen dataclass handed to route handlers: `method`, `path`,
+  `headers`, `body` (raw bytes), `content_type` (lower-cased media type),
+  `json` (parsed JSON payload, `None` when absent or malformed),
+  `json_error` (`None` or an `InputError`). `json_or_error()` returns the
+  payload or raises the parse error, so JSON `null` is distinguishable from
+  a parse failure.
+- `RouterServer(router, *, host="127.0.0.1", port=0, timeout=10)` — threading
+  HTTP server. Binds `127.0.0.1` unless explicitly given another (valid)
+  host. `serve_forever` runs on the caller's thread; `shutdown()` and
+  `server_close()` stop it.
+
+Route handlers receive the parsed `Request` and return `(status, body dict)`;
+dict bodies are serialized as JSON responses.
+
+### Error mapping (`opsledger/http/envelope.py`)
+
+Every error response body is exactly:
+
+    {"error": {"code": "<stable code>", "message": "<public message>",
+               "request_id": "<opaque id>"}}
+
+- `error_response_for(error, request_id)` — maps any raised error to
+  `(http status, canonical envelope body)`.
+- `http_status_for_error(error)` — maps a raised error to its HTTP status:
+  `ValidationError` → 422, `NotFoundError` → 404, `PermissionDeniedError`
+  → 403, `ConflictError` → 409, anything else → 500.
+- `build_error_body(code, message, request_id)` — returns the canonical
+  error envelope body (this shape, nothing more).
+- `new_request_id()` — opaque correlation identifier per request.
+- `InputError(status, code, message)` — bounded-input violation detected
+  while parsing one request (for example malformed JSON or unsupported
+  content type).
+- Unexpected exceptions map to code `internal_error`, HTTP 500, public
+  message `internal server error` — no traceback and no exception text in
+  the response.
+- Bounded input: bodies over the configured limit return 413 with code
+  `body_too_large`; malformed JSON on JSON routes returns 400 with code
+  `malformed_json`; a non-JSON content type on JSON routes returns 415 with
+  code `unsupported_media_type`.
+
+Router fixture route: `GET /api/v1/healthz` returns
+`(200, {"status": "ok"})` (exercisable end to end; not the T006 readiness
+handler).
