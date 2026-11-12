@@ -1,6 +1,6 @@
 # DEVFOUNDRY_ACCEPTANCE.md — platform case dispositions
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 · Lab: `0.1.0-c1bd587`
+Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Lab: `0.1.0-27d7b85`
 Labels per spec §19.2: **live** (observed on the lab), **fixture** (verified
 by the platform's own tests), **manual** (source/bundle-verified, live
 render unavailable), **blocked** (prerequisite unavailable), **not-run**.
@@ -63,6 +63,8 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | Cleanup part 3 (test-app) | request `requests/cleanup-B1B2-part3.md` → `tsk-5f7f5e24…` | `62859138…` | accept (human) | `2a58f16` |
 | A1 (RFC3339 zero-padding) | request `requests/A1-rfc3339.md` → `tsk-0ff5ac82…` | `7a0e7e47…` | accept (human) | `3131a90` (PR #3 closed unmerged) |
 | T009 (password hashes) | request `requests/T009.md` → `tsk-7382eb17…` | `a5444fe0…` | accept (human) | `8afad1b` |
+| T010 part A (session domain module) | request `../campaign-opsledger-run-001/requests/T010a.md` → `tsk-33b2a9cc…` | `19d64316…` | accept (human) | `f9d9e46` (merge of Draft PR #5, merged on GitHub) |
+| T010 part B (sessions migration + count literals + docs) | request `../campaign-opsledger-run-001/requests/T010b.md` → `tsk-04f5553b…` | `fdb4b92d…` | accept (human) | `aea9272` (merge of Draft PR #6, merged on GitHub) |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two
@@ -74,3 +76,8 @@ failure (`pub-f03ad672…`), the oversized single cleanup task
 (`tsk-0d95beb3…`, worker_lost/timeout), the CI diagnose before the app
 reconfig (`tsk-cab53568…`, unknown/setup_failed), and the refused CI
 repair (`tsk-eceab43f…`, guard_refused by design). Nothing is hidden.
+T010's four failed single-task runs remain in evidence too:
+`tsk-989d2bc5…` (worker_shutdown + 1800 s timeout), `tsk-0a5f750d…`
+(validation failed on four stale migration-count literals before the
+allowlist was corrected), `tsk-d16982c9…` and `tsk-9d00050a…` (empty-patch
+`agent_error`; one a single 32000-token output-capped response).

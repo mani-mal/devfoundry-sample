@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 (evening) · Final commit: `a42019c`
+Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Final commit: `aea9272`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -52,6 +52,10 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C20 | Platform observation | low | Code-review agent on a heavy diff | Reviewing the 2.3MB deletion PR (57 files, −11792 lines): attempt 1 `worker_lost` after 979 s (51 model calls), attempt 2 hit the lab's 1200 s task budget → failed with no findings | **OPEN — platform consideration**: small diffs review fine (PR #3: full report + 2 real findings in ~5 min); heavy diffs need a bigger budget or diff-scoped review. Evidence: `tsk-0d95beb3…` |
 | C21 | Platform observation | low | Stale auto-detected app config blocks CI reproduction | The repo's app config was auto-detected as Node (`setup = npm ci`); after part 1 deleted `package.json`, `ci diagnose` failed at reproduction (`setup_failed`) with class `unknown` despite a correct agent explanation; fixed as administrator by reconfiguring the app (`kind python`, `test = bash check.sh`, stale commands cleared via API) → re-diagnosis `regression (high confidence)`, comparison passes | **OPEN — platform consideration**: an app-config drift note on CI diagnoses (the readiness report already surfaces `app.build`); evidence `tsk-cab53568…` (unknown), `tsk-759bbc06…` (regression, after the fix) |
 | C22 | Platform observation | low | Repair-guard state messages | `ci repair` of the probe: the guard correctly refused the agent's minimal fix (correcting the expected value **with the test kept**) because test-file edits are refused by design (fail-closed allow list, ruling [T9] R5); the state message says "weakened a check (tests kept)" and "fix it by hand" — accurate, but "weakened" reads oddly for a value correction; the earlier no-change attempt uses a different message | **BY DESIGN** (guard behavior correct; human completion worked: one-line fix applied by hand, CI green, probe closed unmerged, diagnosis marked done) — message wording noted for the platform |
+| C23 | Platform observation | low | Outcome role premise | The outcomes prompt assumed only a lab-sample **team lead** can record outcomes; on this lab the `Administrator` account holds a direct `lead` role in `lab-sample` (`GET /v1/projects/prj-f22f12d0…/members`), so `outcome record` worked from the admin session without a 403 | **OPEN — platform consideration**: if the role split is intentional, the admin's direct `lead` membership should be revoked; evidence `campaign/reports/bug-verification-2026-11-12.md` (outcomes update, role note) |
+| C24 | Platform observation | low | Draft PRs need `gh pr ready` before merge | `gh pr merge N --merge` on a DevFoundry-published Draft PR refuses (`GraphQL: Pull Request is still a draft (mergePullRequest)`); after `gh pr ready N` the merge succeeds (PRs #5, #6) | **OPEN — docs note**: worth a line in the publish docs; not a defect |
+| C25 | Platform observation | low | No read-only feedback viewer | `devfoundry feedback <task>` without flags is a usage error (`say --up or --down…`) and there is no read subcommand; feedback is only visible via the event stream (`feedback.submitted`) or the console | **OPEN — platform consideration**: a `feedback show`/read path would complete the loop |
+| C26 | Platform limit | medium | Single-model-call runs hit the 32000-token output cap | `tsk-d7d95028…`: 1 model call, exactly 32000 output tokens, run failed `agent_error` with an empty patch (the "write in your very first tool call" phrasing pushed the model to emit everything in one truncated response) | **OPEN — platform consideration**: raise the cap or coach the first response to stay small; evidence preserved on the lab |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -68,6 +72,8 @@ reproduction observed, post-fix behavior NOT re-tested**.
 | Cleanup Draft PR #2 | Opened by DevFoundry (`pub-c7371bde…` succeeded); the code-review agent ran on it (worker_lost/timeout — C20); **closed unmerged** (superseded by the local landing `623bb44`+`a42019c`) |
 | A1 Draft PR #3 | Opened by DevFoundry (`pub-014185cb…` succeeded); the code-review agent produced 2 real findings on it; **closed unmerged** (superseded by the local landing `3131a90`) |
 | CI probe PR #4 | Deliberately broken test; diagnosis regression/high-confidence; repair guard refused the test edit by design; fixed by hand (CI green); **closed unmerged**, branch deleted |
+| T010a Draft PR #5 | Opened by DevFoundry (`pub-a9291ea3…` succeeded); first `gh pr merge` refused while draft (C24); **merged on GitHub** 2026-11-12T22:02:47Z → `f9d9e46`; the outcome poller recorded `cr_merged #5 f9d9e4609330 verified` ≤ 1 min later |
+| T010b Draft PR #6 | Opened by DevFoundry (`pub-db8f99fa…` succeeded); ready + **merged on GitHub** 2026-11-12T22:16:08Z → `aea9272`; poller recorded `cr_merged #6 aea92722d55e verified` ~3 min later |
 | Draft PR handoff to DevFoundry | This campaign's DevFoundry handoff is the verification evidence itself (BUG/feature verdicts above); no product changes belong in this repository (spec §18.2) |
 
 ## Totals
@@ -76,15 +82,19 @@ reproduction observed, post-fix behavior NOT re-tested**.
   landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
 - Repository: 3 items — all closed (B1+B2 cleanup landed through
   DevFoundry review; B3 closed by the owner-authorized direct edit).
-- Platform: 22 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+- Platform: 26 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
-  2 closed owner decisions (C17 live, C18 closed), 3 new platform
-  observations (C19 budget, C20 heavy review, C21 stale app config).
+  2 closed owner decisions (C17 live, C18 closed), 3 platform
+  observations (C19 budget, C20 heavy review, C21 stale app config),
+  4 new observations from the outcomes run (C23 role premise, C24
+  draft-PR ready step, C25 no feedback viewer, C26 32000-token cap).
 - Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `a42019c` (fresh
   clone: 44-file tree, 97 Python + 2 JS tests, 0 skipped; plain
   `bash check.sh` green without a PATH export).
 - Agents: code-review first live PASS (2 real findings), CI
   diagnose/repair first live PASS (diagnosis correct, guard fail-closed,
   by-hand completion).
-- M2: T009 landed (`8afad1b`, 23 tests, 0 findings). Next: T010.
+- M2: T009 landed (`8afad1b`, 23 tests, 0 findings); T010 complete in two
+  parts (sessions module `f9d9e46`/PR #5 + migration/literals `aea9272`/PR
+  #6), both through Draft PRs merged on GitHub. Next: T011.
