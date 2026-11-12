@@ -1,8 +1,0 @@
-src/**
-node_modules/**
-tsconfig.json
-.gitignore
-README.md
-**/*.map
-**/*.ts
-!dist/**
