@@ -94,6 +94,24 @@ class Rfc3339SerializationTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             require_aware_utc(datetime(2026, 1, 1, 0, 0, 0))
 
+    def test_years_below_1000_are_zero_padded(self):
+        cases = {
+            1: "0001-06-15T12:34:56Z",
+            99: "0099-06-15T12:34:56Z",
+            999: "0999-06-15T12:34:56Z",
+        }
+        for year, expected in cases.items():
+            stamp = format_rfc3339(
+                datetime(year, 6, 15, 12, 34, 56, tzinfo=timezone.utc)
+            )
+            self.assertEqual(stamp, expected)
+        self.assertEqual(
+            format_rfc3339(
+                datetime(2026, 6, 15, 12, 34, 56, tzinfo=timezone.utc)
+            ),
+            "2026-06-15T12:34:56Z",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
