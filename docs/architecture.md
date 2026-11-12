@@ -158,9 +158,9 @@ Conventions:
 - Missing numbers are not errors and may not be backfilled by editing:
   `001` can be applied while `002` is absent; `002` applies when it
   reappears.
-- `opsledger/migrations/` currently ships one runner fixture,
-  `0001_initial.sql` (creates the `schema_notes` table); it is not a
-  business table.
+- `opsledger/migrations/` ships the runner fixture `0001_initial.sql`
+  (creates the `schema_notes` table; not a business table) and the identity
+  migration `0002_identity.sql` documented below.
 
 Usage:
 
@@ -169,6 +169,61 @@ from opsledger.core.migrations import migrate
 
 migrate(conn, "opsledger/migrations")
 ```
+
+## Identity schema (T004)
+
+### Tables (`opsledger/migrations/0002_identity.sql`)
+
+`organizations`:
+
+| Column | Definition |
+| --- | --- |
+| `id` | TEXT PRIMARY KEY |
+| `slug` | TEXT NOT NULL UNIQUE |
+| `name` | TEXT NOT NULL |
+| `created_at` | TEXT NOT NULL (RFC3339 UTC `Z`, second precision) |
+
+`users`:
+
+| Column | Definition |
+| --- | --- |
+| `id` | TEXT PRIMARY KEY |
+| `email` | TEXT NOT NULL UNIQUE |
+| `display_name` | TEXT NOT NULL |
+| `created_at` | TEXT NOT NULL (RFC3339 UTC `Z`, second precision) |
+
+`memberships`:
+
+| Column | Definition |
+| --- | --- |
+| `organization_id` | TEXT NOT NULL REFERENCES `organizations(id)` |
+| `user_id` | TEXT NOT NULL REFERENCES `users(id)` |
+| `role` | TEXT NOT NULL CHECK (`role` IN `('developer','lead','auditor','approver','purchasing')`) |
+| `created_at` | TEXT NOT NULL (RFC3339 UTC `Z`, second precision) |
+| *(table)* | PRIMARY KEY (`organization_id`, `user_id`) — one row per organization+user |
+
+### Normalization rule
+
+Organization slugs and user emails are stored lowercase-trimmed. The
+`CHECK` constraints (`slug = lower(trim(slug))`,
+`email = lower(trim(email))`) reject any value that is not already in its
+normalized form, so duplicate or different-case values collide on the
+stored normalized value (UNIQUE) and are rejected with
+`sqlite3.IntegrityError`. No table ever holds a non-normalized slug or
+email; the future service layer normalizes input (lowercase, trimmed)
+before the write.
+
+### Membership key
+
+The `(organization_id, user_id)` primary key means one membership row per
+organization+user: the same user twice in one organization fails with
+`sqlite3.IntegrityError`, while the same user in different organizations is
+fine. Unknown role values are rejected by the `role` CHECK constraint, and
+memberships referencing a missing organization or user fail the foreign
+key (connections enforce `foreign_keys=ON`).
+
+All statements are parameterized everywhere SQL carries values; created_at
+values are RFC3339 UTC ending in `Z` with second precision.
 
 ## HTTP foundation (T005)
 
