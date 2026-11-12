@@ -46,7 +46,9 @@ flowchart TD
 | `web/` | HTML, CSS, ES modules, no generated bundles |
 
 All module directories are orientation for later tasks; the bootstrap ships
-only `opsledger/__init__.py` and `opsledger/__main__.py`.
+`opsledger/__init__.py` and `opsledger/__main__.py`, with `opsledger/core/`,
+`opsledger/http/`, and `opsledger/migrations/` landing through DevFoundry
+tasks (T001–T006).
 
 ## Core foundation (T001)
 
@@ -280,3 +282,62 @@ Every error response body is exactly:
 Router fixture route: `GET /api/v1/healthz` returns
 `(200, {"status": "ok"})` (exercisable end to end; not the T006 readiness
 handler).
+
+## CLI and diagnostics (T006)
+
+### Application CLI (`opsledger/cli.py`)
+
+Stdlib argparse with two subcommands, runnable via
+`python -m opsledger.cli`:
+
+- `migrate DATABASE [--migrations DIR]` — connects to `DATABASE` with
+  `opsledger.core.db.connect`, runs
+  `opsledger.core.migrations.migrate(conn, dir)`, prints each applied
+  `migration_id` one per line, exits 0. `DIR` defaults to
+  `opsledger/migrations`.
+- `serve DATABASE [--host H] [--port P]` — runs migrations first (same
+  rules as `migrate`), builds the diagnostics router
+  (`opsledger.http.handlers.build_router()`), and serves with
+  `RouterServer` until SIGINT/SIGTERM. Defaults `127.0.0.1` / `8080`.
+  Shutdown is `shutdown()` + `server_close()` and a clean exit 0.
+
+Exit codes:
+
+| Exit | Meaning |
+| --- | --- |
+| 0 | Success (migrations applied / no-op, or server shut down cleanly) |
+| 1 | `ConflictError` / `ValidationError`: the public message is printed to stderr (never a traceback) |
+
+No paths, SQL, secrets, or traceback text are ever printed.
+
+### Diagnostics responses (`opsledger/http/handlers.py`)
+
+Router built by `build_router()`:
+
+- `GET /api/v1/healthz` -> `healthz_handler`
+- `GET /api/v1/readyz` -> `readyz_handler`
+
+The liveness body is exactly:
+
+    {"status": "ok"}
+
+The readiness handler reads the database the router server was configured
+with (schema_migrations history) and returns exactly one of:
+
+- missing or empty history, or recorded history missing a shipped
+  migration (first five missing ids sorted):
+
+      {"error": {"code": "unready", "message": "the schema has not been migrated", "request_id": "<opaque id>"}}
+
+  (the missing-ids variant appends `: missing <id>, <id>` to the message;
+  503 status);
+- otherwise (200):
+
+      {"status": "ready", "migrations": N}
+
+Responses are bounded and never contain paths, SQL, secrets, or traceback
+text. Unexpected errors inside readyz go through `error_response_for`
+(500 `internal_error`, public message `internal server error`, no
+exception details). The readyz target is set via
+`configure_readyz(database_path)` (also available through
+`build_router(database_path=...)`); tests clear it with `configure_readyz(None)`.
