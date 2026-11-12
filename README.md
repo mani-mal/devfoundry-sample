@@ -32,9 +32,11 @@ this commit are:
 - **`doc/`** — the project specification (`DevFoundry_Large_Scale_OpenCode_Project.md`)
   and the DevFoundry campaign docs supplied alongside the workspace.
 
-Campaign scaffolding (driver code, journal, request files, evidence) is kept in
-a separate local `campaign/` directory that is not part of the public
-application history. No credentials, tokens, or LAN traces are committed.
+Campaign scaffolding (driver code, journal, request files, evidence) lives
+outside the product tree in a separate local directory
+(`../campaign-opsledger-run-001/`, owner decision 2026-11-12); it is not part
+of the public application history. No credentials, tokens, or LAN traces are
+committed.
 
 Legacy tracked files from a previous project (an older dev-foundry build:
 `.nx/`, `Dockerfile*`, `packages/`, `docs/tech`, `test-app/`, and related

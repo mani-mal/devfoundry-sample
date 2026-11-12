@@ -4,13 +4,13 @@ dist/
 *.log
 .DS_Store
 
-# Local secrets and campaign evidence — never commit
+# Local secrets — never commit
 sec.txt
 .env*
-campaign/journal/events.jsonl
-campaign/journal/index.json
-campaign/reports/
-campaign/evidence/
 __pycache__/
 *.pyc
-campaign/config.local.json
+
+# Campaign scaffolding lives outside the product tree
+# (owner decision 2026-11-12: /home/manimal/projects/campaign-opsledger-run-001)
+campaign/
+

@@ -61,5 +61,6 @@ part of the accepted contract; violating them invalidates the run.
   repository. Configuration shapes live in non-secret example files with
   placeholders, never usable credentials.
 - Campaign artifacts (`driver/`, `requests/`, `journal/`, `evidence/`,
-  `acceptance/`) belong to the separate campaign directory — never create them
-  inside this repository.
+  `acceptance/`) belong to the separate campaign directory
+  (`../campaign-opsledger-run-001/`, outside this repository) — never create
+  them inside this repository.
