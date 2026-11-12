@@ -2,6 +2,14 @@
 
 Campaign: `opsledger-run-001` · Updated: 2026-11-12 · Workspace: `/home/manimal/projects/devfoundry-sample`
 
+> **2026-11-12 (final, handover):** M1 complete — T001–T006 integrated on
+> `main` (`575f138`); fresh-checkout gate green (96 Python + 2 JS tests, 0
+> skipped). T006 approved on the lab (attempt 3 after two request-defect
+> `agent_error` runs) and landed locally. Final reports: `DEFECT_REGISTER.md`
+> (25 items: 1 open app defect, 3 owner decisions, 18 platform items),
+> `DEVFOUNDRY_ACCEPTANCE.md` (case dispositions), and the per-image
+> verification reports. See the handover section below.
+>
 > 2026-11-12 (evening prompt, lab `0.1.0-c1bd587`): Items 1–8 PASS, items
 > 9–10 NOT TESTED (not deployed). Packet 0.2.0 line totals exact (`+438 −3`);
 > "approved" wording everywhere; readiness rubric 1.1.0 (`repo.default_branch`
@@ -32,7 +40,7 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 
 ## Current checkpoint
 
-**B01–B05 complete locally. T001 implemented locally (gate green). B06 pending (human boundary). B07/B08 platform submission blocked on credentials.**
+**M1 COMPLETE (T001–T006 integrated, `575f138`, fresh-checkout gate green). Campaign handed to DevFoundry/owner: final reports written (`DEFECT_REGISTER.md`, `DEVFOUNDRY_ACCEPTANCE.md`); remaining items are owner decisions + the M2 backlog (T009+).**
 
 | ID | Work | State | Evidence |
 | --- | --- | --- | --- |
@@ -53,8 +61,10 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | T004 | Organizations, users and membership schema | **completed/accepted + landed (2026-11-12)** | `tsk-e744c6d9b88b40888733684d22a98f7b` — 3 files +438 −3, 17 tests, 0 findings, 1 attempt; approved via the F-102 flow; **published as Draft PR #1** (pub-49ae5275513f42ba832cacf6f635453c succeeded, open not merged — superseded); patch applied locally from the review packet (digest verified `181ac49b`), gate green (81 tests), committed `3951dd9`, pushed |
 | BUG-verify-4 | Evening prompt items on lab 0.1.0-c1bd587 (packet 0.2.0, F-208, approved wording, readiness 1.1.0, submit warnings, NEW-005 fix, T004, re-checks) | **done (2026-11-12)** | `campaign/reports/bug-verification-2026-11-12.md` — items 1–8 PASS; items 9–10 NOT TESTED (written but not deployed); NEW-005 fix verified (empty patch → `agent_error` before validation); readiness report rr-e6bc8c8c (rubric 1.1.0, both new checks pass) |
 | B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
-| B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
-| B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
+| B07 | Register repo (if needed), readiness | **done (2026-11-12)** | repo registered (default branch `main` after F-121); readiness rubric 1.1.0 run live: report `rr-e6bc8c8c` — `repo.default_branch` pass, `repo.validation_check` pass; app.build/secret-scan/branch-protection fails are the legacy-tree facts (owner decisions) |
+| B08 | Tiny onboarding task + first clean-checkout validation | **done (2026-11-11/12)** | the `[lab smoke]` tasks + T002 (first submitted task, accepted, landed) served as onboarding; clean-checkout validation re-verified on `575f138` (96 Python + 2 JS tests, gate green, CLI migrate works) |
+| T006 | CLI migrate/serve + bounded health/readiness handlers | **completed/accepted + landed (2026-11-12)** | `tsk-a820b98b26384849bff5c4ae288b5853` — 4 files +685 −1, 13 tests, 0 findings, 1 attempt (88 model calls, 1395 s); approved via the F-102 flow; publication refused by design (workspace autonomy, NEW-004); patch applied locally from the review packet, gate green, committed `575f138`, pushed. Two prior runs failed `agent_error` (empty patch, request defect — request corrected, evidence preserved) |
+| HANDOVER | Final reports for the DevFoundry handoff | **done (2026-11-12)** | `DEFECT_REGISTER.md` (25 items classified per §18.2), `DEVFOUNDRY_ACCEPTANCE.md` (case dispositions: live/manual/blocked/not-run), `campaign/reports/bug-verification-2026-11-12.md` (final image items) |
 
 ## Observed facts (B01 preflight, 2026-11-06; re-verified 2026-11-10 after WSL reinstall)
 
@@ -121,29 +131,50 @@ Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
 ## Next eligible work (once blockers clear)
 
 1. ~~Owner review + push T001 commit~~ → done 2026-11-10: `e35dd81` on `origin/main`, remote base SHA recorded (B06 complete).
-2. Recreate `campaign/config.local.json`, login, confirm project/repo/env/pack;
-   register repo if needed; readiness (B07).
-3. Tiny onboarding task + clean-checkout validation (B08).
-4. ~~Render T002~~ → done 2026-11-11: submitted, validated, **owner-approved**
-   (diff 1a21d2c); publication refused (workspace autonomy; NEW-004); patch
-   applied locally and committed `46825d3` on `origin/main`.
+2. ~~Login + project/repo identity~~ → done 2026-11-11 (see blockers).
+3. ~~B08 onboarding~~ → done 2026-11-11/12 (see table).
+4. ~~Render T002~~ → done 2026-11-11: accepted, landed `46825d3`.
 5. ~~T003 regression run~~ → done 2026-11-12: T003 **approved + landed**
-   (`a3c0bc7`); T005 also **approved + landed** (`d0dd2e3`). Both were
-   submitted without `--base` (registered default branch is `main` now,
-   F-121). T002/T003/T005 tasks `completed (accepted)` on the lab.
+   (`a3c0bc7`); T005 also **approved + landed** (`d0dd2e3`).
 6. ~~T004~~ → done 2026-11-12: **implemented, approved, published as
-   Draft PR #1** (open, not merged), then **landed locally** from the
-   review packet (digest-verified `181ac49b`), gate green, committed
-   `3951dd9` and pushed. The Draft PR is superseded by the local landing
-   (closing it is the owner's call). Next spec task: **T006** (CLI
-   migrate/serve + bounded health/readiness handlers, needs T003+T005 ✓)
-   — unblocked.
-7. Owner decisions pending on repo issues A2–A4 (delete ~780 legacy seed files
-   vs amend README; untrack `campaign/` vs amend docs) and on:
-   NEW-004 (resolved by design: submit with `--autonomy draft_pr` when a
-   Draft PR is wanted — exercised by T004's Draft PR #1),
-   ~~NEW-005~~ (fixed on the lab, BUG-133: empty patch now fails before
-   validation — verified), F-120b (resolved on the lab, BUG-134: the
-   preview shows the base line — verified), and the recurring
-   qualified-baseline dependency-drift warning (real drift; ignore until
-   the environment build is re-qualified, needs the cluster).
+   Draft PR #1**, then **landed locally** from the review packet
+   (digest-verified `181ac49b`), gate green, committed `3951dd9` and
+   pushed. The Draft PR is superseded (closing it is the owner's call).
+7. ~~T006~~ → done 2026-11-12: **approved + landed** (`575f138`).
+   **M1 (T001–T006) is complete.**
+
+## Handover to DevFoundry/owner (2026-11-12)
+
+The campaign is handed over at `575f138`. What was delivered and where the
+open items live:
+
+1. **Delivered**: the M1 slice of OpsLedger (errors, clock, db factory,
+   migration runner + checksums, identity schema, HTTP router + envelope,
+   CLI migrate/serve + healthz/readyz) — every platform task approved by a
+   human, landed from digest-verified review packets, gate green on a fresh
+   checkout (96 Python + 2 JS tests, 0 skipped). No credentials, no campaign
+   evidence dump in the public tree.
+2. **Final reports** (this handoff): `DEFECT_REGISTER.md` — 25 items, each
+   classified per spec §18.2 with reproduction + evidence + resolution:
+   1 open application defect (A1, low: RFC3339 pre-1000-year), 3 open owner
+   decisions (B1 legacy tree + campaign governance, B2 default-looking
+   placeholder creds, B3 gate PATH footgun), 18 platform items (12 fixed +
+   verified PASS, 1 by-design NEW-004, 1 not triggered, 1 fix deployed but
+   not re-tested, 2 not tested — not deployed, 1 registry-resolved).
+   `DEVFOUNDRY_ACCEPTANCE.md` — case dispositions with live/manual/blocked/
+   not-run labels and the request-digest → task → patch → decision → commit
+   map for every integrated feature.
+3. **Owner decisions requested**:
+   - B1: delete the ~740-file legacy seed tree + untrack `campaign/`, or
+     amend README/AGENTS to bless them (B1's decision subsumes B2).
+   - A1: approve a small successor task through DevFoundry for the
+     RFC3339 zero-padding fix.
+   - C18: dependency-drift warning — re-qualify the environment build
+     (needs the cluster) or keep ignoring.
+   - T004's Draft PR #1: close (superseded by `3951dd9`).
+4. **Next backlog**: M2 starts at **T009** (password-hash records, needs
+   T004 ✓), then T010–T016. Submit without `--base` on the `polyglot`
+   environment; land via the review packet as before.
+5. **Boundaries held**: no task was approved by the driver, no task
+   bypassed human review, no DevFoundry merge was attempted, `check.sh` was
+   never edited, no accepted test was weakened, no secrets entered the repo.
