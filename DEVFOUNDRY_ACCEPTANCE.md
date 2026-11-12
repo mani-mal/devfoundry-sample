@@ -41,9 +41,11 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | VS Code extension | **manual** | Verified headless in an earlier checkpoint (activation + 8 commands + trees, SMOKE PASS); no interactive session on this machine |
 | People management (invites, roles) | **not-run** | No second human in the campaign; invitations were exercised at the API level in earlier runs only |
 | Disruptive faults (pod kills, outages) | **not-run** | Not in the evening/brief prompts; lab stability was sufficient |
-| Readiness (rubric 1.1.0) | **live** | Report `rr-e6bc8c8c`: `repo.default_branch` pass, `repo.validation_check` pass, environment warning on a non-assessed environment, `--preview` base line — all observed 2026-11-12 |
+| Readiness (rubric 1.1.0) | **live** | Report `rr-e6bc8c8c`: `repo.default_branch` pass, `repo.validation_check` pass, environment warning on a non-assessed environment, `--preview` base line — all observed 2026-11-12; re-run after the B3 fix (`rr-f9179b98…`) and on the cleaned tree (`rr-31b16f33…`, `repo.secret_scan` pass) |
 | Console rendering | **manual** | Browser MCP extension not connected on this machine; console facts verified via the served SPA bundle + frontend source (BUG-006 branch, F-503 page + timeline actor, approved wording, publish strings); live clicks NOT TESTED |
-| Items 9–10 of the evening prompt (opencode.json readiness note; environment re-qualification) | **blocked** | Written but not deployed; the lab still runs `0.1.0-c1bd587` |
+| Items 9–10 of the evening prompt (opencode.json readiness note; environment re-qualification) | **live** (9) / **live** (10) | Item 9: `repo.agent_guidance` carries the single opencode.json note (verified on `rr-f9179b98…`, `rr-31b16f33…`). Item 10: `polyglot` v4 qualifies against `main` (owner decision, C18 closed — verified on the T009 packet and both evening reports) |
+| Code review agent (first live runs) | **live** | PR #3 (+23 −1): full report, conclusion `incomplete (automated check, not an approval)`, 2 real findings (OverflowError escape path; unused RFC3339_Z_FORMAT), `comment` correctly refused (started without posting). PR #2 (2.3MB deletion diff): attempt 1 `worker_lost` (979 s), attempt 2 hit the 1200 s task budget — failed, C20 |
+| CI repair agent (first live runs) | **live** | Owner-authorized workflow commit `cf6d2c8` passes on `main`; probe PR #4 (deliberate `2 + 2 == 5`) failed as designed; diagnose: first unknown (`setup_failed` — stale auto-detected npm-ci app config after part 1; feedback `right` recorded), after reconfiguring the app as administrator (`kind python`, `test = bash check.sh`): `regression (high confidence)`, reproduction reproduced, comparison passes; `ci repair` proposed the exact minimal fix and the guard refused it **by design** (test-file edits refused, ruling [T9] R5); fixed by hand (one line), CI green, probe closed unmerged, branch deleted, diagnosis `done` |
 
 ## Every integrated feature maps (spec §19.2)
 
@@ -55,9 +57,20 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | T005 (HTTP router) | request `campaign/requests/T005.md` → `tsk-e2441607…` | `245c71fb…` | accept (human) | `d0dd2e3` |
 | T004 (identity schema) | request `campaign/requests/T004.md` → `tsk-e744c6d9…` | `181ac49b…` | accept (human) | `3951dd9` (+ Draft PR #1) |
 | T006 (CLI + diagnostics) | request `campaign/requests/T006.md` → `tsk-a820b98b…` | `c5cea845…` | accept (human) | `575f138` |
+| Cleanup part 1 (legacy root files + B2 creds) | request `../campaign-opsledger-run-001/requests/cleanup-B1B2-part1.md` → `tsk-1b631a7c…` | `da42444b…` | accept (human) | `623bb44` + completion `a42019c` (PR #2 closed unmerged) |
+| Cleanup part 2a (.nx/cache + packages) | request `requests/cleanup-B1B2-part2a.md` → `tsk-6c95b5c1…` | `13290d62…` | accept (human) | `2dd153e` |
+| Cleanup part 2b (.nx/workspace-data) | request `requests/cleanup-B1B2-part2b.md` → `tsk-5dda1cea…` | `6bcb9208…` | accept (human) | `1ef2570` |
+| Cleanup part 3 (test-app) | request `requests/cleanup-B1B2-part3.md` → `tsk-5f7f5e24…` | `62859138…` | accept (human) | `2a58f16` |
+| A1 (RFC3339 zero-padding) | request `requests/A1-rfc3339.md` → `tsk-0ff5ac82…` | `7a0e7e47…` | accept (human) | `3131a90` (PR #3 closed unmerged) |
+| T009 (password hashes) | request `requests/T009.md` → `tsk-7382eb17…` | `a5444fe0…` | accept (human) | `8afad1b` |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two
 request-defect runs (`tsk-97283bf6…`, `tsk-68152d5f…`, `agent_error`), the
-NEW-005 probe (`tsk-2fa42241…`, `agent_error`), and the BUG-107 publish
-failure (`pub-f03ad672…`). Nothing is hidden.
+NEW-005 probe (`tsk-2fa42241…`, `agent_error`), the BUG-107 publish
+failure (`pub-f03ad672…`), the oversized single cleanup task
+(`tsk-38fd16f0…`, validation_error), the two over-budget split attempts
+(`tsk-5afb8a89…`, `tsk-7c2a64f9…`), the heavy code-review run
+(`tsk-0d95beb3…`, worker_lost/timeout), the CI diagnose before the app
+reconfig (`tsk-cab53568…`, unknown/setup_failed), and the refused CI
+repair (`tsk-eceab43f…`, guard_refused by design). Nothing is hidden.

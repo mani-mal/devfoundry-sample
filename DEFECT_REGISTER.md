@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 · Final commit: `575f138`
+Campaign: `opsledger-run-001` · Updated: 2026-11-12 (evening) · Final commit: `a42019c`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -10,18 +10,19 @@ speculative.
 
 | # | Class | Severity | Where | Reproduction | Evidence | Resolution / successor |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1 | Application defect (spec-conformance gap) | low | `opsledger/core/clock.py` — `format_rfc3339` | `format_rfc3339(datetime(999, 1, 1, tzinfo=timezone.utc))` → `'999-01-01T00:00:00Z'` (3-digit year; RFC3339 §5.6 requires 4DIGIT; `strftime("%Y")` on glibc does not zero-pad) | re-verified on `575f138`: still `'999-...`; `campaign/reports/T001-issues.md` §1 | **OPEN** — successor task through DevFoundry (one-line fix + regression test); no later task depends on pre-1000-year timestamps |
+| A1 | Application defect (spec-conformance gap) | low | `opsledger/core/clock.py` — `format_rfc3339` | `format_rfc3339(datetime(999, 1, 1, tzinfo=timezone.utc))` → `'999-01-01T00:00:00Z'` (3-digit year; RFC3339 §5.6 requires 4DIGIT; `strftime("%Y")` on glibc does not zero-pad) | fixed by lab task `tsk-0ff5ac82…` (diff `7a0e7e47…`, 2 files +23 −1, 0 findings), landed `3131a90`; `format_rfc3339(datetime(999,…))` → `'0999-…'`; regression test covers years 1/99/999/2026 | **CLOSED** — landed `3131a90`, gate green; Draft PR #3 closed unmerged (superseded) |
 | A2 | Application defect (platform-behavior gap, fixed upstream 2026-11-12) | medium | DevFoundry lab (affected OpsLedger campaign runs) | Two T005 runs produced empty patches (`e3b0c442…`, 0 files) that **passed validation** and reached `awaiting_review` with only a packet warning (NEW-005) | `campaign/reports/bug-verification-2026-11-11.md` §Item 6; both tasks preserved (`completed (rejected)`) | **RESOLVED on the lab** (`0.1.0-c1bd587`, BUG-133): empty patch now fails before validation — verified with probe `tsk-2fa422417511486fb054257bdcfa4cff` (`agent_error`, reason "the agent changed nothing: the patch is empty") |
 | A3 | Task/request defect | medium | `campaign/requests/T006.md` attempts 1–2 | The agent read 20+ files, ran the gate, and **stopped without writing files** — two consecutive `agent_error` failures (`tsk-97283bf6…`, `tsk-68152d5f…`) | attempt streams: 9–23 tool calls, final step reason `stop`, patch `e3b0c442…` | **RESOLVED by request correction** (spec §18.2 action): compressed the request and put an explicit "implement now, in this order; start writing opsledger/cli.py first" instruction at the top — attempt 3 (`tsk-a820b98b…`) implemented fully, 0 findings. Both failed runs remain in evidence on the lab |
 | A4 | Task/request defect (operator error) | low | T002 first submission | Submitted without `--base` when the registered default branch was the `checked` seed → refusal | preserved on the lab (NEW-001) | **RESOLVED**: F-121 shipped branch changing; the registry default is `main` now; all later submissions omit `--base` |
+| A5 | Campaign planning defect (landing) | low | Part-1 cleanup landing (`623bb44`) | The working-tree changes were stashed before the CI probe and not restored, so the landing commit captured only `.env.example` + README; 55 root deletions stayed unlanded until the completion commit | `git show --stat 623bb44` (1 file) vs the reviewed 57-file patch; recovered via `git stash pop` → completion commit `a42019c`, gate green | **RESOLVED** — `a42019c` completes the reviewed patch exactly; lesson: never stash across a landing |
 
 ## B. Repository issues (owner decisions, open)
 
 | # | Class | Severity | Where | Reproduction | Resolution |
 | --- | --- | --- | --- | --- | --- |
-| B1 | Doc/reality drift + governance | medium | `README.md` vs tracked legacy tree; `campaign/` governance | README claims "a clean OpsLedger-only tree" but `git ls-files` shows 501 `.nx/` files, `packages/`, `test-app/`, root `Dockerfile*` etc. (762 tracked files total); README + `campaign/README.md` describe `campaign/` as local-only while 24 of its files are tracked and public | **OPEN — owner decision**: (a) delete the legacy tree and untrack `campaign/` (matches the written governance), or (b) amend README/AGENTS to state the merge intentionally kept them. Not changed unilaterally; both AGENTS.md and the README are owner-owned |
-| B2 | Hygiene (contradicts AGENTS.md in spirit) | low | `.env.example`, `packages/web-console/.env.example` | `POSTGRES_PASSWORD=devfoundry`, `DATABASE_URL=postgres://devfoundry:devfoundry@…`, `NEXTAUTH_SECRET=langfuse-secret` — default-looking, not live secrets (token-shape scan: zero `ghp_*`/`glpat-*`/`sk-*`/PEM matches repo-wide) | **OPEN** — folds into B1's decision; deleting the legacy tree removes them |
-| B3 | Environment/infrastructure | medium | `check.sh` + WSL `python3` | Plain `bash check.sh` → exit 1 (`Python 3.12 required by qualified baseline`) because fresh WSL `python3` is 3.14.4; the gate passes only with the uv 3.12 PATH exported | **OPEN — operator action**: install CPython 3.12 system-wide (or a documented non-protected wrapper; `check.sh` itself is protected and untouched) |
+| B1 | Doc/reality drift + governance | medium | `README.md` vs tracked legacy tree; `campaign/` governance | README claimed "a clean OpsLedger-only tree" while 701 legacy files were tracked; `campaign/` was tracked despite local-only governance | **CLOSED (2026-11-12 evening, owner decision applied)**: `campaign/` moved out (snapshot branch `campaign` at `65323db`, live dir `../campaign-opsledger-run-001/`, commit `49d4ef6`); the legacy seed tree removed through DevFoundry review (parts 1/2a/2b/3, commits `623bb44`+`a42019c`, `2dd153e`, `1ef2570`, `2a58f16`) — final tree 44 files, README claim true, gate green |
+| B2 | Hygiene (contradicts AGENTS.md in spirit) | low | `.env.example`, `packages/web-console/.env.example` | `POSTGRES_PASSWORD=devfoundry`, `DATABASE_URL=postgres://devfoundry:devfoundry@…`, `NEXTAUTH_SECRET=langfuse-secret` — default-looking, not live secrets | **CLOSED (2026-11-12 evening)**: both files deleted through DevFoundry review (part 1, `623bb44`/`a42019c`); readiness `repo.secret_scan` now passes ("no tracked file matches the secret patterns") |
+| B3 | Environment/infrastructure | medium | `check.sh` + WSL `python3` | Plain `bash check.sh` → exit 1 (`Python 3.12 required by qualified baseline`) because fresh WSL `python3` was 3.14.4 | **CLOSED (2026-11-12 evening, owner-authorized direct edit of the protected file)**: `check.sh` locates Python 3.12 itself (commit `f502a32`); plain `bash check.sh` green on WSL, clear failure when no 3.12 exists, readiness `repo.validation_check` still passes |
 
 ## C. DevFoundry platform defects (filed/verified during the campaign)
 
@@ -45,8 +46,12 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C14 | NEW-005 / BUG-133 | medium | Empty patch passed validation | **FIXED** (fails before validation, `agent_error`; verified 2026-11-12) |
 | C15 | NEW-004 | medium | `workspace`-autonomy tasks cannot be published | **BY DESIGN** (owner decision): submit with `--autonomy draft_pr` when a Draft PR is wanted — exercised by T004's Draft PR #1 (publish succeeded); `workspace` tasks are applied locally from the review packet |
 | C16 | NEW-001 | low | Registered default branch was the `checked` seed | **RESOLVED** (registry default is `main`) |
-| C17 | Packet warnings | low | Tracked `opencode.json` skip-worktree warning; "dependencies differ from the qualified baseline" | Recurred on every packet through `0.1.0-fccb92f`; **absent on `0.1.0-c1bd587`** (T006's packet: `warnings: []`); the written-but-undeployed readiness-note fix (item 9 of the evening prompt) addresses the readiness half — NOT TESTED (not deployed) |
-| C18 | Dependency drift | medium | "dependencies differ from the qualified baseline; setup reinstalled" | Real drift; **owner decision: ignore until the environment build is re-qualified** (needs the cluster) |
+| C17 | Packet warnings | low | Tracked `opencode.json` skip-worktree warning; "dependencies differ from the qualified baseline" | Recurred on every packet through `0.1.0-fccb92f`; **absent on `0.1.0-c1bd587`** (T006's packet: `warnings: []`); the readiness-note fix (item 9 of the evening prompt) is now **live** — `repo.agent_guidance` carries the single opencode.json note (verified on `rr-f9179b98…` and `rr-31b16f33…`) |
+| C18 | Dependency drift | medium | "dependencies differ from the qualified baseline; setup reinstalled" | **CLOSED (owner decision 2026-11-12)**: `polyglot` v4 qualifies against `main` (build `envb-2d5bb032…` qualified at `fc7758a`); verified on the T009 packet (no drift warning) and both evening readiness reports (`freshness current`, no warning) |
+| C19 | Platform limit | medium | Lab validation: "the compressed patch does not fit in a 524288-byte Secret" | A 700-file deletion task produced a 2.74MB patch (517KB gzip-9) → validation error before checks; a `.nx`+`packages`+`test-app` split (2.56MB raw) failed the same way; `.nx`+`packages` (2.25MB raw) failed because `.nx/workspace-data` diffs huge JSON/SQLite files | **OPEN — platform consideration**: document the budget; deletion campaigns must be split per tree (working split used: root files, `.nx/cache`+`packages`, `.nx/workspace-data`, `test-app`). Evidence: `tsk-38fd16f0…`, `tsk-5afb8a89…`, `tsk-7c2a64f9…` |
+| C20 | Platform observation | low | Code-review agent on a heavy diff | Reviewing the 2.3MB deletion PR (57 files, −11792 lines): attempt 1 `worker_lost` after 979 s (51 model calls), attempt 2 hit the lab's 1200 s task budget → failed with no findings | **OPEN — platform consideration**: small diffs review fine (PR #3: full report + 2 real findings in ~5 min); heavy diffs need a bigger budget or diff-scoped review. Evidence: `tsk-0d95beb3…` |
+| C21 | Platform observation | low | Stale auto-detected app config blocks CI reproduction | The repo's app config was auto-detected as Node (`setup = npm ci`); after part 1 deleted `package.json`, `ci diagnose` failed at reproduction (`setup_failed`) with class `unknown` despite a correct agent explanation; fixed as administrator by reconfiguring the app (`kind python`, `test = bash check.sh`, stale commands cleared via API) → re-diagnosis `regression (high confidence)`, comparison passes | **OPEN — platform consideration**: an app-config drift note on CI diagnoses (the readiness report already surfaces `app.build`); evidence `tsk-cab53568…` (unknown), `tsk-759bbc06…` (regression, after the fix) |
+| C22 | Platform observation | low | Repair-guard state messages | `ci repair` of the probe: the guard correctly refused the agent's minimal fix (correcting the expected value **with the test kept**) because test-file edits are refused by design (fail-closed allow list, ruling [T9] R5); the state message says "weakened a check (tests kept)" and "fix it by hand" — accurate, but "weakened" reads oddly for a value correction; the earlier no-change attempt uses a different message | **BY DESIGN** (guard behavior correct; human completion worked: one-line fix applied by hand, CI green, probe closed unmerged, diagnosis marked done) — message wording noted for the platform |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -59,15 +64,27 @@ reproduction observed, post-fix behavior NOT re-tested**.
 
 | Item | State |
 | --- | --- |
-| T004 Draft PR #1 | Open on GitHub (head `devfoundry/tsk-e744c6d9` → main), **superseded** by the local landing `3951dd9`; closing it is the owner's call |
+| T004 Draft PR #1 | **Closed by the owner** (2026-11-12T15:31:24Z) with a comment pointing to `3951dd9`; the DevFoundry task keeps the review record |
+| Cleanup Draft PR #2 | Opened by DevFoundry (`pub-c7371bde…` succeeded); the code-review agent ran on it (worker_lost/timeout — C20); **closed unmerged** (superseded by the local landing `623bb44`+`a42019c`) |
+| A1 Draft PR #3 | Opened by DevFoundry (`pub-014185cb…` succeeded); the code-review agent produced 2 real findings on it; **closed unmerged** (superseded by the local landing `3131a90`) |
+| CI probe PR #4 | Deliberately broken test; diagnosis regression/high-confidence; repair guard refused the test edit by design; fixed by hand (CI green); **closed unmerged**, branch deleted |
 | Draft PR handoff to DevFoundry | This campaign's DevFoundry handoff is the verification evidence itself (BUG/feature verdicts above); no product changes belong in this repository (spec §18.2) |
 
 ## Totals
 
-- Application: 4 items — 1 open (A1, low), 3 resolved/corrected.
-- Repository: 3 items — all open, all owner decisions (B1 subsumes B2).
-- Platform: 18 items — 12 fixed + verified PASS, 1 by-design, 1 not
-  triggered, 1 not re-tested (C8 correction), 2 not tested (not deployed),
-  1 resolved at the registry level.
-- Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `575f138` (fresh
-  checkout: 96 Python + 2 JS tests, 0 skipped).
+- Application: 5 items — 0 open (A1 closed by lab task `tsk-0ff5ac82…`,
+  landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
+- Repository: 3 items — all closed (B1+B2 cleanup landed through
+  DevFoundry review; B3 closed by the owner-authorized direct edit).
+- Platform: 22 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+  1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
+  deployed but not re-tested (C8 correction), 1 registry-resolved,
+  2 closed owner decisions (C17 live, C18 closed), 3 new platform
+  observations (C19 budget, C20 heavy review, C21 stale app config).
+- Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `a42019c` (fresh
+  clone: 44-file tree, 97 Python + 2 JS tests, 0 skipped; plain
+  `bash check.sh` green without a PATH export).
+- Agents: code-review first live PASS (2 real findings), CI
+  diagnose/repair first live PASS (diagnosis correct, guard fail-closed,
+  by-hand completion).
+- M2: T009 landed (`8afad1b`, 23 tests, 0 findings). Next: T010.
