@@ -314,6 +314,53 @@ write), and `from_row(row)` maps back. Parameterized SQL for list/get
 paths stays in later tasks; all SQL here carries values only as bound
 parameters.
 
+## Identity: sessions storage (T010 part B)
+
+### Migration (`opsledger/migrations/0003_sessions.sql`)
+
+Third shipped append-only migration, applied after `0002_identity`. It
+creates the `sessions` table:
+
+    CREATE TABLE sessions (
+        token_hash TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        revoked_at TEXT
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations` in the
+same IMMEDIATE transaction as the DDL, so any later change to the file
+bytes is tamper-evident.
+
+### Table shape
+
+| Column | Content |
+| --- | --- |
+| `token_hash` | Primary key; the sha256 hex digest of the raw session token |
+| `user_id` | Owner identity, `REFERENCES users(id)` |
+| `created_at` | RFC3339 UTC `Z` second-precision creation text |
+| `expires_at` | RFC3339 UTC `Z` second-precision expiry text |
+| `revoked_at` | Null while active; revocation timestamp when revoked |
+
+### Token storage rule
+
+Only the sha256 token hash is stored. The raw token is shown once at
+creation (returned by `create_session`) and never persisted — not in this
+table, not in the audit, not in logs — so a database leak cannot be replayed
+as a session.
+
+### Expiry and revocation semantics
+
+- `verify_session(token)` looks up the row by the token's sha256 hash and
+  returns the session only when `revoked_at` is null and `expires_at` is in
+  the future; an expired or revoked session fails verification.
+- `revoke_session(token)` stamps `revoked_at`; a revoked session never
+  verifies again.
+- Logout is revocation: ending a session calls `revoke_session`, and the
+  revocation timestamp is persisted (audit trail stays append-only).
+
 ## HTTP foundation (T005)
 
 ### Router (`opsledger/http/router.py`)

@@ -62,7 +62,7 @@ class FreshDatabaseMigrationTests(IdentitySchemaTestBase):
 
         result = migrate(self.conn, migrations_dir)
 
-        self.assertEqual(result, ["0001_initial", "0002_identity"])
+        self.assertEqual(result, ["0001_initial", "0002_identity", "0003_sessions"])
         table_names = {
             row[0]
             for row in self.conn.execute(
@@ -75,7 +75,7 @@ class FreshDatabaseMigrationTests(IdentitySchemaTestBase):
             "SELECT migration_id, applied_at FROM schema_migrations"
             " ORDER BY migration_id"
         ).fetchall()
-        self.assertEqual(len(rows), 2)
+        self.assertEqual(len(rows), 3)
         for row in rows:
             self.assertTrue(RFC3339_Z_PATTERN.match(row["applied_at"]))
 

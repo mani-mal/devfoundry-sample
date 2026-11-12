@@ -68,7 +68,7 @@ class CliMigrateTests(unittest.TestCase):
         code, out, err = _run_cli(["migrate", str(self.db_path)])
 
         self.assertEqual(code, 0)
-        self.assertEqual(out.splitlines(), ["0001_initial", "0002_identity"])
+        self.assertEqual(out.splitlines(), ["0001_initial", "0002_identity", "0003_sessions"])
         self.assertEqual(err, "")
 
     def test_second_migrate_exits_0_and_prints_nothing(self):
@@ -150,7 +150,7 @@ class ReadyzHandlerTests(unittest.TestCase):
         status, body = readyz_handler(self._request())
 
         self.assertEqual(status, 200)
-        self.assertEqual(body, {"status": "ready", "migrations": 2})
+        self.assertEqual(body, {"status": "ready", "migrations": 3})
 
     def test_readyz_with_missing_history_row_is_503_naming_it(self):
         self.assertEqual(_run_cli(["migrate", str(self.db_path)])[0], 0)
@@ -256,7 +256,7 @@ class HealthzEndToEndTests(unittest.TestCase):
             self.assertEqual(response.status, 200)
             payload = json.loads(response.read().decode("utf-8"))
 
-        self.assertEqual(payload, {"status": "ready", "migrations": 2})
+        self.assertEqual(payload, {"status": "ready", "migrations": 3})
 
 
 class ServeShutdownRulesTest(unittest.TestCase):
