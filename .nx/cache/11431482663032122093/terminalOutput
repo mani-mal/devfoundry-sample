@@ -1,5 +1,0 @@
-
-> @dev-foundry/api@0.1.0 test
-> jest --passWithNoTests
-
-[1mNo tests found, exiting with code 0[22m

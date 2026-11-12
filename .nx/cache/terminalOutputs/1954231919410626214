@@ -1,9 +1,0 @@
-
-> worker@0.1.0 build
-> tsc --build
-
-src/worker.ts(91,9): error TS2322: Type 'unknown' is not assignable to type 'string'.
-npm ERR! Lifecycle script `build` failed with error: 
-npm ERR! Error: command failed 
-npm ERR!   in workspace: worker@0.1.0 
-npm ERR!   at location: /home/manimal/projects/dev-foundry/packages/worker 
