@@ -4,7 +4,28 @@ cd -- "$(dirname -- "$0")"
 export PYTHONDONTWRITEBYTECODE=1
 export PYTHONHASHSEED=0
 export TZ=UTC
-python3 - <<'PY'
+
+# Locate a Python 3.12 interpreter (B3, owner-authorized edit 2026-11-12):
+# prefer python3.12, then a python3 that is 3.12. The gate checks the version
+# again inside Python; this only finds the right interpreter so plain
+# `bash check.sh` works on hosts whose default python3 is newer (e.g. 3.14).
+PY12=python3.12
+if ! command -v "$PY12" >/dev/null 2>&1; then
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 \
+       && "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)' 2>/dev/null; then
+      PY12="$candidate"
+      break
+    fi
+  done
+fi
+if ! command -v "$PY12" >/dev/null 2>&1; then
+  echo "check.sh: no Python 3.12 interpreter found (tried python3.12, python3, python)" >&2
+  echo "install CPython 3.12 and ensure 'python3.12' is on PATH" >&2
+  exit 1
+fi
+
+"$PY12" - <<'PY'
 from pathlib import Path
 import subprocess
 import sys
