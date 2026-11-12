@@ -361,7 +361,52 @@ as a session.
 - Logout is revocation: ending a session calls `revoke_session`, and the
   revocation timestamp is persisted (audit trail stays append-only).
 
-## HTTP foundation (T005)
+## Identity: CSRF contexts storage (T011 part B)
+
+### Migration (`opsledger/migrations/0004_csrf_contexts.sql`)
+
+Fourth shipped append-only migration, applied after `0003_sessions`. It
+creates the `csrf_contexts` table:
+
+    CREATE TABLE csrf_contexts (
+        token_hash TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL,
+        rotated_at TEXT
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations` in the
+same IMMEDIATE transaction as the DDL, so any later change to the file
+bytes is tamper-evident.
+
+### Table shape
+
+| Column | Content |
+| --- | --- |
+| `token_hash` | Primary key; the sha256 hex digest of the raw CSRF token |
+| `created_at` | RFC3339 UTC `Z` second-precision creation text |
+| `expires_at` | RFC3339 UTC `Z` second-precision expiry text |
+| `rotated_at` | Null while current; timestamp when the context was rotated/superseded |
+
+### Token storage rule
+
+Only the sha256 token hash is stored. The raw CSRF token is delivered once
+at issue time (returned by `issue_context`) and never persisted — not in
+this table, not in the audit, not in logs — so a database leak cannot be
+used to build a CSRF token.
+
+### TTL
+
+CSRF contexts have a short TTL: default 900 s, maximum 3600 s. An expired
+context fails verification.
+
+### Rotation semantics
+
+- `rotate_context` issues a fresh context (new token, new expiry) in place
+  of the old one.
+- `supersede` marks the old context rotated (stamps `rotated_at`) so its
+  raw token stops verifying.
 
 ### Router (`opsledger/http/router.py`)
 
