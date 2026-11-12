@@ -38,10 +38,11 @@ outside the product tree in a separate local directory
 of the public application history. No credentials, tokens, or LAN traces are
 committed.
 
-Legacy tracked files from a previous project (an older dev-foundry build:
-`.nx/`, `Dockerfile*`, `packages/`, `docs/tech`, `test-app/`, and related
-paths) were already deleted in the working tree and those deletions are
-included in this commit, leaving a clean OpsLedger-only tree.
+The legacy DevFoundry seed files (the Dockerfiles, the docker-compose files,
+the legacy root test scripts, the platform notes, `docs/tech/` and
+`docs/user/`, and the placeholder `.env.example` files) were removed by this
+task; a follow-up task removes the remaining large legacy trees (`.nx/`,
+`packages/`, `test-app/`), leaving an OpsLedger-only tree.
 
 OpsLedger is a multi-organization operations system for sites, equipment, work
 orders, spare parts, purchase requests, incident follow-up, and reporting.
@@ -93,6 +94,7 @@ node --check web/js/app.mjs
 - SQLite is single-instance on local disk: no NFS placement, no multi-replica
   sharing of one database file. Journal mode and SQLite version are recorded.
 - No network calls, no secrets, no external fonts or CDNs in `web/` assets.
+- OpsLedger reads no environment files and the repository ships no credential material or .env files.
 
 ## Layout
 
