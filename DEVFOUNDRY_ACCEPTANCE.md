@@ -65,6 +65,8 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | T009 (password hashes) | request `requests/T009.md` → `tsk-7382eb17…` | `a5444fe0…` | accept (human) | `8afad1b` |
 | T010 part A (session domain module) | request `../campaign-opsledger-run-001/requests/T010a.md` → `tsk-33b2a9cc…` | `19d64316…` | accept (human) | `f9d9e46` (merge of Draft PR #5, merged on GitHub) |
 | T010 part B (sessions migration + count literals + docs) | request `../campaign-opsledger-run-001/requests/T010b.md` → `tsk-04f5553b…` | `fdb4b92d…` | accept (human) | `aea9272` (merge of Draft PR #6, merged on GitHub) |
+| T011 part A (CSRF context domain module) | request `../campaign-opsledger-run-001/requests/T011a.md` → `tsk-f58d2c58…` | `3c39edf0…` | accept (human) | `321cfa5` (merge of Draft PR #7, merged on GitHub) |
+| T011 part B (CSRF contexts migration + count literals + docs) | request `../campaign-opsledger-run-001/requests/T011b.md` → `tsk-ab1f9d17…` | `28d44475…` | accept (human) | `9c723bc` (merge of Draft PR #8, merged on GitHub) |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two

@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Final commit: `aea9272`
+Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Final commit: `9c723bc`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -74,6 +74,8 @@ reproduction observed, post-fix behavior NOT re-tested**.
 | CI probe PR #4 | Deliberately broken test; diagnosis regression/high-confidence; repair guard refused the test edit by design; fixed by hand (CI green); **closed unmerged**, branch deleted |
 | T010a Draft PR #5 | Opened by DevFoundry (`pub-a9291ea3…` succeeded); first `gh pr merge` refused while draft (C24); **merged on GitHub** 2026-11-12T22:02:47Z → `f9d9e46`; the outcome poller recorded `cr_merged #5 f9d9e4609330 verified` ≤ 1 min later |
 | T010b Draft PR #6 | Opened by DevFoundry (`pub-db8f99fa…` succeeded); ready + **merged on GitHub** 2026-11-12T22:16:08Z → `aea9272`; poller recorded `cr_merged #6 aea92722d55e verified` ~3 min later |
+| T011a Draft PR #7 | Opened by DevFoundry (`pub-afbb92f1…` succeeded); ready + **merged on GitHub** 2026-11-12T23:04:38Z → `321cfa5`; poller recorded `cr_merged #7 321cfa5835a2 verified` ~4 min later |
+| T011b Draft PR #8 | Opened by DevFoundry (`pub-ccb4054c…` succeeded); ready + **merged on GitHub** 2026-11-12T23:15:00Z → `9c723bc`; poller recorded `cr_merged #8 9c723bca0833 verified` < 1 min later |
 | Draft PR handoff to DevFoundry | This campaign's DevFoundry handoff is the verification evidence itself (BUG/feature verdicts above); no product changes belong in this repository (spec §18.2) |
 
 ## Totals
@@ -97,4 +99,6 @@ reproduction observed, post-fix behavior NOT re-tested**.
   by-hand completion).
 - M2: T009 landed (`8afad1b`, 23 tests, 0 findings); T010 complete in two
   parts (sessions module `f9d9e46`/PR #5 + migration/literals `aea9272`/PR
-  #6), both through Draft PRs merged on GitHub. Next: T011.
+  #6); T011 complete in two parts (CSRF module `321cfa5`/PR #7 +
+  migration/literals `9c723bc`/PR #8) — all through Draft PRs merged on
+  GitHub, all first-attempt after the split lesson. Next: T012.
