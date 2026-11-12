@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS schema_notes (
+    id INTEGER PRIMARY KEY,
+    note TEXT NOT NULL
+)

@@ -115,3 +115,57 @@ with transaction(conn) as tx:
 sqlite3 database errors (`IntegrityError`, `OperationalError`) propagate
 unchanged from `transaction()` blocks: they are never swallowed and never
 wrapped into application errors. All SQL is parameterized.
+
+## Schema foundation (T003)
+
+### Migration runner (`opsledger/core/migrations.py`)
+
+Public interface — one function:
+
+- `migrate(conn, directory, *, clock=None) -> list[str]` — applies pending
+  SQL migrations from `directory` to the SQLite connection `conn` and
+  returns the list of `migration_id` values applied in this call, in
+  application order. Pass `clock` to make `applied_at` deterministic in
+  tests; the real wall clock is used by default.
+
+Runner behavior:
+
+- Creates the `schema_migrations` history table when absent:
+  `id` INTEGER PRIMARY KEY, `migration_id` TEXT NOT NULL UNIQUE,
+  `checksum` TEXT NOT NULL, `applied_at` TEXT NOT NULL.
+- Lists `*.sql` files in `directory` and sorts them by their numeric prefix
+  (`NNN_name.sql`); a file without a numeric prefix raises
+  `ValidationError` with the stable subclass code `validation_error`.
+- Refuses changed applied files: loads the recorded history first, and if
+  any already-applied migration's file content changed, raises
+  `ConflictError` naming the `migration_id` before running anything —
+  nothing is applied when any checksum mismatch exists (check all first,
+  then apply).
+- Applies each not-yet-applied migration inside one `transaction(conn)`
+  block and records `(migration_id, checksum, applied_at)` in the same
+  transaction, so schema statements and their history row commit or roll
+  back together. `migration_id` is the filename without the `.sql` suffix;
+  `checksum` is the sha256 hex digest of the exact file bytes.
+- Skips already-applied migrations whose recorded checksum still matches
+  the file's current checksum, so a second run is a no-op.
+
+Conventions:
+
+- Migration filenames are append-only numbered SQL files: `NNN_name.sql`.
+  `applied_at` is RFC3339 UTC ending in `Z` with second precision.
+- The history row for an applied migration is append-only: an applied
+  migration's file must never change (SHA-256 makes tampering evident).
+- Missing numbers are not errors and may not be backfilled by editing:
+  `001` can be applied while `002` is absent; `002` applies when it
+  reappears.
+- `opsledger/migrations/` currently ships one runner fixture,
+  `0001_initial.sql` (creates the `schema_notes` table); it is not a
+  business table.
+
+Usage:
+
+```python
+from opsledger.core.migrations import migrate
+
+migrate(conn, "opsledger/migrations")
+```
