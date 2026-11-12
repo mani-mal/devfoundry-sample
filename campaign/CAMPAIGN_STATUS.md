@@ -7,8 +7,8 @@ Campaign: `opsledger-run-001` · Updated: 2026-11-12 · Workspace: `/home/manima
 > "approved" wording everywhere; readiness rubric 1.1.0 (`repo.default_branch`
 > + `repo.validation_check` pass); submit env warning + `--preview` base line;
 > NEW-005 fix verified (empty patch → `agent_error` before validation).
-> **T004 implemented, approved, published as Draft PR #1** (open, not merged;
-> local landing pending owner pick). See
+> **T004 implemented, approved, published as Draft PR #1, then landed
+> locally** (`3951dd9`, gate green, pushed; PR superseded). See
 > `campaign/reports/bug-verification-2026-11-12.md`.
 >
 > 2026-11-12 (early AM): Three lab images verified (b902183 → 69fc038 →
@@ -50,7 +50,7 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | T003 | Migration runner + migration history checksums (regression run) | **completed/accepted (2026-11-12)** | `tsk-66b5305a74b14c38a8c7d59cc7c81107` — validation passed on base 46825d3, 4 files / ~640 lines, 1 attempt, 0 findings; approved via the F-102 flow; patch landed locally `a3c0bc7`, pushed |
 | T005 | HTTP router + JSON error envelope | **completed/accepted (2026-11-12)** | `tsk-e24416074c6c43fbbc739c2b8a005ec2` — 5 files / ~705 lines, 1 attempt, 0 findings; approved; landed `d0dd2e3`, pushed. Two prior runs produced empty patches that passed validation (NEW-005, medium; both rejected + preserved) |
 | BUG-verify-3 | F-121, BUG-127, F-102, F-203, F-503, BUG-107 + re-checks on lab 0.1.0-fccb92f | **done (2026-11-12)** | `campaign/reports/bug-verification-2026-11-11.md` — F-121 real branch change + restore exercised; BUG-127 overlapping runs observed; F-102 binding verified (stale → exit 5, no-read → note); F-203 once-per-reviewer+digest; BUG-107 publish-time CI refusal observed; F-120 preview half not met (F-120b); F-503 pass-by-source; NEW-005 filed |
-| T004 | Organizations, users and membership schema | **completed/accepted + Draft PR #1 (2026-11-12)** | `tsk-e744c6d9b88b40888733684d22a98f7b` — 3 files +438 −3, 17 tests, 0 findings, 1 attempt; approved via the F-102 flow; **published as Draft PR #1** (pub-49ae5275513f42ba832cacf6f635453c succeeded, head `devfoundry/tsk-e744c6d9` → main, open not merged); local landing pending the owner's pick (PR merge vs local apply) |
+| T004 | Organizations, users and membership schema | **completed/accepted + landed (2026-11-12)** | `tsk-e744c6d9b88b40888733684d22a98f7b` — 3 files +438 −3, 17 tests, 0 findings, 1 attempt; approved via the F-102 flow; **published as Draft PR #1** (pub-49ae5275513f42ba832cacf6f635453c succeeded, open not merged — superseded); patch applied locally from the review packet (digest verified `181ac49b`), gate green (81 tests), committed `3951dd9`, pushed |
 | BUG-verify-4 | Evening prompt items on lab 0.1.0-c1bd587 (packet 0.2.0, F-208, approved wording, readiness 1.1.0, submit warnings, NEW-005 fix, T004, re-checks) | **done (2026-11-12)** | `campaign/reports/bug-verification-2026-11-12.md` — items 1–8 PASS; items 9–10 NOT TESTED (written but not deployed); NEW-005 fix verified (empty patch → `agent_error` before validation); readiness report rr-e6bc8c8c (rubric 1.1.0, both new checks pass) |
 | B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
 | B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
@@ -132,11 +132,12 @@ Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
    submitted without `--base` (registered default branch is `main` now,
    F-121). T002/T003/T005 tasks `completed (accepted)` on the lab.
 6. ~~T004~~ → done 2026-11-12: **implemented, approved, published as
-   Draft PR #1** (open, not merged; head `devfoundry/tsk-e744c6d9` → main,
-   `272d8fce`). Local landing pending the owner's pick: merge the PR, or
-   have the agent apply the review-packet patch locally and push as with
-   T003/T005. Next spec task: **T006** (CLI migrate/serve + bounded
-   health/readiness handlers, needs T003+T005 ✓) — unblocked.
+   Draft PR #1** (open, not merged), then **landed locally** from the
+   review packet (digest-verified `181ac49b`), gate green, committed
+   `3951dd9` and pushed. The Draft PR is superseded by the local landing
+   (closing it is the owner's call). Next spec task: **T006** (CLI
+   migrate/serve + bounded health/readiness handlers, needs T003+T005 ✓)
+   — unblocked.
 7. Owner decisions pending on repo issues A2–A4 (delete ~780 legacy seed files
    vs amend README; untrack `campaign/` vs amend docs) and on:
    NEW-004 (resolved by design: submit with `--autonomy draft_pr` when a
