@@ -50,7 +50,11 @@ def require_aware_utc(value: datetime) -> datetime:
 def format_rfc3339(value: datetime) -> str:
     """Serialize an aware datetime as second-precision RFC3339 ending in Z."""
     normalized = require_aware_utc(value).replace(microsecond=0)
-    return normalized.strftime(RFC3339_Z_FORMAT)
+    return (
+        f"{normalized.year:04d}-{normalized.month:02d}-{normalized.day:02d}"
+        f"T{normalized.hour:02d}:{normalized.minute:02d}"
+        f":{normalized.second:02d}Z"
+    )
 
 
 class RealClock:
