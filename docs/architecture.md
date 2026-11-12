@@ -33,7 +33,7 @@ flowchart TD
 | Path | Responsibility |
 | --- | --- |
 | `opsledger/core/` | Errors, identity context, clock, IDs, database connections, migration runner |
-| `opsledger/identity/` | Users, sessions, role checks, organization/site membership |
+| `opsledger/identity/` | Password hashes, users, sessions, role checks, organization/site membership |
 | `opsledger/assets/` | Sites, equipment, maintenance plans |
 | `opsledger/workorders/` | State transitions, assignments, labor, checklists, comments |
 | `opsledger/inventory/` | Parts, balances, reservations, movements, reconciliation |
@@ -226,6 +226,93 @@ key (connections enforce `foreign_keys=ON`).
 
 All statements are parameterized everywhere SQL carries values; created_at
 values are RFC3339 UTC ending in `Z` with second precision.
+
+## Identity: password hashes (T009)
+
+### Module (`opsledger/identity/passwords.py`)
+
+Public names (exported from `opsledger/identity/`):
+
+- `PROTOCOL_VERSION = 1` — recorded with every hash record.
+- `SCRYPT_N = 16384`, `SCRYPT_R = 8`, `SCRYPT_P = 1` — the shipped work
+  factors, also the defaults of `ScryptParams`.
+- `hash_password(password, *, params=None, clock=None, rng=None)` — returns
+  one `PasswordHash`; the raw password is never stored, logged, or returned.
+- `verify_password(password, record)` — constant-time verification.
+- `to_row(record)` / `from_row(row)` — mapping between a record and the
+  users-provisioning row shape for the offline provisioning path.
+- `provision_user(conn, *, user_id, email, display_name, password,
+  clock=None, rng=None)` — inserts the user row with the hash columns.
+- `scrypt_unavailable()` — preflight; True when `hashlib.scrypt` raises
+  `ValueError` (OpenSSL without scrypt).
+
+### Record shape (`PasswordHash`, frozen; `ScryptParams`, frozen)
+
+| Field | Content |
+| --- | --- |
+| `user_id` | User identity this record belongs to (blank on `hash_password`; set by `provision_user`) |
+| `salt` | 16 random bytes from `secrets.token_bytes`, hex-encoded (128-bit salt, 32 hex chars) |
+| `hash` | 64-byte derived key from `hashlib.scrypt(password.encode("utf-8"), salt=..., n/r/p from params, dklen=64)`, hex-encoded (128 hex chars) |
+| `params` | `ScryptParams(n, r, p)` pinned and recorded with the hash |
+| `protocol_version` | `PROTOCOL_VERSION` (1), recorded with the hash |
+| `created_at` | RFC3339 UTC `Z` second-precision text via `opsledger.core.clock.format_rfc3339` (injected `Clock`; real wall clock by default) |
+
+### Scrypt work factors and their rationale
+
+`n = 2**14 = 16384`, `r = 8`, `p = 1` (constants `SCRYPT_N`/`SCRYPT_R`/
+`SCRYPT_P`, never tuned at raise sites):
+
+- `n = 16384` — ~16 MiB of memory per derivation (scrypt needs roughly
+  `128 * n * r` bytes), strong against GPU/ASIC cracking while a login
+  stays in the documented runtime budget.
+- `r = 8` — the scrypt reference value; the standard pairing with `n` that
+  parallelizes memory access without weakening it.
+- `p = 1` — no CPU-side parallelism multiplier; keeps the derivation single
+  work unit, so the memory cost is the dominant defense.
+- `dklen = 64` — 64-byte derived key, stored as 128 hex chars; no truncation
+  of scrypt output.
+
+Validation rejects `n <= 1` or not a power of two, and `r < 1` or `p < 1`,
+with `ValidationError`. Two hashes of the same password always differ
+(random salt), so hashes are not linkable and precomputed tables are
+useless. A fast unsalted hash is never used.
+
+### Protocol-version rule
+
+Every hash record pins `protocol_version` (1). Recomputation only accepts
+records whose `protocol_version` equals `PROTOCOL_VERSION`; a record with
+any other value (a future format written by newer code, or a corrupted
+version field) raises `ValidationError` on `verify_password` instead of
+comparing against a recomputed key of unknown meaning. A future protocol
+version bumps `PROTOCOL_VERSION`, keeps the old verifier reading old
+records, and migrates records forward; hex fields are validated before use,
+so malformed fields raise `ValidationError` too.
+
+### Offline-provisioning path
+
+`provision_user(conn, ...)` is the offline path for creating a user with
+credentials (no sessions, no login, no HTTP endpoint, no UI — those are
+later tasks):
+
+1. Validates the input: `user_id` and `display_name` non-empty strings; the
+   email is normalized with `.strip().lower()` and validated as a simple
+   local@domain shape (one `@`, non-empty parts) — violations raise
+   `ValidationError`.
+2. Preflights scrypt: with scrypt unavailable, provisioning raises
+   `ValidationError` before hashing and never stores a row.
+3. Derives the hash record via `hash_password` with the injected clock/rng.
+4. Inserts the user row (identity columns plus the hash columns) inside
+   `opsledger.core.db.transaction(conn)`, in one IMMEDIATE transaction —
+   the user and its hash columns commit or roll back together. A duplicate
+   email surfaces `sqlite3.IntegrityError` as `ValidationError`, and the
+   duplicate is never stored raw.
+5. Returns the stored `PasswordHash` with `user_id` set.
+
+`to_row(record)` maps the record onto this row shape (identity columns blank
+for the record-only case; callers fill `email`/`display_name` before the
+write), and `from_row(row)` maps back. Parameterized SQL for list/get
+paths stays in later tasks; all SQL here carries values only as bound
+parameters.
 
 ## HTTP foundation (T005)
 
