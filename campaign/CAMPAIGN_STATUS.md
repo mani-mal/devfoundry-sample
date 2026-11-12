@@ -1,7 +1,13 @@
 # CAMPAIGN_STATUS.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-11 · Workspace: `/home/manimal/projects/devfoundry-sample`
+Campaign: `opsledger-run-001` · Updated: 2026-11-12 · Workspace: `/home/manimal/projects/devfoundry-sample`
 
+> 2026-11-12 (early AM): Three lab images verified (b902183 → 69fc038 →
+> fccb92f). BUG-005/006, F-607, F-121, BUG-127, F-102, F-203 PASS; BUG-107
+> publish-time refusal observed. T003 approved + landed (`a3c0bc7`); T005
+> approved + landed (`d0dd2e3`) after two empty-patch runs (NEW-005, medium).
+> See `campaign/reports/bug-verification-2026-11-11.md`.
+>
 > 2026-11-11: T002 approved by owner; patch landed on `main` (`46825d3`).
 > BUG-005/006 + F-607/F-120 verified against lab `0.1.0-b902183`. T003
 > submitted as the regression run and awaiting review. See
@@ -32,7 +38,9 @@ no credentials. Raw evidence lives in `campaign/journal/` (private local evidenc
 | BUG-verify | BUG-001..004 verified against lab after CLI reinstall from fix branch | **done (2026-11-10)** | `campaign/reports/bug-verification-2026-11-10.md` — BUG-002 fully fixed; BUG-001 fixed in behavior (exit 1 vs 3 deviation filed as BUG-001a); attempt metadata confirmed (1 per implement task); 3 new papercuts filed |
 | T002 | SQLite connection factory + transaction context (first submitted DevFoundry task) | **completed/accepted (2026-11-11)** | `tsk-45ce00920c8943e08e19f2a8f0ff7b60` — owner-approved (diff 1a21d2c); publish refused (workspace autonomy has no publication path; NEW-004); patch applied locally from the review packet, gate OK, committed `46825d3`, pushed. First submission failed on missing `--base main` (NEW-001, operator error, preserved) |
 | BUG-verify-2 | BUG-005/006 + F-607/F-120 verified against lab 0.1.0-b902183 | **done (2026-11-11)** | `campaign/reports/bug-verification-2026-11-11.md` — BUG-005 PASS (exit 3, 403 policy_denied); BUG-006 PASS (exact cancelled wording; console by source, browser extension not connected); F-607 PASS (attempt 1 of 3); F-120 PASS on submit, preview silent (F-120b); BUG-128 not triggered; NEW-004 (no publication path for workspace tasks) |
-| T003 | Migration runner + migration history checksums (regression run) | **awaiting_review (2026-11-11)** | `tsk-66b5305a74b14c38a8c7d59cc7c81107` — validation passed on base 46825d3, 4 files / ~640 lines, 1 attempt, 0 findings, protected paths untouched; patch matches T003 acceptance |
+| T003 | Migration runner + migration history checksums (regression run) | **completed/accepted (2026-11-12)** | `tsk-66b5305a74b14c38a8c7d59cc7c81107` — validation passed on base 46825d3, 4 files / ~640 lines, 1 attempt, 0 findings; approved via the F-102 flow; patch landed locally `a3c0bc7`, pushed |
+| T005 | HTTP router + JSON error envelope | **completed/accepted (2026-11-12)** | `tsk-e24416074c6c43fbbc739c2b8a005ec2` — 5 files / ~705 lines, 1 attempt, 0 findings; approved; landed `d0dd2e3`, pushed. Two prior runs produced empty patches that passed validation (NEW-005, medium; both rejected + preserved) |
+| BUG-verify-3 | F-121, BUG-127, F-102, F-203, F-503, BUG-107 + re-checks on lab 0.1.0-fccb92f | **done (2026-11-12)** | `campaign/reports/bug-verification-2026-11-11.md` — F-121 real branch change + restore exercised; BUG-127 overlapping runs observed; F-102 binding verified (stale → exit 5, no-read → note); F-203 once-per-reviewer+digest; BUG-107 publish-time CI refusal observed; F-120 preview half not met (F-120b); F-503 pass-by-source; NEW-005 filed |
 | B06 | Human review of bootstrap + initial remote publication | **done (2026-11-10)** | `e35dd81` pushed to `origin/main` (owner-authorized, token via `sec.txt`); remote base SHA `e35dd81` |
 | B07 | Register repo (if needed), readiness | **pending** | needs DF credentials (lost in WSL reinstall) |
 | B08 | Tiny onboarding task + first clean-checkout validation | **pending** | needs DF credentials + registered base |
@@ -108,12 +116,17 @@ Qualified environment: Python 3.12.16 (uv) + Node 22.23.4.
 4. ~~Render T002~~ → done 2026-11-11: submitted, validated, **owner-approved**
    (diff 1a21d2c); publication refused (workspace autonomy; NEW-004); patch
    applied locally and committed `46825d3` on `origin/main`.
-5. T003 regression run: submitted 2026-11-11, `awaiting_review`
-   (`tsk-66b5305a74b14c38a8c7d59cc7c81107`). On owner approval, apply the
-   patch from the review packet locally (workspace autonomy has no platform
-   publication — NEW-004), commit, push, then proceed to T004 (organizations/
-   users/membership schema) and T005 (HTTP router) in spec order.
-6. Owner decisions pending on repo issues A2–A4 (delete ~780 legacy seed files
-   vs amend README; untrack `campaign/` vs amend docs) and on the NEW-004
-   publication-path question (submit future review-worthy tasks with
-   `--autonomy draft_pr`, or allow post-approval promotion).
+5. ~~T003 regression run~~ → done 2026-11-12: T003 **approved + landed**
+   (`a3c0bc7`); T005 also **approved + landed** (`d0dd2e3`). Both were
+   submitted without `--base` (registered default branch is `main` now,
+   F-121). T002/T003/T005 tasks `completed (accepted)` on the lab.
+6. Next spec tasks (both unblocked): **T004** (organizations, users and
+   membership schema, needs T003 ✓) and **T006** (CLI migrate/serve + bounded
+   health/readiness handlers, needs T003+T005 ✓). Submit without `--base`;
+   on approval, land via the review packet as before.
+7. Owner decisions pending on repo issues A2–A4 (delete ~780 legacy seed files
+   vs amend README; untrack `campaign/` vs amend docs) and on:
+   NEW-004 (publication path for `workspace`-autonomy tasks),
+   NEW-005 (empty patch passes validation), F-120b (preview lacks the base
+   line), and the recurring packet warnings (tracked `opencode.json`
+   skip-worktree; qualified-baseline dependency drift).
