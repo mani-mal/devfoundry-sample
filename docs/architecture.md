@@ -477,6 +477,58 @@ lose access to the site on revocation.
 `deactivate_membership` deletes the memberships row, which takes effect
 immediately for subsequent access checks.
 
+## Locations: sites storage (T017 part B)
+
+### Migration (`opsledger/migrations/0007_sites.sql`)
+
+Seventh shipped append-only migration, applied after
+`0006_site_memberships`. It creates the `sites` table:
+
+    CREATE TABLE sites (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        timezone TEXT NOT NULL DEFAULT 'UTC',
+        created_at TEXT NOT NULL,
+        archived_at TEXT,
+        UNIQUE (organization_id, code)
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations` in the
+same IMMEDIATE transaction as the DDL, so any later change to the file
+bytes is tamper-evident.
+
+### Table shape
+
+Primary key: `id` (opaque `site-<hex>` id, immutable after create).
+
+| Column | Content |
+| --- | --- |
+| `id` | Primary key; opaque site identifier |
+| `organization_id` | References `organizations(id)`; the owning organization |
+| `code` | Site code within the organization; immutable after create |
+| `name` | Display name (updates may touch this) |
+| `timezone` | IANA timezone name, `UTC` by default (updates may touch this) |
+| `created_at` | RFC3339 UTC `Z` second-precision creation text |
+| `archived_at` | Null while active; archive timestamp when the site is archived |
+
+### Scoped uniqueness
+
+`UNIQUE (organization_id, code)` is the scoping rule: the same code is
+allowed in another organization, and a duplicate within the same
+organization collides. The service maps that `IntegrityError` to
+`ConflictError` with the canonical message
+`site code already exists in this organization`.
+
+### Update semantics
+
+`update_site` touches `name` and `timezone` only. `code` is immutable
+after creation: there is no code update path in the module. Every lookup
+is scoped by `require_owned`, so a missing site and another
+organization's site surface the identical `site not found` error.
+
 ### Error mapping (`opsledger/http/envelope.py`)
 
 Every error response body is exactly:
