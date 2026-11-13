@@ -3,7 +3,9 @@
 Includes the asset filtered list with stable pagination (T019): assets are
 ordered by ``created_at ASC, id ASC`` -- a deterministic total order -- and
 paged by a keyset cursor of ``(after_created_at, after_id)``, so identical
-timestamps neither duplicate nor omit stable rows.
+timestamps neither duplicate nor omit stable rows. Includes optimistic
+version updates for assets (T020): a stale version surfaces a retryable
+ConflictError and the second writer's stale write is refused.
 """
 
 from __future__ import annotations
@@ -23,15 +25,18 @@ from opsledger.assets.assets import (
     get_asset,
 )
 from opsledger.assets.listing import asset_page_cursor, list_assets
+from opsledger.assets.updates import STALE_VERSION_MESSAGE, update_asset
 
 __all__ = [
     "DUPLICATE_ASSET_TAG_MESSAGE",
     "DUPLICATE_SITE_CODE_MESSAGE",
     "SITE_NOT_FOUND_MESSAGE",
+    "STALE_VERSION_MESSAGE",
     "CRITICALITIES",
     "asset_page_cursor",
     "create_asset",
     "create_site",
+    "update_asset",
     "get_asset",
     "get_site",
     "list_assets",
