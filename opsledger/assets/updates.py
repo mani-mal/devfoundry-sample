@@ -16,6 +16,11 @@ unprovided field (bound None) keeps its stored value on a partial update.
 Scoping rule: every lookup is guarded by
 :func:`opsledger.core.context.require_owned`; a missing asset and an asset
 owned by another organization surface the identical NotFoundError.
+
+The audited variant :func:`update_asset_audited` (T022, §8.2) runs the same
+optimistic-concurrency update and an audit event in one shared transaction:
+the business mutation and its audit/outbox record commit atomically — an
+audit failure rolls back the business mutation too.
 """
 
 from __future__ import annotations
@@ -34,6 +39,7 @@ from opsledger.core.errors import ConflictError, NotFoundError, ValidationError
 __all__ = [
     "STALE_VERSION_MESSAGE",
     "update_asset",
+    "update_asset_audited",
 ]
 
 STALE_VERSION_MESSAGE = "asset was modified by someone else; reload and retry"
@@ -155,5 +161,125 @@ def update_asset(
     except sqlite3.IntegrityError as error:
         raise ConflictError(STALE_VERSION_MESSAGE) from error
     if tx_cursor.rowcount == 0:
+        raise ConflictError(STALE_VERSION_MESSAGE) from None
+    return conn.execute(_SELECT_ASSET_BY_ID_SQL, (asset_id,)).fetchone()
+
+
+def update_asset_audited(
+    conn: sqlite3.Connection,
+    context: object,
+    *,
+    asset_id: str,
+    expected_version: int,
+    name: str | None = None,
+    criticality: str | None = None,
+    purchase_cost_cents: int | None = None,
+    clock: Clock,
+    audit_details: dict | None = None,
+) -> sqlite3.Row:
+    """Update one asset and write its audit event in ONE transaction.
+
+    Identical validation to :func:`update_asset`: require_context(context);
+    expected_version must be an int (not bool) > 0; at least one of
+    name/criticality/purchase_cost_cents must be provided; criticality is
+    validated by _validate_criticality; purchase_cost_cents is validated by
+    _validate_purchase_cost (money is integer cents). NO LEAK: the asset row
+    is SELECTed and surfaced by require_owned(label "asset"), so a
+    cross-organization asset raises the identical NotFoundError as a missing
+    asset.
+
+    ``opsledger.audit`` is imported lazily INSIDE this function body, not at
+    module level: audit imports nothing from assets, and the lazy import
+    keeps this module dependency-free for callers that never audit.
+
+    Business mutation + audit row commit atomically (spec §8.2). Both writes
+    happen in ONE transaction(conn), in this order: (1) the ATOMIC
+    CONDITIONAL UPDATE — every value a bound parameter and each optional
+    column assigned ``col = COALESCE(?, col)`` so unprovided fields keep
+    their stored values — then (2) ``opsledger.audit.record_event_in_tx`` on
+    the SAME transaction (entity_type "asset", entity_id asset_id, operation
+    "asset.update"), with details defaulting to {"fields": [the provided
+    field names], "from_version": expected_version, "to_version":
+    expected_version + 1}; pass audit_details to override. Because the audit
+    write shares the transaction, a FORCED AUDIT FAILURE (e.g. a missing
+    audit_events table) rolls back the business mutation too: the version is
+    unchanged and no audit row remains.
+
+    When the UPDATE reports rowcount 0 (the version moved), the row is
+    re-SELECTed inside the transaction and the contention is remembered in a
+    local flag; ConflictError carrying STALE_VERSION_MESSAGE is raised only
+    after the transaction block exits (rolling back — no audit row is written
+    either). On contention nothing from this writer is stored — the FIRST
+    writer's change is retained and this update simply fails.
+
+    After the transaction commits, the updated row is re-SELECTed by id and
+    returned (version incremented by exactly 1).
+    """
+    require_context(context)
+    validated_expected_version = _validate_expected_version(expected_version)
+    if not _has_fields_to_update(name, criticality, purchase_cost_cents):
+        raise ValidationError("no fields to update")
+    provided_names = [
+        field_name
+        for field_name, value in (
+            ("name", name),
+            ("criticality", criticality),
+            ("purchase_cost_cents", purchase_cost_cents),
+        )
+        if value is not None
+    ]
+    validated_criticality = (
+        _validate_criticality(criticality) if criticality is not None else None
+    )
+    validated_cost = (
+        _validate_purchase_cost(purchase_cost_cents)
+        if purchase_cost_cents is not None
+        else None
+    )
+    asset_row = conn.execute(_SELECT_ASSET_BY_ID_SQL, (asset_id,)).fetchone()
+    require_owned(context, asset_row, label="asset")
+
+    import opsledger.audit
+
+    timestamp_text = format_rfc3339(clock.now())
+    contention = False
+    with transaction(conn) as tx:
+        tx_cursor = tx.execute(
+            _UPDATE_ASSET_SQL,
+            (
+                name,
+                validated_criticality,
+                validated_cost,
+                timestamp_text,
+                asset_id,
+                validated_expected_version,
+            ),
+        )
+        if tx_cursor.rowcount == 0:
+            contention = (
+                tx.execute(_SELECT_ASSET_BY_ID_SQL, (asset_id,)).fetchone()
+                is not None
+            )
+            if not contention:
+                raise NotFoundError("asset not found")
+        else:
+            opsledger.audit.record_event_in_tx(
+                tx,
+                context,
+                entity_type=opsledger.audit.AUDIT_ENTITY_ASSET,
+                entity_id=asset_id,
+                operation="asset.update",
+                details=(
+                    audit_details
+                    if audit_details is not None
+                    else {
+                        "fields": provided_names,
+                        "from_version": validated_expected_version,
+                        "to_version": validated_expected_version + 1,
+                    }
+                ),
+                clock=clock,
+            )
+    if contention:
         raise ConflictError(STALE_VERSION_MESSAGE) from None
     return conn.execute(_SELECT_ASSET_BY_ID_SQL, (asset_id,)).fetchone()
