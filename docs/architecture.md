@@ -565,3 +565,59 @@ text. Unexpected errors inside readyz go through `error_response_for`
 exception details). The readyz target is set via
 `configure_readyz(database_path)` (also available through
 `build_router(database_path=...)`); tests clear it with `configure_readyz(None)`.
+
+## Authorization matrix (T016)
+
+Gate rule (spec §7.3/M2 gate, T016): "Every declared role/action pair has
+observed or explicitly pending evidence." Roles come from
+`opsledger.identity.permissions` (`KNOWN_ROLES` + `BASE_PERMISSIONS` +
+`PURCHASE_APPROVE_PERMISSION`); actions are the base-permission strings plus
+the explicit approver grant. Verdicts below are observed at the domain layer
+by `tests/security/test_authorization_matrix.py` (A = allow, D = deny).
+Pairs not yet enforced by HTTP routes are "explicitly pending": HTTP-route
+enforcement lands with M3+ tasks.
+
+### Role x action verdicts
+
+| Action | admin | supervisor | technician | purchasing | auditor |
+| --- | --- | --- | --- | --- | --- |
+| `asset.write` | A | A | D | D | D |
+| `audit.read` | A | D | D | D | A |
+| `export.read` | D | D | D | D | A |
+| `inventory.adjust` | A | A | D | D | D |
+| `inventory.reserve` | D | D | A | D | D |
+| `inventory.write` | A | D | D | D | D |
+| `org.manage_members` | A | D | D | D | D |
+| `org.manage_sites` | A | D | D | D | D |
+| `purchase.approve` (no explicit grant) | D | D | D | D | D |
+| `purchase.approve` (with explicit grant) | A | A | A | A | A |
+| self-approval (actor_id == target_user_id) | D | D | D | D | D |
+| `purchasing.write` | A | D | D | A | D |
+| `reporting.read` | A | A | A | A | A |
+| `workorder.close` | A | A | D | D | D |
+| `workorder.work` | D | D | A | D | D |
+
+### Auditor read-only rule
+
+For every permission in `effective_permissions("auditor")`, the permission
+contains `.read` or `.export`; no permission containing `.write`, `.adjust`,
+`.approve`, `.reserve`, `.consume`, or `workorder.work` is held.
+`has_permission(auditor, each write-shaped action)` is False.
+
+### Approver-grant rule
+
+`purchase.approve` is in NO role's base set. A purchasing context with
+`explicit_grants=["purchase.approve"]` holds it; a purchasing context
+without the grant does not. The same applies to supervisor. A technician
+without the grant is denied.
+
+### Self-approval rule
+
+`assert_not_self_approval` raises `PermissionDeniedError` for every role
+(all five roles) when `context.actor_id == target_user_id` — including
+admin — and passes for a different target.
+
+### HTTP-route enforcement (explicitly pending evidence)
+
+HTTP-route enforcement of the matrix above lands with M3+ tasks
+(explicitly pending evidence).
