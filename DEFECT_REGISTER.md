@@ -55,7 +55,8 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C23 | Platform observation | low | Outcome role premise | The outcomes prompt assumed only a lab-sample **team lead** can record outcomes; on this lab the `Administrator` account holds a direct `lead` role in `lab-sample` (`GET /v1/projects/prj-f22f12d0…/members`), so `outcome record` worked from the admin session without a 403 | **OPEN — platform consideration**: if the role split is intentional, the admin's direct `lead` membership should be revoked; evidence `campaign/reports/bug-verification-2026-11-12.md` (outcomes update, role note) |
 | C24 | Platform observation | low | Draft PRs need `gh pr ready` before merge | `gh pr merge N --merge` on a DevFoundry-published Draft PR refuses (`GraphQL: Pull Request is still a draft (mergePullRequest)`); after `gh pr ready N` the merge succeeds (PRs #5, #6) | **OPEN — docs note**: worth a line in the publish docs; not a defect |
 | C25 | Platform observation | low | No read-only feedback viewer | `devfoundry feedback <task>` without flags is a usage error (`say --up or --down…`) and there is no read subcommand; feedback is only visible via the event stream (`feedback.submitted`) or the console | **OPEN — platform consideration**: a `feedback show`/read path would complete the loop |
-| C26 | Platform limit | medium | Single-model-call runs hit the 32000-token output cap | `tsk-d7d95028…`: 1 model call, exactly 32000 output tokens, run failed `agent_error` with an empty patch (the "write in your very first tool call" phrasing pushed the model to emit everything in one truncated response) | **OPEN — platform consideration**: raise the cap or coach the first response to stay small; evidence preserved on the lab |
+| C26 | Platform limit | medium | Single-model-call runs hit the 32000-token output cap | `tsk-d7d95028…`: 1 model call, exactly 32000 output tokens, run failed `agent_error` with an empty patch (the "write in your very first tool call" phrasing pushed the model to emit everything in one truncated response) | **CLOSED (platform, 2026-11-13)**: DevFoundry BUG-135 — a last turn ending cut off or at 32000 output tokens now fails the task *before validation* with "the agent's last model turn was cut off at the output-token limit; the change is unfinished" (`agent_error`); RouteForge B113 delivers cut-off turns as `length` on every path and no longer caches them |
+| C28 | Application/tooling observation — **RE-LABELED 2026-11-13 (root cause correction from DevFoundry)** | medium | "The write tool corrupts files" (M2 report defect 2) — original label was wrong | On `tsk-13bf1e65` the agent's last model turn ran 95 s and stopped at exactly 32 000 output tokens (OpenCode's one-turn limit): a runaway generation. RouteForge then reported the turn as *finished* (`stop`) instead of *cut off* (`length`), so OpenCode ended the session and the unfinished change went to review — the write tool itself was fine. The "malformed placeholder definitions" seen in the diff were the truncated tail of the runaway turn, not write-tool corruption | **CLOSED — root cause fixed on both sides**: DevFoundry BUG-135 (fail fast before validation on a cut-off last turn) + RouteForge B113 (`length` on every path, cut-off answers not cached). The whole-file-write / rewrite-once / tests-split-out workaround remains good practice: it keeps each turn short |
 | C27 | Application defect (spec-conformance gap, found + fixed 2026-11-13) | medium | `opsledger/migrations/0002_identity.sql` vs T009's `provision_user` | The shipped `users` table had no `salt/hash/n/r/p/protocol_version` columns, so `provision_user` raised `OperationalError` ("table users has no column named salt") on every real migrated DB; T009's tests passed because they create their own table — found during T011 planning by running `provision_user` against a fresh `migrate()` | **CLOSED**: `0005_user_hash_columns.sql` (append-only ALTER TABLE) + the first integration test against the real shipped migrations landed through PR #9 (`598203f`, 0 findings); `provision_user` verified end to end on a migrated DB |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
@@ -96,14 +97,17 @@ reproduction observed, post-fix behavior NOT re-tested**.
   landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
 - Repository: 3 items — all closed (B1+B2 cleanup landed through
   DevFoundry review; B3 closed by the owner-authorized direct edit).
-- Platform: 27 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+- Platform: 28 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
   2 closed owner decisions (C17 live, C18 closed), 3 platform
   observations (C19 budget, C20 heavy review, C21 stale app config),
   4 observations from the outcomes run (C23 role premise, C24
-  draft-PR ready step, C25 no feedback viewer, C26 32000-token cap),
-  1 application gap found + closed en route (C27, fixed by PR #9).
+  draft-PR ready step, C25 no feedback viewer, C26 32000-token cap —
+  CLOSED 2026-11-13 by BUG-135/B113), 1 application gap found + closed
+  en route (C27, fixed by PR #9), 1 re-labeled (C28: M2 report defect 2
+  "write tool corrupts files" was actually a 32000-token runaway turn +
+  RouteForge stop-vs-length misreport — closed by BUG-135/B113).
 - Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `a42019c` (fresh
   clone: 44-file tree, 97 Python + 2 JS tests, 0 skipped; plain
   `bash check.sh` green without a PATH export).
