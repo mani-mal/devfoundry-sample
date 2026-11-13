@@ -629,6 +629,47 @@ Router fixture route: `GET /api/v1/healthz` returns
 `(200, {"status": "ok"})` (exercisable end to end; not the T006 readiness
 handler).
 
+## Audit: audit_events storage (T022 part C)
+
+### Migration (`opsledger/migrations/0009_audit_events.sql`)
+
+Ninth shipped append-only migration, applied after `0008_assets`. It creates
+the `audit_events` table:
+
+    CREATE TABLE audit_events (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        actor_id TEXT,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        details TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations`, so any
+later change to the file bytes is tamper-evident.
+
+### APPEND-ONLY immutable business history
+
+`audit_events` is APPEND-ONLY immutable business history: there is no UPDATE
+and no DELETE path anywhere in the module — audit rows are inserted once and
+are never modified or removed, so the recorded history of a business record
+is immutable. Every lookup joins on the authenticated organization context,
+so a reader only ever sees events belonging to its own organization.
+
+### One transaction: business mutation + audit row
+
+The audited asset update (`opslender.assets.update_asset_audited`,
+`opslender/assets/updates.py`) writes the business mutation and its audit
+row in ONE transaction: the conditional optimistic-concurrency UPDATE first,
+then `opsledger.audit.record_event_in_tx` on the same transaction, so both
+writes commit atomically. Because the audit write shares the transaction, a
+forced audit failure (for example a missing `audit_events` table) rolls the
+business mutation back too: the version is unchanged and no audit row
+remains.
+
 ## CLI and diagnostics (T006)
 
 ### Application CLI (`opsledger/cli.py`)
