@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Final commit: `9c723bc`
+Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M2 complete) · Final commit: `e992e47`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -56,6 +56,7 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C24 | Platform observation | low | Draft PRs need `gh pr ready` before merge | `gh pr merge N --merge` on a DevFoundry-published Draft PR refuses (`GraphQL: Pull Request is still a draft (mergePullRequest)`); after `gh pr ready N` the merge succeeds (PRs #5, #6) | **OPEN — docs note**: worth a line in the publish docs; not a defect |
 | C25 | Platform observation | low | No read-only feedback viewer | `devfoundry feedback <task>` without flags is a usage error (`say --up or --down…`) and there is no read subcommand; feedback is only visible via the event stream (`feedback.submitted`) or the console | **OPEN — platform consideration**: a `feedback show`/read path would complete the loop |
 | C26 | Platform limit | medium | Single-model-call runs hit the 32000-token output cap | `tsk-d7d95028…`: 1 model call, exactly 32000 output tokens, run failed `agent_error` with an empty patch (the "write in your very first tool call" phrasing pushed the model to emit everything in one truncated response) | **OPEN — platform consideration**: raise the cap or coach the first response to stay small; evidence preserved on the lab |
+| C27 | Application defect (spec-conformance gap, found + fixed 2026-11-13) | medium | `opsledger/migrations/0002_identity.sql` vs T009's `provision_user` | The shipped `users` table had no `salt/hash/n/r/p/protocol_version` columns, so `provision_user` raised `OperationalError` ("table users has no column named salt") on every real migrated DB; T009's tests passed because they create their own table — found during T011 planning by running `provision_user` against a fresh `migrate()` | **CLOSED**: `0005_user_hash_columns.sql` (append-only ALTER TABLE) + the first integration test against the real shipped migrations landed through PR #9 (`598203f`, 0 findings); `provision_user` verified end to end on a migrated DB |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -76,6 +77,17 @@ reproduction observed, post-fix behavior NOT re-tested**.
 | T010b Draft PR #6 | Opened by DevFoundry (`pub-db8f99fa…` succeeded); ready + **merged on GitHub** 2026-11-12T22:16:08Z → `aea9272`; poller recorded `cr_merged #6 aea92722d55e verified` ~3 min later |
 | T011a Draft PR #7 | Opened by DevFoundry (`pub-afbb92f1…` succeeded); ready + **merged on GitHub** 2026-11-12T23:04:38Z → `321cfa5`; poller recorded `cr_merged #7 321cfa5835a2 verified` ~4 min later |
 | T011b Draft PR #8 | Opened by DevFoundry (`pub-ccb4054c…` succeeded); ready + **merged on GitHub** 2026-11-12T23:15:00Z → `9c723bc`; poller recorded `cr_merged #8 9c723bca0833 verified` < 1 min later |
+| T011c Draft PR #9 | Opened by DevFoundry (`pub-c5fa5502…` succeeded); ready + **merged on GitHub** 2026-11-12T23:32:38Z → `598203f`; poller `cr_merged #9 598203fd2426 verified` ~4 min later; closes C27 |
+| T011d1 Draft PR #10 | Opened by DevFoundry (`pub-ec82ee89…` succeeded); ready + **merged on GitHub** 2026-11-13T00:22:32Z → `38e7453`; poller `cr_merged #10 38e7453425d6 verified` ~4 min later |
+| T011d2 Draft PR #11 | Opened by DevFoundry (`pub-7ce142db…` succeeded); ready + **merged on GitHub** 2026-11-13T00:33:52Z → `ad8893c`; poller `cr_merged #11 ad8893c59e91 verified` ~3 min later |
+| T012a Draft PR #12 | Opened by DevFoundry (`pub-238b3cf1…` succeeded); ready + **merged on GitHub** 2026-11-13T01:15:54Z → `e346dd7`; poller `cr_merged #12 e346dd73e1c1 verified` < 1 min later |
+| T012b Draft PR #13 | Opened by DevFoundry (`pub-990fdf3b…` succeeded); ready + **merged on GitHub** 2026-11-13T01:22:29Z → `5dd3ad0`; poller `cr_merged #13 5dd3ad05549a verified` ~5 min later |
+| T013 Draft PR #14 | Opened by DevFoundry (`pub-f1357a76…` succeeded); ready + **merged on GitHub** 2026-11-13T01:31:39Z → `566c379`; poller `cr_merged #14 566c3795645c verified` < 1 min later |
+| T014a Draft PR #15 | Opened by DevFoundry (`pub-2e373566…` succeeded); ready + **merged on GitHub** 2026-11-13T01:49:06Z → `3500b3f`; poller `cr_merged #15 3500b3f6dab3 verified` ~3 min later |
+| T014b Draft PR #16 | Opened by DevFoundry (`pub-8198cc3e…` succeeded); ready + **merged on GitHub** 2026-11-13T01:56:03Z → `e5ec1b3`; poller `cr_merged #16 e5ec1b322993 verified` < 1 min later |
+| T015a Draft PR #17 | Opened by DevFoundry (`pub-1e2967f2…` succeeded); ready + **merged on GitHub** 2026-11-13T02:01:14Z → `baeb9af`; poller `cr_merged #17 baeb9af2b632 verified` < 1 min later |
+| T015b Draft PR #18 | Opened by DevFoundry (`pub-050307e2…` succeeded); ready + **merged on GitHub** 2026-11-13T02:06:15Z → `d1936e8`; poller `cr_merged #18 d1936e8409b3 verified` < 1 min later |
+| T016 Draft PR #19 | Opened by DevFoundry (`pub-c4f74d48…` succeeded); ready + **merged on GitHub** 2026-11-13T02:18:50Z → `e992e47`; poller `cr_merged #19 e992e475c5c3 verified` ~4 min later — **M2 gate complete** |
 | Draft PR handoff to DevFoundry | This campaign's DevFoundry handoff is the verification evidence itself (BUG/feature verdicts above); no product changes belong in this repository (spec §18.2) |
 
 ## Totals
@@ -84,13 +96,14 @@ reproduction observed, post-fix behavior NOT re-tested**.
   landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
 - Repository: 3 items — all closed (B1+B2 cleanup landed through
   DevFoundry review; B3 closed by the owner-authorized direct edit).
-- Platform: 26 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+- Platform: 27 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
   2 closed owner decisions (C17 live, C18 closed), 3 platform
   observations (C19 budget, C20 heavy review, C21 stale app config),
-  4 new observations from the outcomes run (C23 role premise, C24
-  draft-PR ready step, C25 no feedback viewer, C26 32000-token cap).
+  4 observations from the outcomes run (C23 role premise, C24
+  draft-PR ready step, C25 no feedback viewer, C26 32000-token cap),
+  1 application gap found + closed en route (C27, fixed by PR #9).
 - Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `a42019c` (fresh
   clone: 44-file tree, 97 Python + 2 JS tests, 0 skipped; plain
   `bash check.sh` green without a PATH export).
@@ -99,6 +112,14 @@ reproduction observed, post-fix behavior NOT re-tested**.
   by-hand completion).
 - M2: T009 landed (`8afad1b`, 23 tests, 0 findings); T010 complete in two
   parts (sessions module `f9d9e46`/PR #5 + migration/literals `aea9272`/PR
-  #6); T011 complete in two parts (CSRF module `321cfa5`/PR #7 +
-  migration/literals `9c723bc`/PR #8) — all through Draft PRs merged on
-  GitHub, all first-attempt after the split lesson. Next: T012.
+  #6); T011 complete in five parts (CSRF module `321cfa5`/PR #7 + migration
+  `9c723bc`/PR #8 + user-hash-columns fix `598203f`/PR #9 + auth service
+  `38e7453`/PR #10 + auth tests `ad8893c`/PR #11); T012 complete in two
+  parts (context module `e346dd7`/PR #12 + tests `5dd3ad0`/PR #13); T013
+  landed (`566c379`/PR #14); T014 complete in two parts (sites module
+  `3500b3f`/PR #15 + migration `e5ec1b3`/PR #16); T015 complete in two
+  parts (static allowlist `baeb9af`/PR #17 + login UI `d1936e8`/PR #18);
+  T016 landed (`e992e47`/PR #19) — **M2 gate complete**, all through Draft
+  PRs merged on GitHub. One integration gap found and fixed en route
+  (C27: 0002 users table lacked T009's hash columns — fixed by
+  `598203f`). Next: M3 (sites and equipment).

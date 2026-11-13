@@ -67,6 +67,17 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | T010 part B (sessions migration + count literals + docs) | request `../campaign-opsledger-run-001/requests/T010b.md` → `tsk-04f5553b…` | `fdb4b92d…` | accept (human) | `aea9272` (merge of Draft PR #6, merged on GitHub) |
 | T011 part A (CSRF context domain module) | request `../campaign-opsledger-run-001/requests/T011a.md` → `tsk-f58d2c58…` | `3c39edf0…` | accept (human) | `321cfa5` (merge of Draft PR #7, merged on GitHub) |
 | T011 part B (CSRF contexts migration + count literals + docs) | request `../campaign-opsledger-run-001/requests/T011b.md` → `tsk-ab1f9d17…` | `28d44475…` | accept (human) | `9c723bc` (merge of Draft PR #8, merged on GitHub) |
+| T011 part C (user hash columns migration + integration test) | request `../campaign-opsledger-run-001/requests/T011c.md` → `tsk-2bf23823…` | `d1bcf5c3…` | accept (human) | `598203f` (merge of Draft PR #9, merged on GitHub) |
+| T011 part D1 (auth service module) | request `../campaign-opsledger-run-001/requests/T011d1.md` → `tsk-af6ee3e9…` | `9814079f…` | accept (human) | `38e7453` (merge of Draft PR #10, merged on GitHub) |
+| T011 part D2 (auth service integration tests) | request `../campaign-opsledger-run-001/requests/T011d2.md` → `tsk-a1c48292…` | `4655b50c…` | accept (human) | `ad8893c` (merge of Draft PR #11, merged on GitHub) |
+| T012 part A (organization context module) | request `../campaign-opsledger-run-001/requests/T012a.md` → `tsk-976688c5…` | `9729fbf3…` | accept (human) | `e346dd7` (merge of Draft PR #12, merged on GitHub) |
+| T012 part B (context unit + isolation tests) | request `../campaign-opsledger-run-001/requests/T012b.md` → `tsk-c5b1994c…` | `4ee331aa…` | accept (human) | `5dd3ad0` (merge of Draft PR #13, merged on GitHub) |
+| T013 (role + explicit permission checks) | request `../campaign-opsledger-run-001/requests/T013.md` → `tsk-1d7f713b…` | `adabc6ae…` | accept (human) | `566c379` (merge of Draft PR #14, merged on GitHub) |
+| T014 part A (site membership module + tests) | request `../campaign-opsledger-run-001/requests/T014a.md` → `tsk-9a354a46…` | `d0aab4fd…` | accept (human) | `3500b3f` (merge of Draft PR #15, merged on GitHub) |
+| T014 part B (site_memberships migration + literals + docs) | request `../campaign-opsledger-run-001/requests/T014b.md` → `tsk-4b3947c7…` | `ecf93818…` | accept (human) | `e5ec1b3` (merge of Draft PR #16, merged on GitHub) |
+| T015 part A (static file allowlist module) | request `../campaign-opsledger-run-001/requests/T015a.md` → `tsk-5ec77422…` | `6f4b3510…` | accept (human) | `baeb9af` (merge of Draft PR #17, merged on GitHub) |
+| T015 part B (login/account UI + JS tests) | request `../campaign-opsledger-run-001/requests/T015b.md` → `tsk-c200fe27…` | `3a577dcc…` | accept (human) | `d1936e8` (merge of Draft PR #18, merged on GitHub) |
+| T016 (authorization matrix regression + docs) | request `../campaign-opsledger-run-001/requests/T016.md` → `tsk-776db7f6…` | `6641e579…` | accept (human) | `e992e47` (merge of Draft PR #19, merged on GitHub) |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two
@@ -82,4 +93,9 @@ T010's four failed single-task runs remain in evidence too:
 `tsk-989d2bc5…` (worker_shutdown + 1800 s timeout), `tsk-0a5f750d…`
 (validation failed on four stale migration-count literals before the
 allowlist was corrected), `tsk-d16982c9…` and `tsk-9d00050a…` (empty-patch
-`agent_error`; one a single 32000-token output-capped response).
+`agent_error`; one a single 32000-token output-capped response). The
+T011–T016 runs keep their failures in evidence as well: T011d's
+corrupted-write run (`tsk-13bf1e65…`, rejected — tests missing, write-tool
+output corrupted three times) and its over-budget second run
+(`tsk-679a011b…`, 1800 s timeout), and T012's single-task attempt
+(`tsk-f2e6e602…`, 1800 s timeout) before the split. Nothing is hidden.
