@@ -1,14 +1,16 @@
-"""Identity for OpsLedger (T009, T010-A, T011 part A, T013).
+"""Identity for OpsLedger (T009, T010-A, T011 part A, T013, T014).
 
 Ships the password-hash records, the offline user provisioning path, the
 opaque session domain module (creation, constant-time verify, expiry,
 revocation), the CSRF domain module (short-lived opaque CSRF contexts
 issued before login, rotation with the authenticated session, constant-time
-verify, supersession, and the pure same-origin predicate), and the explicit
+verify, supersession, and the pure same-origin predicate), the explicit
 operation permission checks (known application roles, base permissions per
 role, the explicit purchase-approver grant path, and self-approval
-prohibition). The csrf-contexts storage migration, HTTP guards, and the
-login flow are later tasks (T011-B, T015).
+prohibition), and the site membership module (users granted access to
+specific sites within their organization, per-grant revocation, and
+immediate deactivation). The csrf-contexts storage migration, HTTP guards,
+and the login flow are later tasks (T011-B, T015).
 """
 
 from .passwords import (
@@ -59,6 +61,15 @@ from .permissions import (
     require_permission,
     require_role,
 )
+from .sites import (
+    SiteGrant,
+    active_site_ids,
+    deactivate_membership,
+    revoke_site_grant,
+    require_site_access,
+    has_site_access,
+    site_access_active,
+)
 
 __all__ = [
     "from_row",
@@ -94,5 +105,12 @@ __all__ = [
     "has_permission",
     "require_permission",
     "require_role",
+    "SiteGrant",
+    "site_access_active",
+    "require_site_access",
+    "has_site_access",
+    "deactivate_membership",
+    "revoke_site_grant",
+    "active_site_ids",
 ]
 
