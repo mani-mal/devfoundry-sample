@@ -5,7 +5,11 @@ ordered by ``created_at ASC, id ASC`` -- a deterministic total order -- and
 paged by a keyset cursor of ``(after_created_at, after_id)``, so identical
 timestamps neither duplicate nor omit stable rows. Includes optimistic
 version updates for assets (T020): a stale version surfaces a retryable
-ConflictError and the second writer's stale write is refused.
+ConflictError and the second writer's stale write is refused. Includes the
+site/asset archive rules (T021): archive sets ``archived_at`` (never DELETE,
+referenced records are retained), archived objects are excluded from the
+default lists and cannot accept new work (live assets block a site archive;
+:func:`require_site_accepts_assets` refuses new assets on an archived site).
 """
 
 from __future__ import annotations
@@ -26,8 +30,24 @@ from opsledger.assets.assets import (
 )
 from opsledger.assets.listing import asset_page_cursor, list_assets
 from opsledger.assets.updates import STALE_VERSION_MESSAGE, update_asset
+from opsledger.assets.archiving import (
+    ARCHIVED_SITE_MESSAGE,
+    SITE_HAS_LIVE_ASSETS_MESSAGE,
+    archive_asset,
+    archive_site,
+    require_site_accepts_assets,
+    unarchive_asset,
+    unarchive_site,
+)
 
 __all__ = [
+    "ARCHIVED_SITE_MESSAGE",
+    "SITE_HAS_LIVE_ASSETS_MESSAGE",
+    "archive_asset",
+    "archive_site",
+    "require_site_accepts_assets",
+    "unarchive_asset",
+    "unarchive_site",
     "DUPLICATE_ASSET_TAG_MESSAGE",
     "DUPLICATE_SITE_CODE_MESSAGE",
     "SITE_NOT_FOUND_MESSAGE",
