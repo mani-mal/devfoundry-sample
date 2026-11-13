@@ -10,6 +10,10 @@ site/asset archive rules (T021): archive sets ``archived_at`` (never DELETE,
 referenced records are retained), archived objects are excluded from the
 default lists and cannot accept new work (live assets block a site archive;
 :func:`require_site_accepts_assets` refuses new assets on an archived site).
+Includes the transactional audit (T022): :func:`update_asset_audited` runs
+the optimistic-concurrency update and its audit event in one shared
+transaction, so the business mutation and its audit/outbox record commit
+atomically — a forced audit failure rolls back the business mutation too.
 """
 
 from __future__ import annotations
@@ -29,7 +33,11 @@ from opsledger.assets.assets import (
     get_asset,
 )
 from opsledger.assets.listing import asset_page_cursor, list_assets
-from opsledger.assets.updates import STALE_VERSION_MESSAGE, update_asset
+from opsledger.assets.updates import (
+    STALE_VERSION_MESSAGE,
+    update_asset,
+    update_asset_audited,
+)
 from opsledger.assets.archiving import (
     ARCHIVED_SITE_MESSAGE,
     SITE_HAS_LIVE_ASSETS_MESSAGE,
@@ -57,6 +65,7 @@ __all__ = [
     "create_asset",
     "create_site",
     "update_asset",
+    "update_asset_audited",
     "get_asset",
     "get_site",
     "list_assets",
