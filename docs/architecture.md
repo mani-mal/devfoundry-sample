@@ -432,6 +432,51 @@ context fails verification.
 Route handlers receive the parsed `Request` and return `(status, body dict)`;
 dict bodies are serialized as JSON responses.
 
+## Identity: site memberships storage (T014 part B)
+
+### Migration (`opsledger/migrations/0006_site_memberships.sql`)
+
+Sixth shipped append-only migration, applied after `0005_user_hash_columns`.
+It creates the `site_memberships` table:
+
+    CREATE TABLE site_memberships (
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        site_id TEXT NOT NULL,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        granted_at TEXT NOT NULL,
+        revoked_at TEXT,
+        PRIMARY KEY (organization_id, site_id, user_id)
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations` in the
+same IMMEDIATE transaction as the DDL, so any later change to the file
+bytes is tamper-evident.
+
+### Table shape
+
+Composite primary key: (`organization_id`, `site_id`, `user_id`).
+
+| Column | Content |
+| --- | --- |
+| `organization_id` | Part of the composite PK; references `organizations(id)` |
+| `site_id` | Part of the composite PK; the site within the organization |
+| `user_id` | Part of the composite PK; references `users(id)` |
+| `granted_at` | RFC3339 UTC `Z` second-precision grant text |
+| `revoked_at` | Null while active; revocation timestamp when the membership was revoked |
+
+### Revocation semantics
+
+Revocation stamps `revoked_at`. There is no caching: every access check
+(`require_site_access` / `has_site_access`) reads `revoked_at IS NULL` on
+every call, so revocation takes effect immediately and existing sessions
+lose access to the site on revocation.
+
+### Deactivation semantics
+
+`deactivate_membership` deletes the memberships row, which takes effect
+immediately for subsequent access checks.
+
 ### Error mapping (`opsledger/http/envelope.py`)
 
 Every error response body is exactly:
