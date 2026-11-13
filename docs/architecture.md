@@ -529,6 +529,76 @@ after creation: there is no code update path in the module. Every lookup
 is scoped by `require_owned`, so a missing site and another
 organization's site surface the identical `site not found` error.
 
+## Equipment: assets storage (T018 part B)
+
+### Migration (`opsledger/migrations/0008_assets.sql`)
+
+Eighth shipped append-only migration, applied after `0007_sites`. It adds a
+unique index on `sites` and creates the `assets` table:
+
+    CREATE UNIQUE INDEX sites_org_id_idx ON sites (organization_id, id);
+
+    CREATE TABLE assets (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL REFERENCES organizations(id),
+        site_id TEXT NOT NULL,
+        tag TEXT NOT NULL,
+        name TEXT NOT NULL,
+        criticality TEXT NOT NULL CHECK (criticality IN ('low','medium','high')),
+        purchase_cost_cents INTEGER NOT NULL CHECK (purchase_cost_cents >= 0),
+        version INTEGER NOT NULL CHECK (version > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        archived_at TEXT,
+        UNIQUE (organization_id, tag),
+        FOREIGN KEY (organization_id, site_id) REFERENCES sites (organization_id, id)
+    );
+
+The migration is checksum-recorded by the migration runner: its sha256
+digest of the exact file bytes is written into `schema_migrations`, so any
+later change to the file bytes is tamper-evident.
+
+### Table shape
+
+Primary key: `id` (opaque `ast-<hex>` id, immutable after create).
+
+| Column | Content |
+| --- | --- |
+| `id` | Primary key; opaque asset identifier |
+| `organization_id` | References `organizations(id)`; the owning organization |
+| `site_id` | Site the asset belongs to; part of the composite foreign key |
+| `tag` | Asset tag within the organization; unique per organization |
+| `name` | Display name |
+| `criticality` | One of: low, medium, high (CHECK) |
+| `purchase_cost_cents` | Purchase cost in integer cents, CHECK `>= 0` |
+| `version` | Positive integer version, CHECK `> 0` |
+| `created_at` | RFC3339 UTC `Z` second-precision creation text |
+| `updated_at` | RFC3339 UTC `Z` second-precision update text |
+| `archived_at` | Null while active; archive timestamp when archived |
+
+### Database-level site scoping
+
+The composite foreign key `(organization_id, site_id) -> sites
+(organization_id, id)` is the database-level scoping rule: an asset row's
+`(organization_id, site_id)` must match a site row's `(organization_id,
+id)`, so a cross-organization site reference violates the FK and is
+impossible to store. The unique index `sites_org_id_idx` on `sites
+(organization_id, id)` backs this composite foreign key. The service-level
+path (`scoped_first` + `require_owned` in `opsledger/assets/sites.py` +
+`assets.py`, commit 0545801) makes a cross-organization site
+indistinguishable from a missing site (`site not found`); the database
+level makes it impossible to store even if written directly.
+
+### Scoped uniqueness and money
+
+`UNIQUE (organization_id, tag)` is the scoping rule: the same tag is
+allowed in another organization, and a duplicate within the same
+organization collides. The service maps that `IntegrityError` to
+`ConflictError` with the canonical message
+`asset tag already exists in this organization`. Money is stored as
+integer cents (no floats, no rounding): `purchase_cost_cents` with CHECK
+`>= 0`.
+
 ### Error mapping (`opsledger/http/envelope.py`)
 
 Every error response body is exactly:
