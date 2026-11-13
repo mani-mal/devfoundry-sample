@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M3 complete) · Final commit: `1b3dae7`
+Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M4 in progress, eval-window observation C34 open) · Final commit: `c2e3fe1`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -63,6 +63,7 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C31 | Application defect (caught by review, run rejected) | medium | T022a first attempt raised NameError on every `record_event` | `tsk-bcaeff3f…` (diff `9df35f5d…`): the module used `transaction(conn)` but never imported it from `opsledger.core.db` (the request explicitly required the import) — `NameError: name 'transaction' is not defined` on the first hands-on call | **CLOSED**: rejected; resubmission added the import; landed through PR #29 (`540c2bc`), hands-on verified (record_event / record_event_in_tx / events_for_entity) |
 | C32 | Application defect (caught by review, run rejected) | medium | T022b first attempt raised NameError on the no-row path | `tsk-3073bf14…` (diff `cbbe5077…`): the no-rowcount path raised an undefined module-level sentinel `raise _NoRowError()` — `NameError` hands-on; the try/except around the transaction referenced the same undefined name | **CLOSED**: rejected; resubmission's request added an explicit structure note (define any sentinel at module level, or record rowcount in a local and raise ConflictError after the tx block); landed through PR #30 (`df010ff`); core T022 acceptance verified hands-on (forced audit failure rolls back the business mutation) |
 | C33 | Platform/tooling observation (transient) | low | `gh pr ready` first attempt failed with "network is unreachable" | PR #20: `gh pr ready 20` failed (`Post https://api.github.com/graphql: dial tcp 140.82.114.5:443: connect: network is unreachable`) when only `NO_PROXY` was set; setting BOTH `NO_PROXY` and lowercase `no_proxy` before every `gh` command fixed it (all later PRs #21–#35 first attempt) | **CLOSED (workaround established)**: export both variables; the merge itself then succeeded; left PR #20 in draft for ~10 min before the retry (outcome poller still recorded the merge 8 min after — within bounds) |
+| C34 | Platform observation (worker output integrity, M4 eval window) | medium | Degenerate worker generation during the b109 evaluation window | 8 consecutive T025 module failures 19:07–21:52 UTC across every request shape (3-file; 2-file; minimal; two-small-writes; verbatim-copy): 4× `timed out after 1800 s`, 2× cut off at the output-token limit (~4 min in, mid-write), 1× completely wrong content — hallucinated a different project (`openclosed` imports, `CalendarService`/`WorkOrderService`, `PENDING_IMPL` tails) — which PASSED validation because unused files do not break the gate, 1× empty patch; meanwhile the same env passed a 1-line probe (~2 min) and the 0010 migration + 5 count-literal edits (~2 min, first attempt) | **OPEN — window observation**: hands-on content review caught the corrupted packet before landing (zero defects landed); module attempts paused during the eval window; F-912 (advisory static check) would also catch it; small SQL/edits tasks unaffected |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -102,7 +103,9 @@ reproduction observed, post-fix behavior NOT re-tested**.
   landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
 - Repository: 3 items — all closed (B1+B2 cleanup landed through
   DevFoundry review; B3 closed by the owner-authorized direct edit).
-- Platform: 29 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+- Platform: 30 items — all previous 29 plus C34 (M4 eval-window worker
+  output integrity: 8 consecutive module failures, one corrupted packet
+  caught hands-on before landing — OPEN during the evaluation window),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
   2 closed owner decisions (C17 live, C18 closed), 3 platform
