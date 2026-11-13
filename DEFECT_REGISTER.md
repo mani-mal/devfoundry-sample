@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M2 complete) · Final commit: `e992e47`
+Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M3 complete) · Final commit: `1b3dae7`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -58,6 +58,11 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C26 | Platform limit | medium | Single-model-call runs hit the 32000-token output cap | `tsk-d7d95028…`: 1 model call, exactly 32000 output tokens, run failed `agent_error` with an empty patch (the "write in your very first tool call" phrasing pushed the model to emit everything in one truncated response) | **CLOSED (platform, 2026-11-13)**: DevFoundry BUG-135 — a last turn ending cut off or at 32000 output tokens now fails the task *before validation* with "the agent's last model turn was cut off at the output-token limit; the change is unfinished" (`agent_error`); RouteForge B113 delivers cut-off turns as `length` on every path and no longer caches them |
 | C28 | Application/tooling observation — **RE-LABELED 2026-11-13 (root cause correction from DevFoundry)** | medium | "The write tool corrupts files" (M2 report defect 2) — original label was wrong | On `tsk-13bf1e65` the agent's last model turn ran 95 s and stopped at exactly 32 000 output tokens (OpenCode's one-turn limit): a runaway generation. RouteForge then reported the turn as *finished* (`stop`) instead of *cut off* (`length`), so OpenCode ended the session and the unfinished change went to review — the write tool itself was fine. The "malformed placeholder definitions" seen in the diff were the truncated tail of the runaway turn, not write-tool corruption | **CLOSED — root cause fixed on both sides**: DevFoundry BUG-135 (fail fast before validation on a cut-off last turn) + RouteForge B113 (`length` on every path, cut-off answers not cached). The whole-file-write / rewrite-once / tests-split-out workaround remains good practice: it keeps each turn short |
 | C27 | Application defect (spec-conformance gap, found + fixed 2026-11-13) | medium | `opsledger/migrations/0002_identity.sql` vs T009's `provision_user` | The shipped `users` table had no `salt/hash/n/r/p/protocol_version` columns, so `provision_user` raised `OperationalError` ("table users has no column named salt") on every real migrated DB; T009's tests passed because they create their own table — found during T011 planning by running `provision_user` against a fresh `migrate()` | **CLOSED**: `0005_user_hash_columns.sql` (append-only ALTER TABLE) + the first integration test against the real shipped migrations landed through PR #9 (`598203f`, 0 findings); `provision_user` verified end to end on a migrated DB |
+| C29 | Application/tooling observation (request defect, caught in review) | low | T017a request assumed a `sites` table existed in the shipped migrations | The T017a request said "the sites table already exists in the shipped migrations (0001_initial.sql)" — wrong: 0001 is only `schema_notes` and no migration 0001–0006 creates `sites`; the hands-on check failed with `sqlite3.OperationalError: no such table: sites` before approve; recovered in-session (hands-on verified against a locally created table matching the documented shape) and the table shipped append-only in T017b `0007_sites.sql` | **CLOSED**: `0007_sites.sql` landed through PR #21 (`fe830a3`); lesson recorded — verify table existence before writing the request; no lab task wasted (the module was correct against the documented shape) |
+| C30 | Application defect (caught by review, run rejected) | medium | T020a first attempt bound NULL over stored values on partial updates | `tsk-aace15bb…` (diff `339b5d2e…`): `_UPDATE_ASSET_SQL` set all three optional columns and bound None for unprovided fields, so `update_asset(name only)` failed `NOT NULL constraint failed: assets.criticality` — reproduced hands-on BEFORE approve; the gate could not see it (no partial-update test existed yet) | **CLOSED**: rejected (`--reason` prose); resubmission specified `col = COALESCE(?, col)` for each optional column; landed through PR #26 (`17ae445`) and covered by T020b's partial-update tests (PR #27) |
+| C31 | Application defect (caught by review, run rejected) | medium | T022a first attempt raised NameError on every `record_event` | `tsk-bcaeff3f…` (diff `9df35f5d…`): the module used `transaction(conn)` but never imported it from `opsledger.core.db` (the request explicitly required the import) — `NameError: name 'transaction' is not defined` on the first hands-on call | **CLOSED**: rejected; resubmission added the import; landed through PR #29 (`540c2bc`), hands-on verified (record_event / record_event_in_tx / events_for_entity) |
+| C32 | Application defect (caught by review, run rejected) | medium | T022b first attempt raised NameError on the no-row path | `tsk-3073bf14…` (diff `cbbe5077…`): the no-rowcount path raised an undefined module-level sentinel `raise _NoRowError()` — `NameError` hands-on; the try/except around the transaction referenced the same undefined name | **CLOSED**: rejected; resubmission's request added an explicit structure note (define any sentinel at module level, or record rowcount in a local and raise ConflictError after the tx block); landed through PR #30 (`df010ff`); core T022 acceptance verified hands-on (forced audit failure rolls back the business mutation) |
+| C33 | Platform/tooling observation (transient) | low | `gh pr ready` first attempt failed with "network is unreachable" | PR #20: `gh pr ready 20` failed (`Post https://api.github.com/graphql: dial tcp 140.82.114.5:443: connect: network is unreachable`) when only `NO_PROXY` was set; setting BOTH `NO_PROXY` and lowercase `no_proxy` before every `gh` command fixed it (all later PRs #21–#35 first attempt) | **CLOSED (workaround established)**: export both variables; the merge itself then succeeded; left PR #20 in draft for ~10 min before the retry (outcome poller still recorded the merge 8 min after — within bounds) |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -97,7 +102,7 @@ reproduction observed, post-fix behavior NOT re-tested**.
   landed `3131a90`), 4 resolved/corrected, 1 landing error resolved.
 - Repository: 3 items — all closed (B1+B2 cleanup landed through
   DevFoundry review; B3 closed by the owner-authorized direct edit).
-- Platform: 28 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
+- Platform: 29 items — 12 fixed + verified PASS, 1 by-design (NEW-004),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
   2 closed owner decisions (C17 live, C18 closed), 3 platform
@@ -107,7 +112,11 @@ reproduction observed, post-fix behavior NOT re-tested**.
   CLOSED 2026-11-13 by BUG-135/B113), 1 application gap found + closed
   en route (C27, fixed by PR #9), 1 re-labeled (C28: M2 report defect 2
   "write tool corrupts files" was actually a 32000-token runaway turn +
-  RouteForge stop-vs-length misreport — closed by BUG-135/B113).
+  RouteForge stop-vs-length misreport — closed by BUG-135/B113),
+  1 M3 request defect caught hands-on (C29, closed by PR #21),
+  3 M3 review-caught rejects closed (C30/C31/C32, landed via PRs
+  #26/#29/#30), 1 transient gh proxy flake (C33, workaround: set both
+  NO_PROXY and no_proxy).
 - Gate: `OPSLEDGER_FAST_GATE_OK` on the final commit `a42019c` (fresh
   clone: 44-file tree, 97 Python + 2 JS tests, 0 skipped; plain
   `bash check.sh` green without a PATH export).

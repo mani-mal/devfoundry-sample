@@ -78,6 +78,22 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | T015 part A (static file allowlist module) | request `../campaign-opsledger-run-001/requests/T015a.md` → `tsk-5ec77422…` | `6f4b3510…` | accept (human) | `baeb9af` (merge of Draft PR #17, merged on GitHub) |
 | T015 part B (login/account UI + JS tests) | request `../campaign-opsledger-run-001/requests/T015b.md` → `tsk-c200fe27…` | `3a577dcc…` | accept (human) | `d1936e8` (merge of Draft PR #18, merged on GitHub) |
 | T016 (authorization matrix regression + docs) | request `../campaign-opsledger-run-001/requests/T016.md` → `tsk-776db7f6…` | `6641e579…` | accept (human) | `e992e47` (merge of Draft PR #19, merged on GitHub) |
+| T017 part A (sites service, scoped unique codes) | request `../campaign-opsledger-run-001/requests/T017a.md` → `tsk-2a5953b8…` | `abc541f7…` | accept (human) | `bfe5583` (merge of Draft PR #20, merged on GitHub) |
+| T017 part B (sites migration + integration tests + literals + docs) | request `../campaign-opsledger-run-001/requests/T017b.md` → `tsk-bbb90473…` | `962e759c…` | accept (human) | `fe830a3` (merge of Draft PR #21, merged on GitHub) |
+| T018 part A (assets service, service-level site scoping) | request `../campaign-opsledger-run-001/requests/T018a.md` → `tsk-b9a68a09…` | `f04ec4ad…` | accept (human) | `5897b81` (merge of Draft PR #22, merged on GitHub) |
+| T018 part B (assets migration, composite-FK scoping + tests + literals + docs) | request `../campaign-opsledger-run-001/requests/T018b.md` → `tsk-7697bdf0…` | `38e60851…` | accept (human) | `9c90bd2` (merge of Draft PR #23, merged on GitHub) |
+| T019 part A (asset filtered list, keyset pagination) | request `../campaign-opsledger-run-001/requests/T019a.md` → `tsk-c43a5545…` | `8584346b…` | accept (human) | `2eaecd7` (merge of Draft PR #24, merged on GitHub) |
+| T019 part B (asset listing integration tests) | request `../campaign-opsledger-run-001/requests/T019b.md` → `tsk-4c094030…` | `7665b84a…` | accept (human) | `9f66505` (merge of Draft PR #25, merged on GitHub) |
+| T020 part A (optimistic version updates, COALESCE) | request `../campaign-opsledger-run-001/requests/T020a.md` → `tsk-1bf3d5ac…` | `17ab56ad…` | accept (human) | `17ae445` (merge of Draft PR #26, merged on GitHub; first attempt `tsk-aace15bb…` diff `339b5d2e…` rejected) |
+| T020 part B (optimistic-concurrency integration tests) | request `../campaign-opsledger-run-001/requests/T020b.md` → `tsk-66b033fa…` | `365279a7…` | accept (human) | `04fc048` (merge of Draft PR #27, merged on GitHub) |
+| T021 part A (site/asset archive rules module) | request `../campaign-opsledger-run-001/requests/T021a.md` → `tsk-1bfb3854…` | `93c5dd72…` | accept (human) | `3d5596d` (merge of Draft PR #28, merged on GitHub) |
+| T021 part B (archive-rule integration tests) | request `../campaign-opsledger-run-001/requests/T021b.md` → `tsk-a5165fd1…` | `3f65441e…` | accept (human) | `fafdd58` (merge of Draft PR #34, merged on GitHub) |
+| T022 part A (audit event module) | request `../campaign-opsledger-run-001/requests/T022a.md` → `tsk-3239d7df…` | `04dae946…` | accept (human) | `540c2bc` (merge of Draft PR #29, merged on GitHub; first attempt `tsk-bcaeff3f…` diff `9df35f5d…` rejected) |
+| T022 part B (transactional asset update with audit) | request `../campaign-opsledger-run-001/requests/T022b.md` → `tsk-27739f30…` | `c04f095d…` | accept (human) | `df010ff` (merge of Draft PR #30, merged on GitHub; first attempt `tsk-3073bf14…` diff `cbbe5077…` rejected) |
+| T022 part C (audit_events migration + rollback tests + literals + docs) | request `../campaign-opsledger-run-001/requests/T022c.md` → `tsk-0eaaba93…` | `125e7323…` | accept (human) | `9713dae` (merge of Draft PR #31, merged on GitHub) |
+| T023 part A (site/asset UI modules + JS tests) | request `../campaign-opsledger-run-001/requests/T023a.md` → `tsk-9863b8a2…` | `f23fecfa…` | accept (human) | `fd23897` (merge of Draft PR #32, merged on GitHub) |
+| T023 part B (index.html sites mount section) | request `../campaign-opsledger-run-001/requests/T023b.md` → `tsk-5b43a7af…` | `5d11beed…` | accept (human) | `1b3dae7` (merge of Draft PR #35, merged on GitHub) |
+| T024 (search/filter JS modules + node tests) | request `../campaign-opsledger-run-001/requests/T024.md` → `tsk-7d86665f…` | `37fb2014…` | accept (human) | `43d6777` (merge of Draft PR #33, merged on GitHub) |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two
@@ -99,3 +115,11 @@ corrupted-write run (`tsk-13bf1e65…`, rejected — tests missing, write-tool
 output corrupted three times) and its over-budget second run
 (`tsk-679a011b…`, 1800 s timeout), and T012's single-task attempt
 (`tsk-f2e6e602…`, 1800 s timeout) before the split. Nothing is hidden.
+The M3 runs keep their rejections in evidence too: T020a's first attempt
+(`tsk-aace15bb…`, diff `339b5d2e…` — bare `?` bound NULL over stored
+values on partial updates, caught hands-on before approve), T022a's first
+attempt (`tsk-bcaeff3f…`, diff `9df35f5d…` — missing `transaction` import,
+NameError), and T022b's first attempt (`tsk-3073bf14…`, diff
+`cbbe5077…` — undefined `_NoRowError` sentinel, NameError). All three
+were caught by hands-on review before landing and all three resubmissions
+landed first attempt. Nothing is hidden.
