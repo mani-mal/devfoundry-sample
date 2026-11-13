@@ -68,7 +68,7 @@ class CliMigrateTests(unittest.TestCase):
         code, out, err = _run_cli(["migrate", str(self.db_path)])
 
         self.assertEqual(code, 0)
-        self.assertEqual(out.splitlines(), ["0001_initial", "0002_identity", "0003_sessions", "0004_csrf_contexts", "0005_user_hash_columns", "0006_site_memberships", "0007_sites", "0008_assets"])
+        self.assertEqual(out.splitlines(), ["0001_initial", "0002_identity", "0003_sessions", "0004_csrf_contexts", "0005_user_hash_columns", "0006_site_memberships", "0007_sites", "0008_assets", "0009_audit_events"])
         self.assertEqual(err, "")
 
     def test_second_migrate_exits_0_and_prints_nothing(self):
@@ -150,7 +150,7 @@ class ReadyzHandlerTests(unittest.TestCase):
         status, body = readyz_handler(self._request())
 
         self.assertEqual(status, 200)
-        self.assertEqual(body, {"status": "ready", "migrations": 8})
+        self.assertEqual(body, {"status": "ready", "migrations": 9})
 
     def test_readyz_with_missing_history_row_is_503_naming_it(self):
         self.assertEqual(_run_cli(["migrate", str(self.db_path)])[0], 0)
@@ -256,7 +256,7 @@ class HealthzEndToEndTests(unittest.TestCase):
             self.assertEqual(response.status, 200)
             payload = json.loads(response.read().decode("utf-8"))
 
-        self.assertEqual(payload, {"status": "ready", "migrations": 8})
+        self.assertEqual(payload, {"status": "ready", "migrations": 9})
 
 
 class ServeShutdownRulesTest(unittest.TestCase):
