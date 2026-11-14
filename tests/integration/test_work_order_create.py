@@ -92,3 +92,56 @@ class WorkOrderCreateTests(unittest.TestCase):
             requester_id="user-111",
             clock=FixedClock(datetime(2026, 11, 13, 15, 0, 0, tzinfo=timezone.utc)),
         )
+
+    def test_t1_create_happy_path(self):
+        conn = self._open_migrated()
+        site_a, _, asset_a = self._seed_site_and_asset(conn)
+        row = self._create_work_order(conn, site_a["id"], asset_a["id"])
+        self.assertEqual("wor-", row["id"][:4])
+        self.assertEqual("open", row["status"])
+        self.assertEqual(1, row["version"])
+        self.assertEqual("wo-001", row["number"])
+        self.assertEqual("high", row["priority"])
+        self.assertEqual("2026-11-13T15:00:00Z", row["created_at"])
+        self.assertIsNone(row["archived_at"])
+
+    def test_t2_same_org_duplicate_number_conflict(self):
+        conn = self._open_migrated()
+        site_a, _, asset_a = self._seed_site_and_asset(conn)
+        self._create_work_order(conn, site_a["id"], asset_a["id"], number="wo-100")
+        with self.assertRaises(ConflictError) as caught:
+            self._create_work_order(conn, site_a["id"], asset_a["id"], number="wo-100")
+        self.assertEqual(DUPLICATE_WORK_ORDER_NUMBER_MESSAGE, str(caught.exception))
+
+    def test_t3_same_number_other_organization_allowed(self):
+        conn = self._open_migrated()
+        site_a, site_b, asset_a = self._seed_site_and_asset(conn)
+        self._create_work_order(conn, site_a["id"], asset_a["id"], number="wo-100")
+        asset_b = create_asset(
+            conn,
+            self._context("org-bbb"),
+            site_id=site_b["id"],
+            tag="pump-002",
+            name="Asset pump-002",
+            criticality="low",
+            purchase_cost_cents=5000,
+            clock=FixedClock(datetime(2026, 11, 13, 12, 30, 0, tzinfo=timezone.utc)),
+        )
+        row_b = self._create_work_order(conn, site_b["id"], asset_b["id"], number="wo-100", organization_id="org-bbb")
+        self.assertEqual("org-bbb", row_b["organization_id"])
+
+    def test_t4_cross_organization_site_not_found(self):
+        conn = self._open_migrated()
+        site_a, site_b, asset_a = self._seed_site_and_asset(conn)
+        with self.assertRaises(NotFoundError):
+            self._create_work_order(conn, site_b["id"], asset_a["id"])
+
+    def test_t5_missing_asset_not_found(self):
+        conn = self._open_migrated()
+        site_a, _, _ = self._seed_site_and_asset(conn)
+        with self.assertRaises(NotFoundError):
+            self._create_work_order(conn, site_a["id"], "asset-missing")
+
+
+if __name__ == "__main__":
+    unittest.main()
