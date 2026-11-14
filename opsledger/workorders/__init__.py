@@ -1,5 +1,9 @@
 """Work orders package for OpsLedger (T025, M4)."""
 
+from opsledger.workorders.assignments import (
+    assign_technician,
+    release_assignment,
+)
 from opsledger.workorders.orders import (
     DUPLICATE_WORK_ORDER_NUMBER_MESSAGE,
     WORK_ORDER_PRIORITIES,
@@ -12,4 +16,6 @@ __all__ = [
     "WORK_ORDER_PRIORITIES",
     "WORK_ORDER_STATUSES",
     "create_work_order",
+    "assign_technician",
+    "release_assignment",
 ]
