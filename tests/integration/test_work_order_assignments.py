@@ -94,3 +94,29 @@ class AssignmentTests(unittest.TestCase):
             technician_id=technician_id, assigned_by_id="user-222",
             clock=FixedClock(datetime(2026, 11, 13, 15, 0, 0, tzinfo=timezone.utc)),
         )
+
+    def test_t1_assign_active_same_site_technician(self):
+        conn = self._open_migrated()
+        site_a, _, _, _, work_order = self._seed(conn)
+        self._grant(conn, site_a["id"], "user-333")
+        assignment = self._assign(conn, work_order, "user-333")
+        self.assertEqual("asg-", assignment["id"][:4])
+        self.assertEqual("org-aaa", assignment["organization_id"])
+        row = conn.execute("SELECT status, version FROM work_orders WHERE id = ?", (work_order["id"],)).fetchone()
+        self.assertEqual("assigned", row["status"])
+        self.assertEqual(2, row["version"])
+
+    def test_t2_cross_site_technician_denied(self):
+        conn = self._open_migrated()
+        site_a, _, site_west, _, work_order = self._seed(conn)
+        self._grant(conn, site_west["id"], "user-333")
+        with self.assertRaises(PermissionDeniedError) as caught:
+            self._assign(conn, work_order, "user-333")
+        self.assertEqual(ASSIGNEE_NOT_ACTIVE_TECHNICIAN_MESSAGE, str(caught.exception))
+
+    def test_t3_inactive_membership_denied(self):
+        conn = self._open_migrated()
+        site_a, _, _, _, work_order = self._seed(conn)
+        self._grant(conn, site_a["id"], "user-333", revoked=True)
+        with self.assertRaises(PermissionDeniedError):
+            self._assign(conn, work_order, "user-333")
