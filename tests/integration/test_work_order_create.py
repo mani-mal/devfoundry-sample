@@ -49,3 +49,46 @@ class WorkOrderCreateTests(unittest.TestCase):
 
     def _context(self, organization_id):
         return OrganizationContext(organization_id=organization_id)
+
+    def _seed_site_and_asset(self, conn, tag="pump-001"):
+        clock = FixedClock(datetime(2026, 11, 13, 12, 0, 0, tzinfo=timezone.utc))
+        self._seed_organizations(conn)
+        site_a = create_site(
+            conn,
+            self._context("org-aaa"),
+            code="main",
+            name="Site A",
+            clock=clock,
+        )
+        site_b = create_site(
+            conn,
+            self._context("org-bbb"),
+            code="main",
+            name="Site B",
+            clock=clock,
+        )
+        asset_a = create_asset(
+            conn,
+            self._context("org-aaa"),
+            site_id=site_a["id"],
+            tag=tag,
+            name="Asset " + tag,
+            criticality="medium",
+            purchase_cost_cents=10000,
+            clock=clock,
+        )
+        return site_a, site_b, asset_a
+
+    def _create_work_order(self, conn, site_id, asset_id, number="wo-001", organization_id="org-aaa"):
+        return create_work_order(
+            conn,
+            self._context(organization_id),
+            site_id=site_id,
+            asset_id=asset_id,
+            number=number,
+            title="Rebuild pump",
+            description="Full rebuild of pump 001",
+            priority="high",
+            requester_id="user-111",
+            clock=FixedClock(datetime(2026, 11, 13, 15, 0, 0, tzinfo=timezone.utc)),
+        )
