@@ -120,3 +120,51 @@ class AssignmentTests(unittest.TestCase):
         self._grant(conn, site_a["id"], "user-333", revoked=True)
         with self.assertRaises(PermissionDeniedError):
             self._assign(conn, work_order, "user-333")
+
+    def test_t4_no_membership_denied(self):
+        conn = self._open_migrated()
+        _, _, _, _, work_order = self._seed(conn)
+        with self.assertRaises(PermissionDeniedError):
+            self._assign(conn, work_order, "user-333")
+
+    def test_t5_work_order_not_open_conflict(self):
+        conn = self._open_migrated()
+        site_a, _, _, _, work_order = self._seed(conn)
+        self._grant(conn, site_a["id"], "user-333")
+        self._assign(conn, work_order, "user-333")
+        self._grant(conn, site_a["id"], "user-444")
+        with self.assertRaises(ConflictError) as caught:
+            self._assign(conn, work_order, "user-444")
+        self.assertEqual(WORK_ORDER_NOT_OPEN_MESSAGE, str(caught.exception))
+
+    def test_t6_release_returns_work_order_to_open(self):
+        conn = self._open_migrated()
+        site_a, _, _, _, work_order = self._seed(conn)
+        self._grant(conn, site_a["id"], "user-333")
+        assignment = self._assign(conn, work_order, "user-333")
+        released = release_assignment(
+            conn, self._context("org-aaa"), assignment_id=assignment["id"],
+            clock=FixedClock(datetime(2026, 11, 13, 16, 0, 0, tzinfo=timezone.utc)),
+        )
+        self.assertIsNotNone(released["released_at"])
+        row = conn.execute("SELECT status, version FROM work_orders WHERE id = ?", (work_order["id"],)).fetchone()
+        self.assertEqual("open", row["status"])
+        self.assertEqual(3, row["version"])
+
+    def test_t7_missing_work_order_not_found(self):
+        conn = self._open_migrated()
+        self._seed(conn)
+        self._grant(conn, "site-x", "user-333")
+        with self.assertRaises(NotFoundError):
+            self._assign(conn, {"id": "wor-missing"}, "user-333")
+
+    def test_t8_cross_organization_work_order_not_found(self):
+        conn = self._open_migrated()
+        site_a, site_b, _, _, _ = self._seed(conn)
+        self._grant(conn, site_b["id"], "user-333", organization_id="org-bbb")
+        with self.assertRaises(NotFoundError):
+            self._assign(conn, work_order={"id": "wor-cross"}, technician_id="user-333", organization_id="org-bbb")
+
+
+if __name__ == "__main__":
+    unittest.main()
