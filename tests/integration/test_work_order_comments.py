@@ -109,3 +109,36 @@ class CommentTests(unittest.TestCase):
                 conn, self._context(), work_order_id=work_order["id"], author_id="user-111",
                 body=123, clock=self._clock(),
             )
+
+    def test_t5_comment_after_version_bump_anchors_new_version(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with conn:
+            conn.execute("UPDATE work_orders SET version = 2 WHERE id = ?", (work_order["id"],))
+        comment = self._comment(conn, work_order, "part arrived", author_id="user-222")
+        self.assertEqual(2, comment["at_version"])
+
+    def test_t6_list_comments_in_creation_order(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        first = self._comment(conn, work_order, "first", hour=15)
+        second = self._comment(conn, work_order, "second", hour=16)
+        comments = list_comments(conn, self._context(), work_order_id=work_order["id"])
+        self.assertEqual([first["id"], second["id"]], [row["id"] for row in comments])
+
+    def test_t7_missing_work_order_not_found(self):
+        conn = self._open_migrated()
+        _, _, _ = self._seed_work_order(conn)
+        with self.assertRaises(NotFoundError):
+            self._comment(conn, {"id": "wor-missing"}, "x")
+
+    def test_t8_cross_organization_comments_not_listed(self):
+        conn = self._open_migrated()
+        _, site_b, work_order = self._seed_work_order(conn)
+        self._comment(conn, work_order, "org-aaa comment")
+        comments = list_comments(conn, self._context("org-bbb"), work_order_id=work_order["id"])
+        self.assertEqual([], comments)
+
+
+if __name__ == "__main__":
+    unittest.main()
