@@ -137,3 +137,82 @@ class WorkOrderLifecycleRegression(unittest.TestCase):
             {"from_status": "closed", "to_status": "open", "from_version": 5, "to_version": 6},
             {key: details[key] for key in ("from_status", "to_status", "from_version", "to_version")},
         )
+
+    def test_t3_reopened_order_walks_to_closed_again_and_history_grows_in_order(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        row = self._transition(conn, work_order, "assigned", 1)
+        row = self._transition(conn, row, "in_progress", 2)
+        row = self._transition(conn, row, "completed", 3)
+        row = self._transition(conn, row, "closed", 4)
+        row = self._transition(conn, row, "open", 5, reason="reopen")
+        row = self._transition(conn, row, "assigned", 6)
+        row = self._transition(conn, row, "in_progress", 7)
+        row = self._transition(conn, row, "completed", 8)
+        row = self._transition(conn, row, "closed", 9)
+        self.assertEqual("closed", row["status"])
+        self.assertEqual(10, row["version"])
+        events = self._lifecycle_events(conn, work_order["id"])
+        self.assertEqual(9, len(events))
+        self.assertEqual(
+            [("open", "assigned"), ("assigned", "in_progress"),
+             ("in_progress", "completed"), ("completed", "closed"),
+             ("closed", "open"), ("open", "assigned"),
+             ("assigned", "in_progress"), ("in_progress", "completed"),
+             ("completed", "closed")],
+            [(event["from_status"], event["to_status"]) for event in events],
+        )
+        audit = self._audit_events(conn, work_order["id"])
+        self.assertEqual(9, len(audit))
+        self.assertEqual(
+            ["work_order.transition"] * 9,
+            [event["operation"] for event in audit],
+        )
+
+    def test_t4_events_are_append_only_no_update_or_delete_paths(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        events_before = self._lifecycle_events(conn, work_order["id"])
+        with self.assertRaises(ConflictError):
+            self._transition(conn, work_order, "closed", 1)
+        self.assertEqual(
+            [(event["from_status"], event["to_status"]) for event in events_before],
+            [(event["from_status"], event["to_status"]) for event in self._lifecycle_events(conn, work_order["id"])],
+        )
+        audit_before = self._audit_events(conn, work_order["id"])
+        self.assertEqual(1, len(audit_before))
+
+    def test_t5_audit_details_carry_from_and_to_version_per_transition(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        row = self._transition(conn, work_order, "assigned", 1)
+        row = self._transition(conn, row, "in_progress", 2)
+        audit = self._audit_events(conn, work_order["id"])
+        self.assertEqual(2, len(audit))
+        first = json.loads(audit[0]["details"])
+        second = json.loads(audit[1]["details"])
+        self.assertEqual(1, first["from_version"])
+        self.assertEqual(2, first["to_version"])
+        self.assertEqual(2, second["from_version"])
+        self.assertEqual(3, second["to_version"])
+        self.assertEqual("open", first["from_status"])
+        self.assertEqual("assigned", first["to_status"])
+        self.assertEqual("assigned", second["from_status"])
+        self.assertEqual("in_progress", second["to_status"])
+
+    def test_t6_cross_organization_history_is_invisible(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        own = self._audit_events(conn, work_order["id"])
+        self.assertEqual(1, len(own))
+        other = events_for_entity(
+            conn, self._context("org-bbb"),
+            entity_type=AUDIT_ENTITY_WORK_ORDER, entity_id=work_order["id"],
+        )
+        self.assertEqual([], other)
+
+
+if __name__ == "__main__":
+    unittest.main()
