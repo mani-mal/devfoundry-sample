@@ -77,3 +77,81 @@ def canonical_request_digest(payload):
     """Canonical sha256 hex digest of the request payload (sorted-key JSON)."""
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def begin_idempotency(conn, context, *, operation, key, request_payload, clock):
+    """Begin (or resolve) one idempotency record; returns (record, replayed).
+
+    require_context(context) plus a non-empty actor_id (the scope includes
+    the actor); operation and key must be non-empty strings; the request
+    payload must be JSON-serializable (its canonical digest is stored).
+    When a record already exists for the scope, the same digest returns
+    the prior record with replayed=True and the caller replays its stored
+    result; a different digest raises ConflictError (HTTP 409) and the
+    original record is untouched. A new scope inserts one pending row
+    inside one transaction and returns it with replayed=False.
+    """
+    context = require_context(context)
+    actor_id = _require_actor_id(context)
+    validated_operation = _require_operation(operation)
+    validated_key = _require_key(key)
+    try:
+        request_digest = canonical_request_digest(request_payload)
+    except TypeError:
+        raise ValidationError("request payload must be JSON-serializable") from None
+    timestamp_text = format_rfc3339(clock.now())
+    with transaction(conn) as tx:
+        row = tx.execute(
+            _SELECT_BY_SCOPE_SQL,
+            (context.organization_id, actor_id, validated_operation, validated_key),
+        ).fetchone()
+        if row is not None:
+            if row["request_digest"] != request_digest:
+                raise ConflictError(IDEMPOTENCY_DIGEST_CONFLICT_MESSAGE)
+            return row, True
+        record_id = "idm-" + uuid4().hex
+        tx.execute(
+            "INSERT INTO idempotency_records (id, organization_id, actor_id, operation,"
+            " key, request_digest, status, result_payload, created_at, updated_at,"
+            " completed_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', NULL, ?, ?, NULL)",
+            (
+                record_id,
+                context.organization_id,
+                actor_id,
+                validated_operation,
+                validated_key,
+                request_digest,
+                timestamp_text,
+                timestamp_text,
+            ),
+        )
+    return conn.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone(), False
+
+
+def complete_idempotency(conn, context, *, record_id, result_payload, clock):
+    """Mark one pending record completed with its replayable result payload.
+
+    require_owned lookup (missing and cross-organization surface the same
+    NotFoundError); the result payload must be a JSON-serializable dict and
+    is stored as canonical JSON. Completing a record that is not pending
+    raises ConflictError (completed and failed are terminal).
+    """
+    require_context(context)
+    if not isinstance(result_payload, dict):
+        raise ValidationError("result payload must be a dict")
+    try:
+        payload_text = json.dumps(result_payload, sort_keys=True, separators=(",", ":"))
+    except TypeError:
+        raise ValidationError("result payload must be JSON-serializable") from None
+    timestamp_text = format_rfc3339(clock.now())
+    with transaction(conn) as tx:
+        row = tx.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
+        require_owned(context, row, label="idempotency record")
+        updated = tx.execute(
+            "UPDATE idempotency_records SET status = 'completed', result_payload = ?,"
+            " updated_at = ?, completed_at = ? WHERE id = ? AND status = 'pending'",
+            (payload_text, timestamp_text, timestamp_text, record_id),
+        ).rowcount
+        if updated != 1:
+            raise ConflictError(IDEMPOTENCY_NOT_PENDING_MESSAGE)
+    return conn.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
