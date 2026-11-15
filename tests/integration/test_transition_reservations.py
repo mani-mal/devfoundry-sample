@@ -232,3 +232,100 @@ class TransitionReservationsTest(unittest.TestCase):
         self.assertEqual("cancelled", completed["status"])
         count = conn.execute("SELECT COUNT(*) FROM stock_movements WHERE work_order_id = ?", (plain["id"],)).fetchone()[0]
         self.assertEqual(0, count)
+
+    def test_t6_invalid_transitions_and_stale_version_unchanged(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        with self.assertRaises(ConflictError):
+            transition_work_order_with_reservations(
+                conn, context, work_order_id=work_order["id"], to_status="completed",
+                expected_version=work_order["version"], reason=None,
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        with self.assertRaises(ConflictError):
+            transition_work_order_with_reservations(
+                conn, context, work_order_id=work_order["id"], to_status="cancelled",
+                expected_version=999, reason="no longer needed",
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        with self.assertRaises(ValidationError):
+            transition_work_order_with_reservations(
+                conn, context, work_order_id=work_order["id"], to_status="cancelled",
+                expected_version=work_order["version"], reason=None,
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        after = conn.execute(
+            "SELECT * FROM work_orders WHERE id = ?", (work_order["id"],)
+        ).fetchone()
+        self.assertEqual(("open", work_order["version"]), (after["status"], after["version"]))
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual(("active", 4), (reservation_after["status"], reservation_after["remaining_quantity"]))
+        events = conn.execute(
+            "SELECT * FROM work_order_events WHERE work_order_id = ?", (work_order["id"],)
+        ).fetchall()
+        self.assertEqual(0, len(events))
+
+    def test_t7_unknown_and_cross_organization_invisible(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        with self.assertRaises(NotFoundError):
+            transition_work_order_with_reservations(
+                conn, context, work_order_id="wor-does-not-exist", to_status="cancelled",
+                expected_version=1, reason="no longer needed",
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        other_context = self._context("org-bbb")
+        with self.assertRaises(NotFoundError):
+            transition_work_order_with_reservations(
+                conn, other_context, work_order_id=work_order["id"], to_status="cancelled",
+                expected_version=work_order["version"], reason="no longer needed",
+                actor_id=other_context.actor_id, clock=self._tick_clock(),
+            )
+        after = conn.execute(
+            "SELECT * FROM work_orders WHERE id = ?", (work_order["id"],)
+        ).fetchone()
+        self.assertEqual(("open", work_order["version"]), (after["status"], after["version"]))
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual(("active", 4), (reservation_after["status"], reservation_after["remaining_quantity"]))
+
+    def test_t8_cancel_with_two_reservations_releases_both(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context, reserved_quantity=1)
+        from opsledger.inventory import reserve_stock as _rs
+        second = _rs(
+            conn, context, part_id=part["id"], location_id=location["id"],
+            work_order_id=work_order["id"], quantity=2,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        cancelled = transition_work_order_with_reservations(
+            conn, context, work_order_id=work_order["id"], to_status="cancelled",
+            expected_version=work_order["version"], reason="no longer needed",
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        self.assertEqual("cancelled", cancelled["status"])
+        rows = conn.execute(
+            "SELECT * FROM reservations WHERE work_order_id = ? ORDER BY id",
+            (work_order["id"],),
+        ).fetchall()
+        self.assertEqual(2, len(rows))
+        for row in rows:
+            self.assertEqual(("released", 0), (row["status"], row["remaining_quantity"]))
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((10, 0, 6), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual(5, len(movements))
+        self.assertEqual(("adjust", "reserve", "reserve", "release", "release"), tuple(m["operation"] for m in movements))
+
+
+if __name__ == "__main__":
+    unittest.main()
