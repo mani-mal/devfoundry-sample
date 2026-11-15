@@ -125,3 +125,56 @@ class ChecklistTests(unittest.TestCase):
         with self.assertRaises(ConflictError) as caught:
             self._complete(conn, item["id"])
         self.assertEqual(ITEM_ALREADY_COMPLETED_MESSAGE, str(caught.exception))
+
+    def test_t6_non_bool_mandatory_refused(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ValidationError):
+            self._add(conn, work_order, "x", 1)
+        with self.assertRaises(ValidationError):
+            self._add(conn, work_order, "x", "true")
+
+    def test_t7_blank_label_refused(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ValidationError):
+            self._add(conn, work_order, "   ", True)
+
+    def test_t8_missing_work_order_not_found(self):
+        conn = self._open_migrated()
+        _, _, _ = self._seed_work_order(conn)
+        with self.assertRaises(NotFoundError):
+            self._add(conn, {"id": "wor-missing"}, "x", True)
+
+    def test_t9_missing_item_not_found(self):
+        conn = self._open_migrated()
+        self._seed_work_order(conn)
+        with self.assertRaises(NotFoundError):
+            self._complete(conn, "cli-missing")
+
+    def test_t10_list_items_in_creation_order(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        first = self._add(conn, work_order, "drain oil", True, hour=15)
+        second = self._add(conn, work_order, "photo", False, hour=16)
+        items = list_checklist_items(conn, self._context(), work_order_id=work_order["id"])
+        self.assertEqual([first["id"], second["id"]], [row["id"] for row in items])
+
+    def test_t11_cross_organization_item_not_found(self):
+        conn = self._open_migrated()
+        _, site_b, _ = self._seed_work_order(conn)
+        item = self._add(conn, {"id": _wo_id(conn, "org-aaa")}, "x", True)
+        with self.assertRaises(NotFoundError):
+            complete_checklist_item(
+                conn, self._context("org-bbb"), item_id=item["id"], clock=self._clock(),
+            )
+
+
+def _wo_id(conn, organization_id):
+    return conn.execute(
+        "SELECT id FROM work_orders WHERE organization_id = ?", (organization_id,),
+    ).fetchone()[0]
+
+
+if __name__ == "__main__":
+    unittest.main()
