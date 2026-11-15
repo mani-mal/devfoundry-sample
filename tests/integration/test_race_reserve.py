@@ -144,3 +144,44 @@ class RaceReserveLastUnitTest(unittest.TestCase):
             "SELECT * FROM reservations WHERE id = ?", (winner_id,)
         ).fetchone()
         self.assertEqual(1, winner["quantity"])
+
+    def test_t2_retry_after_the_race_is_refused_and_reconciliation_matches(self):
+        conn = self._open_migrated()
+        context = OrganizationContext(organization_id="org-aaa", actor_id="user-111")
+        part, location, work_order_a, work_order_b, balance = self._seed_fixture(conn, context)
+        winner = reserve_stock(
+            conn, context, part_id=part["id"], location_id=location["id"],
+            work_order_id=work_order_a["id"], quantity=1,
+            expected_version=balance["version"],
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        with self.assertRaises(ConflictError) as caught:
+            reserve_stock(
+                conn, context, part_id=part["id"], location_id=location["id"],
+                work_order_id=work_order_b["id"], quantity=1,
+                expected_version=balance["version"] + 1,
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        self.assertEqual("reservation exceeds available stock", str(caught.exception))
+        final_balance = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual(
+            (1, 1, 0),
+            (
+                final_balance["on_hand"],
+                final_balance["reserved"],
+                final_balance["on_hand"] - final_balance["reserved"],
+            ),
+        )
+        self.assertEqual(1, self._count_active_reservations(conn))
+        reconciled = reconcile_balance(
+            connect(self._db_path), context, part_id=part["id"],
+            location_id=location["id"], clock=self._tick_clock(),
+        )
+        self.assertTrue(reconciled["matches"])
+        self.assertEqual((1, 1), (reconciled["on_hand_sum"], reconciled["reserved_sum"]))
+
+
+if __name__ == "__main__":
+    unittest.main()
