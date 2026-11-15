@@ -124,3 +124,83 @@ class ReservationTest(unittest.TestCase):
         self.assertEqual(len(before_movements), len(self._movements(conn, context, part, location)))
         count = conn.execute("SELECT COUNT(*) FROM reservations").fetchone()
         self.assertEqual(0, count[0])
+
+    def test_t3_quantity_validation_refuses_non_positive(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance = self._seed_fixture(conn, context)
+        for quantity in (0, -2, 1.5, "3", True):
+            with self.assertRaises(ValidationError):
+                reserve_stock(
+                    conn, context, part_id=part["id"], location_id=location["id"],
+                    work_order_id=work_order["id"], quantity=quantity,
+                    expected_version=balance["version"], actor_id=context.actor_id,
+                    clock=self._tick_clock(),
+                )
+        count = conn.execute("SELECT COUNT(*) FROM reservations").fetchone()
+        self.assertEqual(0, count[0])
+
+    def test_t4_reserved_cannot_exceed_available_cumulative(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance = self._seed_fixture(conn, context, opening=5)
+        first = reserve_stock(
+            conn, context, part_id=part["id"], location_id=location["id"],
+            work_order_id=work_order["id"], quantity=3,
+            expected_version=balance["version"], actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("active", first["status"])
+        with self.assertRaises(ConflictError):
+            reserve_stock(
+                conn, context, part_id=part["id"], location_id=location["id"],
+                work_order_id=work_order["id"], quantity=3,
+                expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        after_balance = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((5, 3, 3), (after_balance["on_hand"], after_balance["reserved"], after_balance["version"]))
+
+    def test_t5_stale_version_conflict(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance = self._seed_fixture(conn, context)
+        with self.assertRaises(ConflictError):
+            reserve_stock(
+                conn, context, part_id=part["id"], location_id=location["id"],
+                work_order_id=work_order["id"], quantity=3,
+                expected_version=1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        after_balance = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual(2, after_balance["version"])
+
+    def test_t6_unknown_and_cross_org_references_are_not_found(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance = self._seed_fixture(conn, context)
+        with self.assertRaises(NotFoundError):
+            reserve_stock(
+                conn, context, part_id=part["id"], location_id=location["id"],
+                work_order_id="wor-does-not-exist", quantity=1,
+                expected_version=balance["version"], actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        other_context = self._context("org-bbb")
+        with self.assertRaises(NotFoundError):
+            reserve_stock(
+                conn, other_context, part_id=part["id"], location_id=location["id"],
+                work_order_id=work_order["id"], quantity=1,
+                expected_version=balance["version"], actor_id=other_context.actor_id,
+                clock=self._tick_clock(),
+            )
+        count = conn.execute("SELECT COUNT(*) FROM reservations").fetchone()
+        self.assertEqual(0, count[0])
+
+
+if __name__ == "__main__":
+    unittest.main()
