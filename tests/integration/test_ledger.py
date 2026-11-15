@@ -146,3 +146,60 @@ class LedgerTest(unittest.TestCase):
         self.assertEqual(-4, movements[1]["on_hand_delta"])
         report = reconcile_balance(conn, self._context(), part_id=part["id"], location_id=location["id"], clock=self._clock())
         self.assertEqual(True, report["matches"])
+
+    def test_t7_cross_organization_balance_is_invisible(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        self._tick = getattr(self, "_tick", 0) + 1
+        part = create_part(
+            conn, self._context(), sku="bolt-m8", name="M8 bolt", unit_of_measure="unit",
+            standard_cost_cents=2500,
+            clock=FixedClock(datetime(2026, 11, 13, 12, self._tick, 0, tzinfo=timezone.utc)),
+        )
+        self._tick += 1
+        location = create_stock_location(
+            conn, self._context(), code="main", name="Main store",
+            clock=FixedClock(datetime(2026, 11, 13, 12, self._tick, 0, tzinfo=timezone.utc)),
+        )
+        self._adjust(conn, self._context(), part, location, 10)
+        own = list_balances(conn, self._context())
+        self.assertEqual(1, len(own))
+        other_context = self._context("org-bbb")
+        self._tick += 1
+        other_part = create_part(
+            conn, other_context, sku="bolt-m8", name="M8 bolt", unit_of_measure="unit",
+            standard_cost_cents=2500,
+            clock=FixedClock(datetime(2026, 11, 13, 12, self._tick, 0, tzinfo=timezone.utc)),
+        )
+        self._tick += 1
+        other_location = create_stock_location(
+            conn, other_context, code="main", name="Main store",
+            clock=FixedClock(datetime(2026, 11, 13, 12, self._tick, 0, tzinfo=timezone.utc)),
+        )
+        self._adjust(conn, other_context, other_part, other_location, 5)
+        other_balances = list_balances(conn, other_context)
+        self.assertEqual(1, len(other_balances))
+        self.assertNotEqual(own[0]["id"], other_balances[0]["id"])
+        self.assertEqual(
+            1, len(list_movements(conn, self._context(), part_id=part["id"], location_id=location["id"])),
+        )
+        self.assertEqual(
+            1, len(list_movements(conn, other_context, part_id=other_part["id"], location_id=other_location["id"])),
+        )
+
+    def test_t8_negative_and_zero_deltas_refused(self):
+        conn = self._open_migrated()
+        part, location = self._seed_part_and_location(conn, self._context())
+        for delta in (0, 1.5, "10", True):
+            with self.assertRaises(ValidationError):
+                adjust_stock(
+                    conn, self._context(), part_id=part["id"], location_id=location["id"],
+                    quantity_delta=delta, reason="x", expected_version=1,
+                    actor_id="user-111", clock=self._clock(),
+                )
+        balances = list_balances(conn, self._context())
+        self.assertEqual(0, len(balances))
+
+
+if __name__ == "__main__":
+    unittest.main()
