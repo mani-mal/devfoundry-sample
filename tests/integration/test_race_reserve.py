@@ -79,3 +79,68 @@ class RaceReserveLastUnitTest(unittest.TestCase):
         return conn.execute(
             "SELECT COUNT(*) FROM reservations WHERE status = 'active'"
         ).fetchone()[0]
+
+    def test_t1_competing_reservations_for_the_last_unit_admit_one(self):
+        conn = self._open_migrated()
+        context = OrganizationContext(organization_id="org-aaa", actor_id="user-111")
+        part, location, work_order_a, work_order_b, balance = self._seed_fixture(conn, context)
+        self.assertEqual((1, 0), (balance["on_hand"], balance["reserved"]))
+        barrier = threading.Barrier(2)
+        results = {}
+        errors = []
+
+        def worker(index):
+            worker_conn = connect(self._db_path)
+            work_order = work_order_a if index == 0 else work_order_b
+            try:
+                barrier.wait()
+                reservation = reserve_stock(
+                    worker_conn, context, part_id=part["id"],
+                    location_id=location["id"], work_order_id=work_order["id"],
+                    quantity=1, expected_version=balance["version"],
+                    actor_id=context.actor_id, clock=self._tick_clock(),
+                )
+                results[index] = ("ok", reservation["id"], None)
+            except ConflictError as exc:
+                # The loser's read races with the winner's commit: it sees either
+                # the stale version (conditional-UPDATE refusal) or the refreshed
+                # version (version precheck refusal). Both are the documented
+                # retryable stock/conflict results.
+                results[index] = ("conflict", None, exc.code)
+            except Exception as error:  # pragma: no cover - diagnostic path
+                errors.append(error)
+            finally:
+                worker_conn.close()
+
+        threads = [
+            threading.Thread(target=worker, args=(index,)) for index in (0, 1)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+        self.assertEqual([], errors)
+        self.assertEqual(2, len(results))
+        winners = [entry for entry in results.values() if entry[0] == "ok"]
+        losers = [entry for entry in results.values() if entry[0] == "conflict"]
+        self.assertEqual(1, len(winners))
+        self.assertEqual(1, len(losers))
+        self.assertEqual("conflict", losers[0][2])
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual(3, balance_after["version"])
+        self.assertEqual(
+            (1, 1, 0),
+            (
+                balance_after["on_hand"],
+                balance_after["reserved"],
+                balance_after["on_hand"] - balance_after["reserved"],
+            ),
+        )
+        self.assertEqual(1, self._count_active_reservations(conn))
+        winner_id = winners[0][1]
+        winner = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (winner_id,)
+        ).fetchone()
+        self.assertEqual(1, winner["quantity"])
