@@ -122,3 +122,34 @@ class LaborTests(unittest.TestCase):
         self._record(conn, work_order, 100, 8000, hour=16)
         total = labor_total_cents(conn, self._context(), work_order_id=work_order["id"])
         self.assertEqual(25333, total)
+
+    def test_t7_record_negative_minutes_refused(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ValidationError):
+            self._record(conn, work_order, -5, 8000)
+
+    def test_t8_missing_work_order_not_found(self):
+        conn = self._open_migrated()
+        _, _, _ = self._seed_work_order(conn)
+        with self.assertRaises(NotFoundError):
+            self._record(conn, {"id": "wor-missing"}, 10, 8000)
+
+    def test_t9_cross_organization_total_is_zero(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._record(conn, work_order, 90, 8000)
+        total = labor_total_cents(conn, self._context("org-bbb"), work_order_id=work_order["id"])
+        self.assertEqual(0, total)
+
+    def test_t10_list_entries_in_creation_order(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        first = self._record(conn, work_order, 60, 8000, hour=15)
+        second = self._record(conn, work_order, 30, 8000, hour=16)
+        entries = list_labor_entries(conn, self._context(), work_order_id=work_order["id"])
+        self.assertEqual([first["id"], second["id"]], [row["id"] for row in entries])
+
+
+if __name__ == "__main__":
+    unittest.main()
