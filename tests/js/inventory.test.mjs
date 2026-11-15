@@ -167,3 +167,60 @@ test("error and conflict setters set and clear their region", () => {
   state = clearInventoryConflict(state);
   assert.equal(state.conflict, null);
 });
+
+test("renderInventoryBalances builds one button per balance with consistent numbers", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  const state = { ...createInventoryState(), balances: [makeBalance()] };
+  let selected = null;
+  renderInventoryBalances(container, state, {
+    onSelect: (id) => {
+      selected = id;
+    },
+  });
+  const list = container.children[0];
+  const item = list.children[0];
+  const button = item.children[0];
+  assert.equal(button.textContent, "bolt-m8 @ main: on_hand 4, reserved 1, available 3");
+  button.listeners["click"]();
+  assert.equal(selected, "prt-1@loc-1");
+  delete globalThis.document;
+});
+
+test("renderInventoryBalances shows an empty message without balances", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  renderInventoryBalances(container, createInventoryState(), { onSelect: () => {} });
+  assert.equal(container.children.length, 2);
+  assert.equal(container.children[1].textContent, "No stock balances yet.");
+  delete globalThis.document;
+});
+
+test("renderMovements lists movements through the shared formatter", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  const state = {
+    ...createInventoryState(),
+    movements: [
+      { operation: "receive", on_hand_delta: 4, reserved_delta: 0 },
+      { operation: "consume", on_hand_delta: -1, reserved_delta: -1 },
+    ],
+  };
+  renderMovements(container, state, {});
+  const list = container.children[0];
+  assert.equal(list.children[0].textContent, "receive: on_hand +4, reserved +0");
+  assert.equal(list.children[1].textContent, "consume: on_hand -1, reserved -1");
+  delete globalThis.document;
+});
+
+test("renderMovements shows an empty message without movements", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  renderMovements(container, createInventoryState(), {});
+  assert.equal(container.children[1].textContent, "No stock movements yet.");
+  delete globalThis.document;
+});
