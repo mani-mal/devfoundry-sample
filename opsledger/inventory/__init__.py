@@ -15,6 +15,13 @@ from opsledger.inventory.reservations import (
     RESERVATION_QUANTITY_MESSAGE,
     reserve_stock,
 )
+from opsledger.inventory.release_consume import (
+    CONSUME_EXCEEDS_REMAINING_MESSAGE,
+    RELEASE_EXCEEDS_REMAINING_MESSAGE,
+    RESERVATION_NOT_ACTIVE_MESSAGE,
+    consume_reservation,
+    release_reservation,
+)
 
 __all__ = [
     "INSUFFICIENT_STOCK_MESSAGE",
@@ -28,4 +35,9 @@ __all__ = [
     "RESERVATION_EXCEEDS_AVAILABLE_MESSAGE",
     "RESERVATION_QUANTITY_MESSAGE",
     "reserve_stock",
+    "CONSUME_EXCEEDS_REMAINING_MESSAGE",
+    "RELEASE_EXCEEDS_REMAINING_MESSAGE",
+    "RESERVATION_NOT_ACTIVE_MESSAGE",
+    "consume_reservation",
+    "release_reservation",
 ]
