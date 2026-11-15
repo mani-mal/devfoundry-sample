@@ -137,3 +137,30 @@ class TransitionTests(unittest.TestCase):
         self.assertEqual(STALE_WORK_ORDER_VERSION_MESSAGE, str(caught.exception))
         self.assertEqual(events_before, self._event_count(conn, work_order["id"]))
         self.assertEqual(audit_before, self._audit_count(conn, work_order["id"]))
+
+    def test_t6_full_open_to_close_to_reopen_walk(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        self._transition(conn, work_order, "in_progress", 2)
+        self._transition(conn, work_order, "completed", 3)
+        row = self._transition(conn, work_order, "closed", 4)
+        self.assertEqual("closed", row["status"])
+        row = self._transition(conn, work_order, "open", 5, reason="reopen")
+        self.assertEqual("open", row["status"])
+        self.assertEqual(6, row["version"])
+        self.assertEqual(5, self._event_count(conn, work_order["id"]))
+
+    def test_t7_cancelled_is_terminal(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        row = self._transition(conn, work_order, "cancelled", 1, reason="duplicate request")
+        self.assertEqual("cancelled", row["status"])
+        with self.assertRaises(ConflictError):
+            self._transition(conn, work_order, "open", 2)
+
+    def test_t8_missing_work_order_not_found(self):
+        conn = self._open_migrated()
+        self._seed_work_order(conn)
+        with self.assertRaises(NotFoundError):
+            self._transition(conn, {"id": "wor-missing"}, "assigned", 1)
