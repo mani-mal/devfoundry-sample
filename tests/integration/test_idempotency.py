@@ -210,3 +210,87 @@ class IdempotencyTest(unittest.TestCase):
                 conn, context, record_id=done["id"], clock=self._tick_clock()
             )
         self.assertEqual(2, self._count_records(conn))
+
+    def test_t5_scope_and_validation_rules(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        context = self._context()
+        with self.assertRaises(ValidationError):
+            begin_idempotency(
+                conn, self._context(actor_id=None), operation="receive_order",
+                key="rcpt-1", request_payload={"a": 1}, clock=self._tick_clock(),
+            )
+        for operation in ("", "   ", None, 7):
+            with self.assertRaises(ValidationError):
+                begin_idempotency(
+                    conn, context, operation=operation, key="rcpt-1",
+                    request_payload={"a": 1}, clock=self._tick_clock(),
+                )
+        for key in ("", "   ", None, 7):
+            with self.assertRaises(ValidationError):
+                begin_idempotency(
+                    conn, context, operation="receive_order", key=key,
+                    request_payload={"a": 1}, clock=self._tick_clock(),
+                )
+        with self.assertRaises(ValidationError):
+            begin_idempotency(
+                conn, context, operation="receive_order", key="rcpt-1",
+                request_payload={"a": {1, 2}}, clock=self._tick_clock(),
+            )
+        with self.assertRaises(ValidationError):
+            complete_idempotency(
+                conn, context, record_id="idm-unknown",
+                result_payload="not a dict", clock=self._tick_clock(),
+            )
+        self.assertEqual(0, self._count_records(conn))
+        first, _ = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-1",
+            request_payload={"a": 1}, clock=self._tick_clock(),
+        )
+        second, replayed = begin_idempotency(
+            conn, context, operation="issue_order", key="rcpt-1",
+            request_payload={"a": 1}, clock=self._tick_clock(),
+        )
+        self.assertFalse(replayed)
+        self.assertNotEqual(first["id"], second["id"])
+        self.assertEqual(2, self._count_records(conn))
+
+    def test_t6_unknown_and_cross_organization_records_are_invisible(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        context = self._context()
+        record, _ = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-42",
+            request_payload={"receipt_id": "rcpt-42"}, clock=self._tick_clock(),
+        )
+        with self.assertRaises(NotFoundError):
+            get_idempotency_record(conn, context, record_id="idm-does-not-exist")
+        other_context = self._context("org-bbb")
+        with self.assertRaises(NotFoundError):
+            get_idempotency_record(
+                conn, other_context, record_id=record["id"]
+            )
+        with self.assertRaises(NotFoundError):
+            complete_idempotency(
+                conn, other_context, record_id=record["id"],
+                result_payload={"received": 9}, clock=self._tick_clock(),
+            )
+        with self.assertRaises(NotFoundError):
+            fail_idempotency(
+                conn, other_context, record_id=record["id"],
+                clock=self._tick_clock(),
+            )
+        after = get_idempotency_record(conn, context, record_id=record["id"])
+        self.assertEqual("pending", after["status"])
+        self.assertIsNone(after["result_payload"])
+        other_record, other_replayed = begin_idempotency(
+            conn, other_context, operation="receive_order", key="rcpt-42",
+            request_payload={"receipt_id": "rcpt-42"}, clock=self._tick_clock(),
+        )
+        self.assertFalse(other_replayed)
+        self.assertNotEqual(record["id"], other_record["id"])
+        self.assertEqual(2, self._count_records(conn))
+
+
+if __name__ == "__main__":
+    unittest.main()
