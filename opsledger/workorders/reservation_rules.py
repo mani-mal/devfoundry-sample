@@ -99,3 +99,60 @@ def _release_reservation_in_tx(tx, context, reservation, timestamp_text):
             timestamp_text,
         ),
     )
+
+
+def transition_work_order_with_reservations(conn, context, *, work_order_id, to_status, expected_version, reason, actor_id, clock):
+    """Apply one transition with reservation rules (cancel releases, complete refuses)."""
+    require_context(context)
+    if not isinstance(expected_version, int) or isinstance(expected_version, bool) or expected_version <= 0:
+        raise ValidationError("expected_version must be a positive integer")
+    cleaned_reason = _require_reason(to_status, reason)
+    work_order = conn.execute(_SELECT_WORK_ORDER_SQL, (work_order_id,)).fetchone()
+    require_owned(context, work_order, label="work order")
+    current_status = work_order["status"]
+    if to_status not in WORK_ORDER_TRANSITIONS.get(current_status, ()):
+        raise ConflictError(INVALID_TRANSITION_MESSAGE)
+    if to_status == "completed":
+        outstanding = conn.execute(
+            _SELECT_OUTSTANDING_SQL,
+            (context.organization_id, work_order["id"]),
+        ).fetchall()
+        if outstanding:
+            raise ConflictError(COMPLETION_OUTSTANDING_RESERVATION_MESSAGE)
+    work_order_key = work_order["id"]
+    timestamp_text = format_rfc3339(clock.now())
+    event_id = "woe-" + uuid4().hex
+    try:
+        with transaction(conn) as tx:
+            cursor = tx.execute(
+                "UPDATE work_orders SET status = ?, version = version + 1, updated_at = ?"
+                " WHERE id = ? AND version = ?",
+                (to_status, timestamp_text, work_order_key, expected_version),
+            )
+            if cursor.rowcount == 0:
+                raise ConflictError(STALE_WORK_ORDER_VERSION_MESSAGE)
+            if to_status == "cancelled":
+                reservations = tx.execute(
+                    _SELECT_OUTSTANDING_SQL,
+                    (context.organization_id, work_order_key),
+                ).fetchall()
+                for reservation in reservations:
+                    _release_reservation_in_tx(tx, context, reservation, timestamp_text)
+            tx.execute(
+                "INSERT INTO work_order_events (id, organization_id, work_order_id, from_status, to_status, reason, actor_id, created_at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (event_id, context.organization_id, work_order_key, current_status, to_status, cleaned_reason, actor_id, timestamp_text),
+            )
+            from opsledger.audit import record_event_in_tx
+            record_event_in_tx(
+                tx,
+                context,
+                entity_type="work_order",
+                entity_id=work_order_key,
+                operation="work_order.transition_with_reservations",
+                details={"from_status": current_status, "to_status": to_status, "reason": cleaned_reason, "from_version": expected_version, "to_version": expected_version + 1},
+                clock=clock,
+            )
+    except sqlite3.IntegrityError as exc:
+        raise ConflictError("duplicate transition event") from exc
+    return conn.execute(_SELECT_WORK_ORDER_SQL, (work_order_key,)).fetchone()
