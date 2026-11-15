@@ -94,3 +94,58 @@ export function lowStockBalances(state) {
     (balance) => availableQuantity(balance) <= state.lowStockThreshold
   );
 }
+
+export function renderInventoryBalances(container, state, handlers) {
+  const list = document.createElement("ul");
+  for (const balance of state.balances) {
+    const item = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = formatBalanceLine(balance);
+    button.addEventListener("click", () => {
+      handlers.onSelect(balanceId(balance));
+    });
+    item.appendChild(button);
+    list.appendChild(item);
+  }
+  container.appendChild(list);
+  if (state.balances.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No stock balances yet.";
+    container.appendChild(empty);
+  }
+}
+
+export function renderMovements(container, state, handlers) {
+  const list = document.createElement("ul");
+  for (const movement of state.movements) {
+    const item = document.createElement("li");
+    item.textContent = formatMovementLine(movement);
+    list.appendChild(item);
+  }
+  container.appendChild(list);
+  if (state.movements.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No stock movements yet.";
+    container.appendChild(empty);
+  }
+}
+
+export function renderLowStock(container, state, handlers) {
+  const heading = document.createElement("h2");
+  heading.textContent = `Low stock (available <= ${state.lowStockThreshold})`;
+  container.appendChild(heading);
+  const balances = lowStockBalances(state);
+  const list = document.createElement("ul");
+  for (const balance of balances) {
+    const item = document.createElement("li");
+    item.textContent = formatBalanceLine(balance);
+    list.appendChild(item);
+  }
+  container.appendChild(list);
+  if (balances.length === 0) {
+    const empty = document.createElement("p");
+    empty.textContent = "No low-stock balances.";
+    container.appendChild(empty);
+  }
+}
