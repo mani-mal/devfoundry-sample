@@ -28,6 +28,15 @@ from .errors import (
     ValidationError,
 )
 from .db import connect, transaction
+from .idempotency import (
+    IDEMPOTENCY_DIGEST_CONFLICT_MESSAGE,
+    IDEMPOTENCY_NOT_PENDING_MESSAGE,
+    begin_idempotency,
+    canonical_request_digest,
+    complete_idempotency,
+    fail_idempotency,
+    get_idempotency_record,
+)
 
 __all__ = [
     "ApplicationError",
@@ -40,6 +49,13 @@ __all__ = [
     "ConflictError",
     "connect",
     "FixedClock",
+    "begin_idempotency",
+    "canonical_request_digest",
+    "complete_idempotency",
+    "fail_idempotency",
+    "get_idempotency_record",
+    "IDEMPOTENCY_DIGEST_CONFLICT_MESSAGE",
+    "IDEMPOTENCY_NOT_PENDING_MESSAGE",
     "NotFoundError",
     "PermissionDeniedError",
     "RFC3339_Z_FORMAT",
