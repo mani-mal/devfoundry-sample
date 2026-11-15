@@ -62,3 +62,63 @@ class ReconcileCliTest(unittest.TestCase):
         with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
             code = reconcile_main(argv)
         return code, stdout.getvalue(), stderr.getvalue()
+
+    def test_t1_matching_balances_exit_0_printing_one_json_object(self):
+        conn = self._open_migrated()
+        part, location = self._seed(conn)
+        code, out, err = self._run_cli([
+            self._db_path, "--part", part["id"], "--location", location["id"],
+        ])
+        self.assertEqual(0, code)
+        self.assertEqual("", err)
+        payload = json.loads(out)
+        self.assertTrue(payload["matches"])
+        self.assertEqual((5, 0), (payload["on_hand_sum"], payload["reserved_sum"]))
+        self.assertEqual(part["id"], payload["balance"]["part_id"])
+
+    def test_t2_unknown_part_and_location_exit_1_with_public_message(self):
+        conn = self._open_migrated()
+        part, location = self._seed(conn)
+        code, out, err = self._run_cli([
+            self._db_path, "--part", "prt-unknown", "--location", location["id"],
+        ])
+        self.assertEqual(1, code)
+        self.assertEqual("part not found", err.strip())
+        self.assertEqual("", out)
+        code, out, err = self._run_cli([
+            self._db_path, "--part", part["id"], "--location", "stl-unknown",
+        ])
+        self.assertEqual(1, code)
+        self.assertEqual("stock location not found", err.strip())
+        self.assertEqual("", out)
+
+    def test_t3_disagreeing_balance_exits_1_naming_the_drift(self):
+        conn = self._open_migrated()
+        part, location = self._seed(conn, on_hand=5)
+        with conn:
+            conn.execute(
+                "INSERT INTO stock_movements (id, organization_id, part_id, stock_location_id,"
+                " operation, on_hand_delta, reserved_delta, reason, work_order_id, actor_id, created_at)"
+                " VALUES ('stm-tamper', 'org-cli', ?, ?, 'adjust', 3, 0, 'tamper', NULL, 'user-111',"
+                " '2026-11-13T12:00:00Z')",
+                (part["id"], location["id"]),
+            )
+        code, out, err = self._run_cli([
+            self._db_path, "--part", part["id"], "--location", location["id"],
+        ])
+        self.assertEqual(1, code)
+        payload = json.loads(out)
+        self.assertFalse(payload["matches"])
+        self.assertEqual(8, payload["on_hand_sum"])
+        self.assertEqual(5, payload["balance"]["on_hand"])
+
+    def test_t4_cli_module_documents_the_adapter_pattern(self):
+        import pathlib
+
+        source = pathlib.Path("opsledger/reconcile_cli.py").read_text(encoding="utf-8")
+        self.assertIn("reconcile_balance", source)
+        self.assertIn("raise SystemExit(main())", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
