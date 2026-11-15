@@ -80,3 +80,45 @@ class LaborTests(unittest.TestCase):
             minutes=minutes, rate_cents_per_hour=rate,
             clock=FixedClock(datetime(2026, 11, 13, hour, 0, 0, tzinfo=timezone.utc)), note=note,
         )
+
+    def test_t1_labor_cost_cents_fixture_exact(self):
+        self.assertEqual(12000, labor_cost_cents(90, 8000))
+        self.assertEqual(13333, labor_cost_cents(100, 8000))
+        self.assertEqual(6000, labor_cost_cents(45, 8000))
+
+    def test_t2_negative_and_zero_minutes_refused(self):
+        with self.assertRaises(ValidationError) as caught:
+            labor_cost_cents(-30, 8000)
+        self.assertEqual(MINUTES_MESSAGE, str(caught.exception))
+        with self.assertRaises(ValidationError):
+            labor_cost_cents(0, 8000)
+
+    def test_t3_bool_and_non_int_minutes_refused(self):
+        with self.assertRaises(ValidationError):
+            labor_cost_cents(True, 8000)
+        with self.assertRaises(ValidationError):
+            labor_cost_cents(90.0, 8000)
+
+    def test_t4_non_positive_rate_refused(self):
+        with self.assertRaises(ValidationError) as caught:
+            labor_cost_cents(90, 0)
+        self.assertEqual(RATE_MESSAGE, str(caught.exception))
+        with self.assertRaises(ValidationError):
+            labor_cost_cents(90, -8000)
+
+    def test_t5_record_labor_stores_server_side_cost(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        entry = self._record(conn, work_order, 90, 8000, note="removal")
+        self.assertEqual("lbr-", entry["id"][:4])
+        self.assertEqual(12000, entry["cost_cents"])
+        self.assertEqual(90, entry["minutes"])
+        self.assertEqual("removal", entry["note"])
+
+    def test_t6_total_aggregates_recorded_costs(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._record(conn, work_order, 90, 8000, hour=15)
+        self._record(conn, work_order, 100, 8000, hour=16)
+        total = labor_total_cents(conn, self._context(), work_order_id=work_order["id"])
+        self.assertEqual(25333, total)
