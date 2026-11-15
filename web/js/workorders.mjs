@@ -130,3 +130,58 @@ export function renderWorkOrderBoard(container, state, handlers) {
     container.appendChild(empty);
   }
 }
+
+export function renderWorkOrderDetail(container, state, handlers) {
+  const order = selectedOrder(state);
+  if (!order) {
+    const empty = document.createElement("p");
+    empty.textContent = "Select a work order to see its detail.";
+    container.appendChild(empty);
+    return null;
+  }
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  heading.textContent = formatWorkOrderLine(order);
+  section.appendChild(heading);
+
+  const versionText = document.createElement("p");
+  versionText.textContent = `Version ${order.version}`;
+  section.appendChild(versionText);
+
+  for (const action of availableActions(order, handlers.role)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = action.label;
+    button.addEventListener("click", () => {
+      handlers.onAction({
+        toStatus: action.toStatus,
+        expectedVersion: action.expectedVersion,
+      });
+    });
+    section.appendChild(button);
+  }
+
+  if (state.conflict) {
+    const conflictRegion = document.createElement("p");
+    conflictRegion.setAttribute("role", "alert");
+    conflictRegion.setAttribute("aria-live", "assertive");
+    conflictRegion.textContent = state.conflict;
+    const refresh = document.createElement("button");
+    refresh.type = "button";
+    refresh.textContent = "Refresh";
+    refresh.addEventListener("click", () => {
+      handlers.onRefresh();
+    });
+    conflictRegion.appendChild(refresh);
+    section.appendChild(conflictRegion);
+  }
+
+  const errorRegion = document.createElement("p");
+  errorRegion.setAttribute("role", "alert");
+  errorRegion.setAttribute("aria-live", "assertive");
+  errorRegion.textContent = state.error ?? "";
+  section.appendChild(errorRegion);
+
+  container.appendChild(section);
+  return section;
+}
