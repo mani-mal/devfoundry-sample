@@ -93,3 +93,92 @@ class ReleaseConsumeTest(unittest.TestCase):
 
     def _movements(self, conn, context, part, location):
         return list_movements(conn, context, part_id=part["id"], location_id=location["id"])
+
+    def test_t1_partial_release_keeps_reservation_active(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        released = release_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=3,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("active", released["status"])
+        self.assertEqual(1, released["remaining_quantity"])
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual("release", movements[-1]["operation"])
+        self.assertEqual((0, -3), (movements[-1]["on_hand_delta"], movements[-1]["reserved_delta"]))
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((10, 1, 4), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
+
+    def test_t2_full_release_marks_released_and_blocks_reuse(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        released = release_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=4,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("released", released["status"])
+        self.assertEqual(0, released["remaining_quantity"])
+        with self.assertRaises(ConflictError) as caught:
+            release_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=1,
+                expected_version=balance["version"] + 2, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        self.assertEqual("reservation is not active", str(caught.exception))
+        with self.assertRaises(ConflictError):
+            consume_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=1,
+                expected_version=balance["version"] + 2, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual(3, len(movements))
+        self.assertEqual(("adjust", "reserve", "release"), tuple(m["operation"] for m in movements))
+
+    def test_t3_partial_consume_drops_on_hand_and_reserved(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        consumed = consume_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=1,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("active", consumed["status"])
+        self.assertEqual(3, consumed["remaining_quantity"])
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual("consume", movements[-1]["operation"])
+        self.assertEqual((-1, -1), (movements[-1]["on_hand_delta"], movements[-1]["reserved_delta"]))
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((9, 3, 4), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
+
+    def test_t4_full_consume_marks_consumed_and_blocks_reuse(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        consumed = consume_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=4,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("consumed", consumed["status"])
+        self.assertEqual(0, consumed["remaining_quantity"])
+        with self.assertRaises(ConflictError) as caught:
+            consume_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=1,
+                expected_version=balance["version"] + 2, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        self.assertEqual("reservation is not active", str(caught.exception))
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((6, 0, 4), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
