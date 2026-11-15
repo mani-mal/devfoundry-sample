@@ -111,3 +111,54 @@ class PartsLocationsTest(unittest.TestCase):
         other_rows = list_parts(conn, self._context("org-bbb"))
         self.assertEqual(1, len(other_rows))
         self.assertEqual(other["id"], other_rows[0]["id"])
+
+    def test_t4_cross_org_get_is_indistinguishable_from_missing(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        part = self._part(conn, self._context())
+        with self.assertRaises(NotFoundError) as own_missing:
+            get_part(conn, self._context(), "prt-does-not-exist")
+        with self.assertRaises(NotFoundError) as cross_org:
+            get_part(conn, self._context("org-bbb"), part["id"])
+        self.assertEqual(str(own_missing.exception), str(cross_org.exception))
+
+    def test_t5_part_validation_refuses_bad_values(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        for kwargs in (
+            {"sku": "", "name": "X"},
+            {"sku": "s", "name": ""},
+            {"sku": "s", "name": "X", "unit_of_measure": "gallon"},
+            {"sku": "s", "name": "X", "standard_cost_cents": -1},
+            {"sku": "s", "name": "X", "standard_cost_cents": 2.5},
+        ):
+            with self.assertRaises(ValidationError):
+                self._part(conn, self._context(), **kwargs)
+        self.assertEqual(0, len(list_parts(conn, self._context())))
+
+    def test_t6_location_uniqueness_scopes_and_no_leak_mirrors_parts(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        self._location(conn, self._context(), code="main")
+        with self.assertRaises(ConflictError) as caught:
+            self._location(conn, self._context(), code="main")
+        self.assertEqual(DUPLICATE_STOCK_LOCATION_CODE_MESSAGE, str(caught.exception))
+        other = self._location(conn, self._context("org-bbb"), code="main")
+        self.assertEqual("main", other["code"])
+        fetched = get_stock_location(conn, self._context("org-bbb"), other["id"])
+        self.assertEqual(other["id"], fetched["id"])
+        with self.assertRaises(NotFoundError):
+            get_stock_location(conn, self._context(), other["id"])
+        self.assertEqual(1, len(list_stock_locations(conn, self._context())))
+
+    def test_t7_list_is_stable_oldest_first(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        first = self._part(conn, self._context(), sku="a-first")
+        second = self._part(conn, self._context(), sku="b-second")
+        rows = list_parts(conn, self._context())
+        self.assertEqual([first["id"], second["id"]], [row["id"] for row in rows])
+
+
+if __name__ == "__main__":
+    unittest.main()
