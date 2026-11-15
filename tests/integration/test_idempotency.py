@@ -127,3 +127,86 @@ class IdempotencyTest(unittest.TestCase):
             (after["status"], after["request_digest"]),
         )
         self.assertEqual(1, self._count_records(conn))
+
+    def test_t3_concurrent_same_key_repeats_cause_one_effect(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        payload = {"receipt_id": "rcpt-42", "quantity": 4}
+        barrier = threading.Barrier(2)
+        clocks = (self._tick_clock(), self._tick_clock())
+        results = {}
+        errors = []
+
+        def worker(index):
+            worker_conn = connect(self._db_path)
+            try:
+                barrier.wait()
+                record, replayed = begin_idempotency(
+                    worker_conn, self._context(), operation="receive_order",
+                    key="rcpt-42", request_payload=payload, clock=clocks[index],
+                )
+                results[index] = (record["id"], replayed, record["status"])
+            except Exception as error:  # pragma: no cover - diagnostic path
+                errors.append(error)
+            finally:
+                worker_conn.close()
+
+        threads = [
+            threading.Thread(target=worker, args=(index,)) for index in (0, 1)
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+        self.assertEqual([], errors)
+        self.assertEqual(2, len(results))
+        self.assertEqual(1, sum(1 for _, replayed, _ in results.values() if not replayed))
+        record_ids = {record_id for record_id, _, _ in results.values()}
+        self.assertEqual(1, len(record_ids))
+        self.assertEqual(1, self._count_records(conn))
+        winner = [entry for entry in results.values() if not entry[1]][0]
+        self.assertEqual("pending", winner[2])
+
+    def test_t4_fail_marks_failed_and_terminal_states_refuse(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        context = self._context()
+        record, replayed = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-77",
+            request_payload={"receipt_id": "rcpt-77"}, clock=self._tick_clock(),
+        )
+        self.assertFalse(replayed)
+        failed = fail_idempotency(
+            conn, context, record_id=record["id"], clock=self._tick_clock()
+        )
+        self.assertEqual("failed", failed["status"])
+        self.assertIsNone(failed["result_payload"])
+        replay_record, replayed = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-77",
+            request_payload={"receipt_id": "rcpt-77"}, clock=self._tick_clock(),
+        )
+        self.assertTrue(replayed)
+        self.assertEqual("failed", replay_record["status"])
+        with self.assertRaises(ConflictError):
+            complete_idempotency(
+                conn, context, record_id=record["id"],
+                result_payload={"received": 4}, clock=self._tick_clock(),
+            )
+        done, _ = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-78",
+            request_payload={"receipt_id": "rcpt-78"}, clock=self._tick_clock(),
+        )
+        complete_idempotency(
+            conn, context, record_id=done["id"],
+            result_payload={"received": 1}, clock=self._tick_clock(),
+        )
+        with self.assertRaises(ConflictError):
+            complete_idempotency(
+                conn, context, record_id=done["id"],
+                result_payload={"received": 1}, clock=self._tick_clock(),
+            )
+        with self.assertRaises(ConflictError):
+            fail_idempotency(
+                conn, context, record_id=done["id"], clock=self._tick_clock()
+            )
+        self.assertEqual(2, self._count_records(conn))
