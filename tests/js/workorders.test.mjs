@@ -220,3 +220,109 @@ test("renderWorkOrderBoard builds one keyboard-reachable button per order and an
     globalThis.document = savedDocument;
   }
 });
+
+test("renderWorkOrderDetail: action buttons match state and role, wired with version", () => {
+  const document = makeStubDocument();
+  const savedDocument = globalThis.document;
+  globalThis.document = document;
+  try {
+    let state = createWorkOrdersState();
+    state.orders.push(ORDER);
+    state = selectWorkOrder(state, "wo-1");
+    const received = [];
+    const container = makeStubElement("div");
+    const section = renderWorkOrderDetail(container, state, {
+      role: "supervisor",
+      onAction: (payload) => received.push(payload),
+      onRefresh: () => {},
+    });
+    assert.equal(section.tagName, "SECTION");
+    const buttons = section.children.filter((child) => child.tagName === "BUTTON");
+    assert.deepEqual(buttons.map((button) => button.textContent), ["Start work", "Unassign", "Cancel"]);
+    buttons[0].listeners.click();
+    assert.deepEqual(received, [{ toStatus: "in_progress", expectedVersion: 2 }]);
+  } finally {
+    globalThis.document = savedDocument;
+  }
+});
+
+test("renderWorkOrderDetail: technician actions differ from supervisor actions for the same order", () => {
+  const document = makeStubDocument();
+  const savedDocument = globalThis.document;
+  globalThis.document = document;
+  try {
+    let state = createWorkOrdersState();
+    state.orders.push(ORDER);
+    state = selectWorkOrder(state, "wo-1");
+    const container = makeStubElement("div");
+    const section = renderWorkOrderDetail(container, state, {
+      role: "technician",
+      onAction: () => {},
+      onRefresh: () => {},
+    });
+    const buttons = section.children.filter((child) => child.tagName === "BUTTON");
+    assert.deepEqual(buttons.map((button) => button.textContent), ["Start work"]);
+  } finally {
+    globalThis.document = savedDocument;
+  }
+});
+
+test("renderWorkOrderDetail: conflict shows an actionable alert with a Refresh button wired to onRefresh", () => {
+  const document = makeStubDocument();
+  const savedDocument = globalThis.document;
+  globalThis.document = document;
+  try {
+    let state = createWorkOrdersState();
+    state.orders.push(ORDER);
+    state = selectWorkOrder(state, "wo-1");
+    state = setWorkOrderConflict(state, "work order version conflict; refresh and retry");
+    let refreshed = 0;
+    const container = makeStubElement("div");
+    const section = renderWorkOrderDetail(container, state, {
+      role: "supervisor",
+      onAction: () => {},
+      onRefresh: () => {
+        refreshed += 1;
+      },
+    });
+    const conflictRegion = section.children.find(
+      (child) => child.tagName === "P" && child.textContent.includes("refresh and retry"),
+    );
+    assert.notEqual(conflictRegion, undefined);
+    assert.equal(conflictRegion.attributes.role, "alert");
+    const refresh = conflictRegion.children.find((child) => child.tagName === "BUTTON");
+    assert.equal(refresh.textContent, "Refresh");
+    refresh.listeners.click();
+    assert.equal(refreshed, 1);
+    const errorRegion = section.children.filter((child) => child.tagName === "P").pop();
+    assert.notEqual(errorRegion, conflictRegion);
+  } finally {
+    globalThis.document = savedDocument;
+  }
+});
+
+test("renderWorkOrderDetail: no selection renders the empty prompt and no buttons", () => {
+  const document = makeStubDocument();
+  const savedDocument = globalThis.document;
+  globalThis.document = document;
+  try {
+    const container = makeStubElement("div");
+    const result = renderWorkOrderDetail(container, createWorkOrdersState(), {
+      role: "supervisor",
+      onAction: () => {},
+      onRefresh: () => {},
+    });
+    assert.equal(result, null);
+    const paragraph = container.appended.find((element) => element.tagName === "P");
+    assert.equal(paragraph.textContent, "Select a work order to see its detail.");
+  } finally {
+    globalThis.document = savedDocument;
+  }
+});
+
+test("no storage access: module source contains neither localStorage nor sessionStorage and no innerHTML", () => {
+  const source = readFileSync(new URL("../../web/js/workorders.mjs", import.meta.url), "utf8");
+  assert.equal(source.includes("localStorage"), false);
+  assert.equal(source.includes("sessionStorage"), false);
+  assert.equal(source.includes("innerHTML"), false);
+});
