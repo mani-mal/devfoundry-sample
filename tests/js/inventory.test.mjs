@@ -73,3 +73,97 @@ function makeBalance(overrides = {}) {
     ...overrides,
   };
 }
+
+test("createInventoryState returns the empty shape with no storage field", () => {
+  const state = createInventoryState();
+  assert.deepEqual(state, {
+    balances: [],
+    movements: [],
+    selectedBalanceId: null,
+    lowStockThreshold: 0,
+    error: null,
+    conflict: null,
+  });
+  assert.equal("token" in state, false);
+  assert.equal("storage" in state, false);
+});
+
+test("selectBalance selects by composite balance id", () => {
+  const state = createInventoryState();
+  const balance = makeBalance();
+  const withBalance = { ...state, balances: [balance] };
+  const next = selectBalance(withBalance, balanceId(balance));
+  assert.equal(next.selectedBalanceId, "prt-1@loc-1");
+  assert.equal(selectedBalance(next), balance);
+  assert.equal(selectedBalance(state), null);
+});
+
+test("availableQuantity is derived as on_hand minus reserved", () => {
+  assert.equal(availableQuantity(makeBalance({ on_hand: 4, reserved: 1 })), 3);
+  assert.equal(availableQuantity(makeBalance({ on_hand: 2, reserved: 2 })), 0);
+});
+
+test("formatBalanceLine shows on_hand, reserved, and available consistently", () => {
+  const line = formatBalanceLine(makeBalance({ on_hand: 4, reserved: 1 }));
+  assert.equal(
+    line,
+    "bolt-m8 @ main: on_hand 4, reserved 1, available 3"
+  );
+});
+
+test("formatSignedDelta prefixes non-negative deltas with plus", () => {
+  assert.equal(formatSignedDelta(4), "+4");
+  assert.equal(formatSignedDelta(0), "+0");
+  assert.equal(formatSignedDelta(-4), "-4");
+});
+
+test("formatMovementLine shows both ledger deltas", () => {
+  assert.equal(
+    formatMovementLine({ operation: "reserve", on_hand_delta: 0, reserved_delta: 4 }),
+    "reserve: on_hand +0, reserved +4"
+  );
+  assert.equal(
+    formatMovementLine({ operation: "consume", on_hand_delta: -4, reserved_delta: -4 }),
+    "consume: on_hand -4, reserved -4"
+  );
+});
+
+test("setLowStockThreshold accepts non-negative integers and rejects the rest", () => {
+  const state = createInventoryState();
+  assert.equal(setLowStockThreshold(state, 2).lowStockThreshold, 2);
+  assert.equal(setLowStockThreshold(state, 0).lowStockThreshold, 0);
+  assert.equal(
+    setLowStockThreshold(state, -1).error,
+    "low-stock threshold must be a non-negative integer"
+  );
+  assert.equal(
+    setLowStockThreshold(state, 1.5).error,
+    "low-stock threshold must be a non-negative integer"
+  );
+});
+
+test("lowStockBalances filters by available <= threshold", () => {
+  const state = { ...createInventoryState(), lowStockThreshold: 1 };
+  const balances = [
+    makeBalance({ part_id: "prt-1", on_hand: 4, reserved: 1 }),
+    makeBalance({ part_id: "prt-2", on_hand: 5, reserved: 1 }),
+    makeBalance({ part_id: "prt-3", on_hand: 2, reserved: 2 }),
+  ];
+  const low = lowStockBalances({ ...state, balances });
+  assert.deepEqual(
+    low.map((balance) => balance.part_id),
+    ["prt-3"]
+  );
+});
+
+test("error and conflict setters set and clear their region", () => {
+  let state = createInventoryState();
+  state = setInventoryError(state, "boom");
+  assert.equal(state.error, "boom");
+  state = clearInventoryError(state);
+  assert.equal(state.error, null);
+  state = setInventoryConflict(state, "stale");
+  assert.equal(state.conflict, "stale");
+  state = clearInventoryConflict(state);
+  assert.equal(state.conflict, null);
+});
