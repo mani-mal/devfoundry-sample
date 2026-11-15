@@ -77,3 +77,35 @@ class CommentTests(unittest.TestCase):
             conn, self._context(), work_order_id=work_order["id"], author_id=author_id,
             body=body, clock=FixedClock(datetime(2026, 11, 13, hour, 0, 0, tzinfo=timezone.utc)),
         )
+
+    def test_t1_add_comment_anchors_current_version(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        comment = self._comment(conn, work_order, "started inspection")
+        self.assertEqual("cmt-", comment["id"][:4])
+        self.assertEqual(1, comment["at_version"])
+        self.assertEqual("user-111", comment["author_id"])
+
+    def test_t2_user_text_is_literal(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        comment = self._comment(conn, work_order, "=SUM(A1)+cmd|danger")
+        self.assertEqual("=SUM(A1)+cmd|danger", comment["body"])
+        stored = conn.execute("SELECT body FROM comments WHERE id = ?", (comment["id"],)).fetchone()
+        self.assertEqual("=SUM(A1)+cmd|danger", stored["body"])
+
+    def test_t3_blank_body_refused(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ValidationError) as caught:
+            self._comment(conn, work_order, "   ")
+        self.assertEqual(BODY_MESSAGE, str(caught.exception))
+
+    def test_t4_non_string_body_refused(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ValidationError):
+            add_comment(
+                conn, self._context(), work_order_id=work_order["id"], author_id="user-111",
+                body=123, clock=self._clock(),
+            )
