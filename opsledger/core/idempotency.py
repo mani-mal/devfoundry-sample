@@ -155,3 +155,32 @@ def complete_idempotency(conn, context, *, record_id, result_payload, clock):
         if updated != 1:
             raise ConflictError(IDEMPOTENCY_NOT_PENDING_MESSAGE)
     return conn.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
+
+
+def fail_idempotency(conn, context, *, record_id, clock):
+    """Mark one pending record failed (terminal; a retry needs a new key).
+
+    require_owned lookup (missing and cross-organization surface the same
+    NotFoundError); the result payload stays NULL. Failing a record that
+    is not pending raises ConflictError.
+    """
+    require_context(context)
+    timestamp_text = format_rfc3339(clock.now())
+    with transaction(conn) as tx:
+        row = tx.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
+        require_owned(context, row, label="idempotency record")
+        updated = tx.execute(
+            "UPDATE idempotency_records SET status = 'failed', updated_at = ?,"
+            " completed_at = ? WHERE id = ? AND status = 'pending'",
+            (timestamp_text, timestamp_text, record_id),
+        ).rowcount
+        if updated != 1:
+            raise ConflictError(IDEMPOTENCY_NOT_PENDING_MESSAGE)
+    return conn.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
+
+
+def get_idempotency_record(conn, context, *, record_id):
+    """Return one idempotency record in scope, or NotFoundError (no leak)."""
+    require_context(context)
+    row = conn.execute(_SELECT_BY_ID_SQL, (record_id,)).fetchone()
+    return require_owned(context, row, label="idempotency record")
