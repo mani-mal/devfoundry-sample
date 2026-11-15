@@ -182,3 +182,99 @@ class ReleaseConsumeTest(unittest.TestCase):
             "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
         ).fetchone()
         self.assertEqual((6, 0, 4), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
+
+    def test_t5_release_and_consume_cannot_exceed_remaining(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context, reserved_quantity=2)
+        with self.assertRaises(ConflictError) as release_caught:
+            release_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=3,
+                expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        self.assertEqual("release exceeds remaining reservation quantity", str(release_caught.exception))
+        with self.assertRaises(ConflictError) as consume_caught:
+            consume_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=3,
+                expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        self.assertEqual("consumption exceeds remaining reservation quantity", str(consume_caught.exception))
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual((2, "active"), (reservation_after["remaining_quantity"], reservation_after["status"]))
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual(2, len(movements))
+
+    def test_t6_quantity_validation_and_unknown_reservation(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        for quantity in (0, -1, 2.5, "2", True):
+            with self.assertRaises(ValidationError):
+                release_reservation(
+                    conn, context, reservation_id=reservation["id"], quantity=quantity,
+                    expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                    clock=self._tick_clock(),
+                )
+            with self.assertRaises(ValidationError):
+                consume_reservation(
+                    conn, context, reservation_id=reservation["id"], quantity=quantity,
+                    expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                    clock=self._tick_clock(),
+                )
+        with self.assertRaises(NotFoundError):
+            release_reservation(
+                conn, context, reservation_id="rsv-does-not-exist", quantity=1,
+                expected_version=balance["version"] + 1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+
+    def test_t7_cross_organization_reservation_is_invisible(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        other_context = self._context("org-bbb")
+        with self.assertRaises(NotFoundError):
+            release_reservation(
+                conn, other_context, reservation_id=reservation["id"], quantity=1,
+                expected_version=balance["version"] + 1, actor_id=other_context.actor_id,
+                clock=self._tick_clock(),
+            )
+        with self.assertRaises(NotFoundError):
+            consume_reservation(
+                conn, other_context, reservation_id=reservation["id"], quantity=1,
+                expected_version=balance["version"] + 1, actor_id=other_context.actor_id,
+                clock=self._tick_clock(),
+            )
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual((4, "active"), (reservation_after["remaining_quantity"], reservation_after["status"]))
+
+    def test_t8_stale_version_conflict(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        with self.assertRaises(ConflictError):
+            release_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=1,
+                expected_version=1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        with self.assertRaises(ConflictError):
+            consume_reservation(
+                conn, context, reservation_id=reservation["id"], quantity=1,
+                expected_version=1, actor_id=context.actor_id,
+                clock=self._tick_clock(),
+            )
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual((4, "active"), (reservation_after["remaining_quantity"], reservation_after["status"]))
+
+
+if __name__ == "__main__":
+    unittest.main()
