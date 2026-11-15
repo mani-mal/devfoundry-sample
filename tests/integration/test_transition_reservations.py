@@ -85,3 +85,74 @@ class TransitionReservationsTest(unittest.TestCase):
 
     def _movements(self, conn, context, part, location):
         return list_movements(conn, context, part_id=part["id"], location_id=location["id"])
+
+    def test_t1_cancel_releases_outstanding_reservation_atomically(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        cancelled = transition_work_order_with_reservations(
+            conn, context, work_order_id=work_order["id"], to_status="cancelled",
+            expected_version=work_order["version"], reason="no longer needed",
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        self.assertEqual("cancelled", cancelled["status"])
+        self.assertEqual(work_order["version"] + 1, cancelled["version"])
+        after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual(("released", 0), (after["status"], after["remaining_quantity"]))
+        balance_after = conn.execute(
+            "SELECT * FROM stock_balances WHERE id = ?", (balance["id"],)
+        ).fetchone()
+        self.assertEqual((10, 0, 4), (balance_after["on_hand"], balance_after["reserved"], balance_after["version"]))
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual(("adjust", "reserve", "release"), tuple(m["operation"] for m in movements))
+        self.assertEqual((0, -4), (movements[-1]["on_hand_delta"], movements[-1]["reserved_delta"]))
+        events = conn.execute(
+            "SELECT * FROM work_order_events WHERE work_order_id = ? ORDER BY created_at, id",
+            (work_order["id"],),
+        ).fetchall()
+        self.assertEqual(1, len(events))
+        self.assertEqual(("open", "cancelled"), (events[0]["from_status"], events[0]["to_status"]))
+        audits = conn.execute(
+            "SELECT * FROM audit_events WHERE entity_id = ? AND entity_type = 'work_order'",
+            (work_order["id"],),
+        ).fetchall()
+        self.assertEqual(1, len(audits))
+
+    def test_t2_completion_refuses_outstanding_reservation(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        started = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="assigned",
+            expected_version=work_order["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        in_progress = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="in_progress",
+            expected_version=started["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        with self.assertRaises(ConflictError) as caught:
+            transition_work_order_with_reservations(
+                conn, context, work_order_id=work_order["id"], to_status="completed",
+                expected_version=in_progress["version"], reason=None,
+                actor_id=context.actor_id, clock=self._tick_clock(),
+            )
+        self.assertEqual(
+            "work order has outstanding reservations; release or consume them first",
+            str(caught.exception),
+        )
+        after = conn.execute(
+            "SELECT * FROM work_orders WHERE id = ?", (work_order["id"],)
+        ).fetchone()
+        self.assertEqual(("in_progress", in_progress["version"]), (after["status"], after["version"]))
+        events = conn.execute(
+            "SELECT * FROM work_order_events WHERE work_order_id = ?", (work_order["id"],)
+        ).fetchall()
+        self.assertEqual(2, len(events))
+        reservation_after = conn.execute(
+            "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
+        ).fetchone()
+        self.assertEqual(("active", 4), (reservation_after["status"], reservation_after["remaining_quantity"]))
