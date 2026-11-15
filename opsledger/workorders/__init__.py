@@ -17,6 +17,14 @@ from opsledger.workorders.checklists import (
     checklist_completion_blocked,
     list_checklist_items,
 )
+from opsledger.workorders.labor import (
+    MINUTES_MESSAGE,
+    RATE_MESSAGE,
+    labor_cost_cents,
+    record_labor,
+    labor_total_cents,
+    list_labor_entries,
+)
 
 __all__ = [
     "DUPLICATE_WORK_ORDER_NUMBER_MESSAGE",
@@ -30,4 +38,8 @@ __all__ = [
     "complete_checklist_item",
     "checklist_completion_blocked",
     "list_checklist_items",
+    "labor_cost_cents",
+    "record_labor",
+    "labor_total_cents",
+    "list_labor_entries",
 ]
