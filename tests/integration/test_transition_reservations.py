@@ -156,3 +156,79 @@ class TransitionReservationsTest(unittest.TestCase):
             "SELECT * FROM reservations WHERE id = ?", (reservation["id"],)
         ).fetchone()
         self.assertEqual(("active", 4), (reservation_after["status"], reservation_after["remaining_quantity"]))
+
+    def test_t3_completion_succeeds_after_release(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        started = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="assigned",
+            expected_version=work_order["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        in_progress = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="in_progress",
+            expected_version=started["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        from opsledger.inventory import release_reservation
+        release_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=4,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        completed = transition_work_order_with_reservations(
+            conn, context, work_order_id=work_order["id"], to_status="completed",
+            expected_version=in_progress["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        self.assertEqual("completed", completed["status"])
+        self.assertEqual(in_progress["version"] + 1, completed["version"])
+
+    def test_t4_completion_succeeds_after_consume(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        started = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="assigned",
+            expected_version=work_order["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        in_progress = transition_work_order(
+            conn, context, work_order_id=work_order["id"], to_status="in_progress",
+            expected_version=started["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        from opsledger.inventory import consume_reservation
+        consume_reservation(
+            conn, context, reservation_id=reservation["id"], quantity=4,
+            expected_version=balance["version"] + 1, actor_id=context.actor_id,
+            clock=self._tick_clock(),
+        )
+        completed = transition_work_order_with_reservations(
+            conn, context, work_order_id=work_order["id"], to_status="completed",
+            expected_version=in_progress["version"], reason=None,
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        self.assertEqual("completed", completed["status"])
+        movements = self._movements(conn, context, part, location)
+        self.assertEqual(("adjust", "reserve", "consume"), tuple(m["operation"] for m in movements))
+
+    def test_t5_no_reservation_completion_still_works(self):
+        conn = self._open_migrated()
+        context = self._context()
+        part, location, work_order, balance, reservation = self._seed_fixture(conn, context)
+        plain = create_work_order(
+            conn, context, site_id=conn.execute("SELECT id FROM sites").fetchone()["id"],
+            asset_id=conn.execute("SELECT id FROM assets").fetchone()["id"], number="wo-101",
+            title="Oil change", description="Routine", priority="low",
+            requester_id="user-111", clock=self._tick_clock(),
+        )
+        completed = transition_work_order_with_reservations(
+            conn, context, work_order_id=plain["id"], to_status="cancelled",
+            expected_version=plain["version"], reason="not needed",
+            actor_id=context.actor_id, clock=self._tick_clock(),
+        )
+        self.assertEqual("cancelled", completed["status"])
+        count = conn.execute("SELECT COUNT(*) FROM stock_movements WHERE work_order_id = ?", (plain["id"],)).fetchone()[0]
+        self.assertEqual(0, count)
