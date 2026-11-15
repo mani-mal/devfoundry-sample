@@ -25,6 +25,10 @@ from opsledger.workorders.labor import (
     labor_total_cents,
     list_labor_entries,
 )
+from opsledger.workorders.comments import (
+    add_comment,
+    list_comments,
+)
 
 __all__ = [
     "DUPLICATE_WORK_ORDER_NUMBER_MESSAGE",
@@ -42,4 +46,6 @@ __all__ = [
     "record_labor",
     "labor_total_cents",
     "list_labor_entries",
+    "add_comment",
+    "list_comments",
 ]
