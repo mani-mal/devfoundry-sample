@@ -25,6 +25,9 @@ from opsledger.workorders.labor import (
     labor_total_cents,
     list_labor_entries,
 )
+from opsledger.workorders.reservation_rules import (
+    transition_work_order_with_reservations,
+)
 from opsledger.workorders.comments import (
     add_comment,
     list_comments,
@@ -38,6 +41,7 @@ __all__ = [
     "assign_technician",
     "release_assignment",
     "transition_work_order",
+    "transition_work_order_with_reservations",
     "add_checklist_item",
     "complete_checklist_item",
     "checklist_completion_blocked",
