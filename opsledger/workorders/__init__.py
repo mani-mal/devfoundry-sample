@@ -18,4 +18,5 @@ __all__ = [
     "create_work_order",
     "assign_technician",
     "release_assignment",
+    "transition_work_order",
 ]
