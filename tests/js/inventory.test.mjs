@@ -224,3 +224,62 @@ test("renderMovements shows an empty message without movements", () => {
   assert.equal(container.children[1].textContent, "No stock movements yet.");
   delete globalThis.document;
 });
+
+test("renderLowStock lists only balances at or below the threshold", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  const state = {
+    ...createInventoryState(),
+    lowStockThreshold: 1,
+    balances: [
+      makeBalance({ part_id: "prt-1", on_hand: 2, reserved: 2 }),
+      makeBalance({ part_id: "prt-2", on_hand: 5, reserved: 1 }),
+    ],
+  };
+  renderLowStock(container, state, {});
+  assert.equal(container.children[0].textContent, "Low stock (available <= 1)");
+  const list = container.children[1];
+  assert.equal(list.children.length, 1);
+  assert.equal(
+    list.children[0].textContent,
+    "bolt-m8 @ main: on_hand 2, reserved 2, available 0"
+  );
+  delete globalThis.document;
+});
+
+test("renderLowStock shows an empty message when nothing is low", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const container = makeStubElement("DIV");
+  const state = {
+    ...createInventoryState(),
+    lowStockThreshold: 0,
+    balances: [makeBalance({ on_hand: 4, reserved: 1 })],
+  };
+  renderLowStock(container, state, {});
+  assert.equal(container.children[0].textContent, "Low stock (available <= 0)");
+  assert.equal(container.children[1].children.length, 0);
+  assert.equal(container.children[2].textContent, "No low-stock balances.");
+  delete globalThis.document;
+});
+
+test("render functions never write innerHTML", () => {
+  const document = makeStubDocument();
+  globalThis.document = document;
+  const containers = [makeStubElement("DIV"), makeStubElement("DIV"), makeStubElement("DIV")];
+  const state = {
+    ...createInventoryState(),
+    balances: [makeBalance()],
+    movements: [{ operation: "receive", on_hand_delta: 4, reserved_delta: 0 }],
+  };
+  renderInventoryBalances(containers[0], state, { onSelect: () => {} });
+  renderMovements(containers[1], state, {});
+  renderLowStock(containers[2], state, {});
+  for (const container of containers) {
+    for (const child of container.children) {
+      assert.equal(child.innerHTML_written ?? "", "");
+    }
+  }
+  delete globalThis.document;
+});
