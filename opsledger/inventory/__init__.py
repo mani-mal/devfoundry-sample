@@ -1,3 +1,5 @@
+"""Inventory package for OpsLedger (T034, T035, M5)."""
+
 from opsledger.inventory.ledger import (
     INSUFFICIENT_STOCK_MESSAGE,
     REASON_REQUIRED_MESSAGE,
@@ -7,6 +9,11 @@ from opsledger.inventory.ledger import (
     list_balances,
     list_movements,
     reconcile_balance,
+)
+from opsledger.inventory.reservations import (
+    RESERVATION_EXCEEDS_AVAILABLE_MESSAGE,
+    RESERVATION_QUANTITY_MESSAGE,
+    reserve_stock,
 )
 
 __all__ = [
@@ -18,4 +25,7 @@ __all__ = [
     "list_balances",
     "list_movements",
     "reconcile_balance",
+    "RESERVATION_EXCEEDS_AVAILABLE_MESSAGE",
+    "RESERVATION_QUANTITY_MESSAGE",
+    "reserve_stock",
 ]
