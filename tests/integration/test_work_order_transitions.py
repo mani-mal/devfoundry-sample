@@ -90,3 +90,50 @@ class TransitionTests(unittest.TestCase):
             "SELECT COUNT(*) FROM audit_events WHERE entity_id = ? AND entity_type = 'work_order'",
             (entity_id,),
         ).fetchone()[0]
+
+    def test_t1_open_to_assigned_appends_event_and_audit(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        row = self._transition(conn, work_order, "assigned", 1)
+        self.assertEqual("assigned", row["status"])
+        self.assertEqual(2, row["version"])
+        self.assertEqual(1, self._event_count(conn, work_order["id"]))
+        self.assertEqual(1, self._audit_count(conn, work_order["id"]))
+
+    def test_t2_forbidden_pair_open_to_completed_conflict(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        with self.assertRaises(ConflictError) as caught:
+            self._transition(conn, work_order, "completed", 1)
+        self.assertEqual(INVALID_TRANSITION_MESSAGE, str(caught.exception))
+
+    def test_t3_block_without_reason_validation_error(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        self._transition(conn, work_order, "in_progress", 2)
+        with self.assertRaises(ValidationError) as caught:
+            self._transition(conn, work_order, "blocked", 3)
+        self.assertEqual(TRANSITION_REASON_REQUIRED_MESSAGE, str(caught.exception))
+
+    def test_t4_block_with_reason_then_unblock(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        self._transition(conn, work_order, "in_progress", 2)
+        row = self._transition(conn, work_order, "blocked", 3, reason="waiting parts")
+        self.assertEqual("blocked", row["status"])
+        row = self._transition(conn, work_order, "in_progress", 4, reason="parts arrived")
+        self.assertEqual("in_progress", row["status"])
+
+    def test_t5_stale_version_conflict_nothing_stored(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._transition(conn, work_order, "assigned", 1)
+        events_before = self._event_count(conn, work_order["id"])
+        audit_before = self._audit_count(conn, work_order["id"])
+        with self.assertRaises(ConflictError) as caught:
+            self._transition(conn, work_order, "in_progress", 1)
+        self.assertEqual(STALE_WORK_ORDER_VERSION_MESSAGE, str(caught.exception))
+        self.assertEqual(events_before, self._event_count(conn, work_order["id"]))
+        self.assertEqual(audit_before, self._audit_count(conn, work_order["id"]))
