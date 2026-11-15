@@ -59,3 +59,71 @@ class IdempotencyTest(unittest.TestCase):
 
     def _count_records(self, conn):
         return conn.execute("SELECT COUNT(*) FROM idempotency_records").fetchone()[0]
+
+    def test_t1_begin_complete_and_replay_returns_original_result(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        context = self._context()
+        record, replayed = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-42",
+            request_payload={"receipt_id": "rcpt-42", "quantity": 4},
+            clock=self._tick_clock(),
+        )
+        self.assertFalse(replayed)
+        self.assertEqual("pending", record["status"])
+        self.assertIsNone(record["result_payload"])
+        self.assertEqual(
+            canonical_request_digest({"receipt_id": "rcpt-42", "quantity": 4}),
+            record["request_digest"],
+        )
+        completed = complete_idempotency(
+            conn, context, record_id=record["id"],
+            result_payload={"received": 4, "status": "received"},
+            clock=self._tick_clock(),
+        )
+        self.assertEqual("completed", completed["status"])
+        self.assertEqual(
+            {"received": 4, "status": "received"},
+            json.loads(completed["result_payload"]),
+        )
+        replay_record, replayed = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-42",
+            request_payload={"quantity": 4, "receipt_id": "rcpt-42"},
+            clock=self._tick_clock(),
+        )
+        self.assertTrue(replayed)
+        self.assertEqual(record["id"], replay_record["id"])
+        self.assertEqual("completed", replay_record["status"])
+        self.assertEqual(
+            {"received": 4, "status": "received"},
+            json.loads(replay_record["result_payload"]),
+        )
+        self.assertEqual(1, self._count_records(conn))
+
+    def test_t2_same_key_different_payload_is_conflict_409(self):
+        conn = self._open_migrated()
+        self._seed_organizations(conn)
+        context = self._context()
+        record, replayed = begin_idempotency(
+            conn, context, operation="receive_order", key="rcpt-42",
+            request_payload={"receipt_id": "rcpt-42", "quantity": 4},
+            clock=self._tick_clock(),
+        )
+        self.assertFalse(replayed)
+        with self.assertRaises(ConflictError) as caught:
+            begin_idempotency(
+                conn, context, operation="receive_order", key="rcpt-42",
+                request_payload={"receipt_id": "rcpt-42", "quantity": 5},
+                clock=self._tick_clock(),
+            )
+        self.assertEqual("conflict", caught.exception.code)
+        self.assertEqual(
+            "idempotency key already used with a different request payload",
+            str(caught.exception),
+        )
+        after = get_idempotency_record(conn, context, record_id=record["id"])
+        self.assertEqual(
+            ("pending", record["request_digest"]),
+            (after["status"], after["request_digest"]),
+        )
+        self.assertEqual(1, self._count_records(conn))
