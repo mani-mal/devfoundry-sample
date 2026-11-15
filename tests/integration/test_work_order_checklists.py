@@ -84,3 +84,44 @@ class ChecklistTests(unittest.TestCase):
             conn, self._context(), item_id=item_id,
             clock=FixedClock(datetime(2026, 11, 13, hour, 0, 0, tzinfo=timezone.utc)),
         )
+
+    def test_t1_add_mandatory_and_optional_items(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        mandatory_item = self._add(conn, work_order, "drain oil", True)
+        optional_item = self._add(conn, work_order, "photo", False)
+        self.assertEqual("cli-", mandatory_item["id"][:4])
+        self.assertEqual(1, mandatory_item["mandatory"])
+        self.assertEqual(0, optional_item["mandatory"])
+        self.assertIsNone(mandatory_item["completed_at"])
+
+    def test_t2_open_mandatory_item_blocks_completion(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._add(conn, work_order, "drain oil", True)
+        self._add(conn, work_order, "photo", False)
+        self.assertEqual(["drain oil"], checklist_completion_blocked(conn, self._context(), work_order_id=work_order["id"]))
+
+    def test_t3_completed_mandatory_item_clears_block(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        item = self._add(conn, work_order, "drain oil", True)
+        self._add(conn, work_order, "photo", False)
+        completed = self._complete(conn, item["id"])
+        self.assertIsNotNone(completed["completed_at"])
+        self.assertEqual([], checklist_completion_blocked(conn, self._context(), work_order_id=work_order["id"]))
+
+    def test_t4_optional_item_never_blocks(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        self._add(conn, work_order, "photo", False)
+        self.assertEqual([], checklist_completion_blocked(conn, self._context(), work_order_id=work_order["id"]))
+
+    def test_t5_double_completion_conflict(self):
+        conn = self._open_migrated()
+        _, _, work_order = self._seed_work_order(conn)
+        item = self._add(conn, work_order, "drain oil", True)
+        self._complete(conn, item["id"])
+        with self.assertRaises(ConflictError) as caught:
+            self._complete(conn, item["id"])
+        self.assertEqual(ITEM_ALREADY_COMPLETED_MESSAGE, str(caught.exception))
