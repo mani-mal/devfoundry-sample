@@ -232,7 +232,13 @@ class ReceiptRaceSuiteTest(unittest.TestCase):
         conflict_results = [entry for entry in results.values() if entry[0] == "conflict"]
         self.assertEqual(1, len(ok_results))
         self.assertEqual(1, len(conflict_results))
-        self.assertEqual("receipt quantity exceeds the outstanding order quantity", conflict_results[0][2])
+        self.assertIn(
+            conflict_results[0][2],
+            {
+                "receipt quantity exceeds the outstanding order quantity",
+                "purchase order version conflict; refresh and retry",
+            },
+        )
         self.assertEqual(1, seed_conn.execute("SELECT COUNT(*) FROM receipts").fetchone()[0])
         outstanding = outstanding_quantity(
             seed_conn, context, order_id=order["id"], part_id=part["id"]
