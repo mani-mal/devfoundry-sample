@@ -155,7 +155,7 @@ def _receive_line(tx, context, *, receipt_id, stock_location_id, line, clock, ti
     else:
         balance_id = balance["id"]
     tx.execute(
-        "UPDATE stock_balances SET on_hand = on_hand + ?, updated_at = ?"
+        "UPDATE stock_balances SET on_hand = on_hand + ?, version = version + 1, updated_at = ?"
         " WHERE id = ?",
         (line["quantity"], timestamp_text, balance_id),
     )
