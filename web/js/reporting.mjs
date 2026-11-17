@@ -47,6 +47,12 @@ export function formatWorkOrderLine(wo) {
 }
 
 export function renderDashboard(container, state, handlers = {}) {
+  if (state.error) {
+    const p = document.createElement("p");
+    p.textContent = state.error;
+    container.appendChild(p);
+    return;
+  }
   const list = document.createElement("ul");
   const d = state.dashboard;
   if (d) {
