@@ -8,6 +8,7 @@ migrate-a-temp-db setup style. Acceptance (spec M3/T020): second writer with
 stale version gets 409; first change retained.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,7 @@ class AssetUpdateTests(unittest.TestCase):
 
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

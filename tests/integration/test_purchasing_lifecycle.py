@@ -7,6 +7,7 @@ DISTINCT clock instant (UTC, RFC3339 Z, second precision; no fixed
 timestamps anywhere in this file).
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -34,6 +35,7 @@ class PurchaseRequestLifecycleTest(unittest.TestCase):
     def _open_migrated(self):
         """Open a temporary file database with the REAL shipped migrations (no CREATE TABLE)."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

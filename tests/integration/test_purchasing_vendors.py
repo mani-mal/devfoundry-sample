@@ -6,6 +6,7 @@ functions only, with a _tick_clock helper giving each call a DISTINCT
 FixedClock timestamp (UTC, RFC3339 Z, second precision).
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -31,6 +32,7 @@ class VendorsTest(unittest.TestCase):
     def _open_migrated(self):
         """Open a temporary file database with the REAL shipped migrations (no CREATE TABLE)."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

@@ -6,6 +6,7 @@ exercises the ledger through public service functions only. Acceptance
 a refused adjustment stores nothing; movements are immutable.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -31,6 +32,7 @@ from opsledger.inventory import (
 class LedgerTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

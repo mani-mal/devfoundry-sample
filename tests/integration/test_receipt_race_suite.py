@@ -10,6 +10,7 @@ _tick_clock helper giving each call a DISTINCT FixedClock timestamp
 (UTC, RFC3339 Z, second precision; never a fixed timestamp).
 """
 
+import os
 import tempfile
 import threading
 import unittest
@@ -41,6 +42,7 @@ class ReceiptRaceSuiteTest(unittest.TestCase):
     def _open_migrated(self):
         """Temporary file database with the REAL shipped migrations (no CREATE TABLE)."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         seed_conn = connect(tmp.name)
         self.addCleanup(seed_conn.close)

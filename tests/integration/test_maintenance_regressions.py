@@ -11,6 +11,7 @@ of raising. Time boundaries (month, year, leap day) are produced by
 datetime.date arithmetic alone: every test pins its own FixedClock instant,
 and this suite never reads the wall clock.
 """
+import os
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -31,6 +32,7 @@ class MaintenanceRegressionTest(unittest.TestCase):
     def _open_migrated(self):
         """Open a temporary file database with the REAL shipped migrations (no CREATE TABLE)."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

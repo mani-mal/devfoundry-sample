@@ -6,6 +6,7 @@ anywhere in the test, mirroring the migrate-a-temp-db style.
 """
 
 import sqlite3
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -27,6 +28,7 @@ class AssetsSchemaTests(unittest.TestCase):
 
     def _open_migrated(self) -> sqlite3.Connection:
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

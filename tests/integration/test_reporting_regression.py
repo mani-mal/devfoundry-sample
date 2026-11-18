@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 import tempfile
 import unittest
 from dataclasses import dataclass
@@ -53,6 +54,7 @@ def _tick_factory():
 
 def _fresh_db():
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    unittest.addModuleCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
     conn = connect(tmp.name)
     migrate(conn, "opsledger/migrations")
     _seed_identities(conn)

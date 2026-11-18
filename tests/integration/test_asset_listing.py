@@ -7,6 +7,7 @@ migrate-a-temp-db setup style. Acceptance (spec M3/T019): identical
 timestamps neither duplicate nor omit stable rows across pages.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -25,6 +26,7 @@ class AssetListingTests(unittest.TestCase):
 
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

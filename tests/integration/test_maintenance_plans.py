@@ -7,6 +7,7 @@ test is an injected FixedClock, so month/year/leap-day boundaries are
 byte-identical across runs.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -40,6 +41,7 @@ from opsledger.maintenance.preview import (
 class MaintenancePlanTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

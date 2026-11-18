@@ -9,6 +9,7 @@ cross-site and inactive assignees are denied; one active assignment per
 work order; release keeps the history.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -34,6 +35,7 @@ class AssignmentTests(unittest.TestCase):
 
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

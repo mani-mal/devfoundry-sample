@@ -19,6 +19,7 @@ from opsledger.core.seeding import build_manifest, logical_checksum, seed_profil
 class SeedingTests(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(os.unlink, tmp.name)
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)

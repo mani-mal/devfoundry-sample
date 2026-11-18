@@ -8,6 +8,7 @@ untouched; the atomic conditional UPDATE makes concurrent overselling
 impossible.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -26,6 +27,7 @@ from opsledger.inventory import adjust_stock, list_movements, reserve_stock
 class ReservationTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

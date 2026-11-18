@@ -8,6 +8,7 @@ is scoped to an owned site and its asset, duplicates are per organization,
 and missing/cross-organization references surface the same NotFoundError.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -29,6 +30,7 @@ class WorkOrderCreateTests(unittest.TestCase):
 
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

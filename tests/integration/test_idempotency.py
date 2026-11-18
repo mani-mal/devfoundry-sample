@@ -9,6 +9,7 @@ same payload returns the original result.
 """
 
 import json
+import os
 import tempfile
 import threading
 import unittest
@@ -31,6 +32,7 @@ from opsledger.core import (
 class IdempotencyTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self._db_path = tmp.name
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)

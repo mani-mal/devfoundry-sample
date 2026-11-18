@@ -9,6 +9,7 @@ anchor to the work order's aggregate version at write time and are
 immutable.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -32,6 +33,7 @@ class CommentTests(unittest.TestCase):
 
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)
