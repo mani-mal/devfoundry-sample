@@ -8,6 +8,8 @@ schema. Part 2 (CSV, sort-injection and import tests) is added to this
 file by a follow-up task.
 """
 
+import csv
+import io
 import os
 import sys
 import tempfile
@@ -20,12 +22,19 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from opsledger.assets import create_asset, create_site
+from opsledger.assets.listing import list_assets
 from opsledger.core import OrganizationContext
 from opsledger.core.clock import FixedClock
 from opsledger.core.db import connect, transaction
+from opsledger.core.errors import (
+    ConflictError,
+    PermissionDeniedError,
+    ValidationError,
+)
 from opsledger.core.migrations import migrate
 from opsledger.http.envelope import InputError
 from opsledger.http.static import resolve_static
+from opsledger.reporting.csv_export import CSV_HEADER, export_work_orders
 from opsledger.reporting.search import search
 from opsledger.workorders import create_work_order
 
@@ -156,6 +165,90 @@ class InjectionRegressionTests(unittest.TestCase):
             self.assertEqual(len(matches[kind]), 0)
         self.assertEqual(
             conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], 2)
+
+    def test_csv_export_formula_injection_and_hostile_cells(self):
+        conn = self._open_migrated()
+        self._seed_org_fixture(conn, ORG_ID)
+        context = OrganizationContext(organization_id=ORG_ID)
+        site = conn.execute("SELECT * FROM sites LIMIT 1").fetchone()
+        asset = create_asset(
+            conn, context, site_id=site["id"], tag="wo-asset",
+            name="Work order asset", criticality="low",
+            purchase_cost_cents=0, clock=self._tick_clock(),
+        )
+        titles = ("=SUM(A1)", "+CMD", "-2+2", "@xp_cmdshell", "a,b\nc")
+        for index, title in enumerate(titles, start=1):
+            created = create_work_order(
+                conn, context, site_id=site["id"], asset_id=asset["id"],
+                number="wo-" + str(index), title=title,
+                description="x", priority="low",
+                requester_id="user-1", clock=self._tick_clock(),
+            )
+            self.assertEqual(created["title"], title)
+        text = export_work_orders(conn, context, actor=_Actor("auditor"))
+        rows = list(csv.reader(io.StringIO(text)))
+        self.assertEqual(rows[0], CSV_HEADER)
+        self.assertEqual(
+            [cell for cell in rows[0] if cell.startswith(("=", "+", "-", "@"))],
+            [],
+        )
+        rendered = [row[2] for row in rows[1:]]
+        self.assertEqual(len(rows), 6)
+        self.assertEqual(
+            [cell for cell in rendered if cell.startswith("'")],
+            ["'=SUM(A1)", "'+CMD", "'-2+2", "'@xp_cmdshell"],
+        )
+        quoted_rows = [row for row in rows[1:] if row[1] == "wo-5"]
+        self.assertEqual(len(quoted_rows), 1)
+        self.assertEqual(quoted_rows[0][2], "a,b\nc")
+        self.assertNotIn("=SUM(A1)", rendered)
+        self.assertNotIn("+CMD", rendered)
+        self.assertNotIn("-2+2", rendered)
+        self.assertNotIn("@xp_cmdshell", rendered)
+        with self.assertRaises(PermissionDeniedError):
+            export_work_orders(conn, context, actor=_Actor("admin"))
+
+    def test_sort_and_limit_injection_rejected(self):
+        conn = self._open_migrated()
+        self._seed_org_fixture(conn, ORG_ID)
+        context = OrganizationContext(organization_id=ORG_ID)
+        site = conn.execute("SELECT * FROM sites LIMIT 1").fetchone()
+        first = create_asset(
+            conn, context, site_id=site["id"], tag="tag-1",
+            name="pump-1", criticality="low", purchase_cost_cents=1,
+            clock=self._tick_clock(),
+        )
+        second = create_asset(
+            conn, context, site_id=site["id"], tag="tag-2",
+            name="valve-2", criticality="low", purchase_cost_cents=2,
+            clock=self._tick_clock(),
+        )
+        self.assertNotEqual(first["id"], second["id"])
+        for limit in (-1, 0, 201, 10**9, True, "50", 50.0):
+            with self.assertRaises(ValidationError):
+                list_assets(conn, context, limit=limit)
+        with self.assertRaises(ValidationError):
+            list_assets(conn, context,
+                        after_created_at="2026-11-18T00:00:00Z")
+        with self.assertRaises(ValidationError):
+            list_assets(conn, context, after_id="a-1")
+        rows = list_assets(
+            conn, context,
+            after_created_at="x' OR 1=1 --", after_id="a'")
+        self.assertEqual(len(rows), 0)
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], 2)
+        ordered = list_assets(conn, context, limit=2)
+        keys = [(row["created_at"], row["id"]) for row in ordered]
+        self.assertEqual(keys, sorted(keys))
+        self.assertEqual(len(keys), 2)
+        wildcard = search(
+            conn, context, actor=_Actor("admin"), query="pump%")
+        self.assertEqual(len(wildcard["assets"]), 0)
+        plain = search(
+            conn, context, actor=_Actor("admin"), query="pump")
+        self.assertGreaterEqual(len(plain["assets"]), 1)
+        self.assertEqual(ConflictError("x").code, "conflict")
 
 
 if __name__ == "__main__":
