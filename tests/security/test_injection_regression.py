@@ -299,6 +299,94 @@ class InjectionRegressionTests(unittest.TestCase):
         self.assertEqual(
             conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count + 1)
 
+    def test_nul_bytes_rejected_in_every_text_field(self):
+        from opsledger.core.validation import reject_nul
+        from opsledger.parts.parts import create_part
+        from opsledger.reporting.asset_import import import_assets
+
+        conn = self._open_migrated()
+        self._seed_org_fixture(conn, ORG_ID)
+        context = OrganizationContext(organization_id=ORG_ID)
+        site = conn.execute("SELECT * FROM sites LIMIT 1").fetchone()
+        count = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+        cases = (
+            lambda: create_asset(
+                conn, context, site_id=site["id"], tag="nul-1",
+                name="na\x00me", criticality="low", purchase_cost_cents=1,
+                clock=self._tick_clock(),
+            ),
+            lambda: create_site(
+                conn, context, code="nul", name="si\x00te", clock=self._tick_clock()),
+            lambda: create_part(
+                conn, context, sku="nul-part", name="pa\x00rt",
+                unit_of_measure="unit", standard_cost_cents=1,
+                clock=self._tick_clock(),
+            ),
+            lambda: create_work_order(
+                conn, context, site_id=site["id"], asset_id="ast-x",
+                number="wo-nul", title="ti\x00tle", description="d",
+                priority="low", requester_id="user-1", clock=self._tick_clock(),
+            ),
+            lambda: create_work_order(
+                conn, context, site_id=site["id"], asset_id="ast-x",
+                number="wo-nul2", title="t", description="d\x00",
+                priority="low", requester_id="user-1", clock=self._tick_clock(),
+            ),
+        )
+        for case in cases:
+            with self.assertRaises(ValidationError) as caught:
+                case()
+            self.assertIn("must not contain a NUL byte", str(caught.exception))
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count)
+        header = "asset_tag,name,criticality,purchase_cost_cents"
+        with self.assertRaises(ValidationError) as caught:
+            import_assets(
+                conn, context, actor=_Actor("admin"), site_id=site["id"],
+                csv_text=header + "\na-name,na\x00me,high,1",
+            )
+        self.assertIn("must not contain a NUL byte", str(caught.exception))
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count)
+        with self.assertRaises(ValidationError) as caught:
+            import_assets(
+                conn, context, actor=_Actor("admin"), site_id=site["id"],
+                csv_text=header + "\nba\x00d-tag,n,high,1",
+            )
+        self.assertIn("asset_tag", str(caught.exception))
+        self.assertNotIn("NUL", str(caught.exception))
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count)
+        self.assertEqual(reject_nul("ok", label="x"), "ok")
+
+    def test_import_tag_charset_enforced(self):
+        from opsledger.reporting.asset_import import import_assets
+
+        conn = self._open_migrated()
+        self._seed_org_fixture(conn, ORG_ID)
+        context = OrganizationContext(organization_id=ORG_ID)
+        site = conn.execute("SELECT * FROM sites LIMIT 1").fetchone()
+        count = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+        header = "asset_tag,name,criticality,purchase_cost_cents"
+        for bad_cell in ("UPPER-TAG", "bad tag"):
+            with self.assertRaises(ValidationError) as caught:
+                import_assets(
+                    conn, context, actor=_Actor("admin"), site_id=site["id"],
+                    csv_text=header + "\n" + bad_cell + ",n,high,1",
+                )
+            self.assertEqual(
+                str(caught.exception),
+                "row 1: asset_tag must contain only lowercase letters, "
+                "digits and hyphens",
+            )
+            self.assertEqual(
+                conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count)
+        imported = import_assets(
+            conn, context, actor=_Actor("admin"), site_id=site["id"],
+            csv_text=header + "\nok-tag-1,n,high,1",
+        )
+        self.assertEqual([row["tag"] for row in imported], ["ok-tag-1"])
+
 
 if __name__ == "__main__":
     unittest.main()
