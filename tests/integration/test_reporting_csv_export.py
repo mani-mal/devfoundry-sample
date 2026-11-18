@@ -12,6 +12,7 @@ scoping, and the 1000-row export bound.
 
 import csv
 import io
+import os
 import tempfile
 import unittest
 from dataclasses import dataclass
@@ -44,6 +45,7 @@ class CsvExportTests(unittest.TestCase):
     def _open_migrated(self):
         """Open a temporary file database with the REAL shipped migrations."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

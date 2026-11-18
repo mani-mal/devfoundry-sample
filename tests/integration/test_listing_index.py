@@ -8,6 +8,7 @@ identical with and without the index; keyset paging covers tied rows
 exactly once.
 """
 
+import os
 import tempfile
 import unittest
 
@@ -30,6 +31,7 @@ _LISTING_SQL = (
 class ListingIndexTests(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

@@ -12,6 +12,7 @@ with rollback on every failure, duplicate-tag conflicts, and cross-tenant
 isolation between organizations.
 """
 
+import os
 import tempfile
 import unittest
 from dataclasses import dataclass
@@ -126,6 +127,7 @@ class AssetImportTests(unittest.TestCase):
     def _open_migrated(self):
         """Open a temporary file database with the REAL shipped migrations."""
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

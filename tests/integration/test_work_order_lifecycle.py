@@ -10,6 +10,7 @@ and from/to version.
 """
 
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -30,6 +31,7 @@ AUDIT_ENTITY_WORK_ORDER = "work_order"
 class WorkOrderLifecycleRegression(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

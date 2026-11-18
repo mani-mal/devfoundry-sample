@@ -7,6 +7,7 @@ non-connection arguments are rejected.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import unittest
@@ -31,7 +32,7 @@ _CLOCK = FixedClock(datetime(2026, 11, 18, 12, 0, 0, tzinfo=timezone.utc))
 class UpgradeFixtureTests(unittest.TestCase):
     def _tmp_path(self):
         path = Path(tempfile.mkdtemp(prefix="upgrade-fixture-tests-")) / "fixture.db"
-        self.addCleanup(lambda: os.path.exists(path) and os.unlink(path))
+        self.addCleanup(lambda d=str(Path(path).parent): shutil.rmtree(d, True))
         return str(path)
 
     def test_prior_database_applies_only_through_boundary(self):

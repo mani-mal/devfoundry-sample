@@ -6,6 +6,7 @@ the test, unlike the T009 unit tests which build their own users table.
 """
 
 import sqlite3
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -26,6 +27,7 @@ class UserHashColumnsTests(unittest.TestCase):
 
     def _open_migrated(self) -> sqlite3.Connection:
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

@@ -11,6 +11,7 @@ a thin adapter: it resolves the part's organization and calls
 import contextlib
 import io
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -27,6 +28,7 @@ from opsledger.reconcile_cli import main as reconcile_main
 class ReconcileCliTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self._db_path = tmp.name
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)

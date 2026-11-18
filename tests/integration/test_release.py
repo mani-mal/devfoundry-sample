@@ -8,6 +8,7 @@ consumed again; every write respects remaining_quantity; the ledger
 records the exact deltas.
 """
 
+import os
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -27,6 +28,7 @@ from opsledger.inventory import consume_reservation, release_reservation
 class ReleaseConsumeTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)

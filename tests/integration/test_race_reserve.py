@@ -10,6 +10,7 @@ connection reconciles balances against the movement sum after both
 workers finish.
 """
 
+import os
 import tempfile
 import threading
 import unittest
@@ -29,6 +30,7 @@ from opsledger.workorders.orders import create_work_order
 class RaceReserveLastUnitTest(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
         self._db_path = tmp.name
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
