@@ -26,6 +26,7 @@ from opsledger.core.context import (
     scoped_first,
 )
 from opsledger.core.errors import ConflictError, NotFoundError, ValidationError
+from opsledger.core.validation import reject_nul
 
 __all__ = [
     "DUPLICATE_ASSET_TAG_MESSAGE",
@@ -67,6 +68,7 @@ def _validate_tag(tag: str) -> str:
         raise ValidationError(
             "asset tag must contain only lowercase letters, digits and hyphens"
         )
+    reject_nul(stripped, label="asset tag")
     return stripped
 
 
@@ -91,6 +93,7 @@ def _validate_criticality(criticality: str) -> str:
 def _require_name(name: object) -> str:
     if not isinstance(name, str) or not name.strip():
         raise ValidationError("asset name required")
+    reject_nul(name.strip(), label="asset name")
     return name
 
 

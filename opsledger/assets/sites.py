@@ -24,6 +24,7 @@ from opsledger.core.context import (
     scoped_all,
 )
 from opsledger.core.errors import ConflictError, NotFoundError, ValidationError
+from opsledger.core.validation import reject_nul
 
 __all__ = [
     "DUPLICATE_SITE_CODE_MESSAGE",
@@ -69,12 +70,14 @@ def _validate_code(code: str) -> str:
         raise ValidationError(
             "site code must contain only lowercase letters, digits and hyphens"
         )
+    reject_nul(stripped, label="site code")
     return stripped
 
 
 def _require_name(name: object) -> str:
     if not isinstance(name, str) or not name.strip():
         raise ValidationError("site name required")
+    reject_nul(name.strip(), label="site name")
     return name
 
 
