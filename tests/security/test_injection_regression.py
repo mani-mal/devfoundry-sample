@@ -250,6 +250,55 @@ class InjectionRegressionTests(unittest.TestCase):
         self.assertGreaterEqual(len(plain["assets"]), 1)
         self.assertEqual(ConflictError("x").code, "conflict")
 
+    def test_import_malicious_cells_and_rows_fail_safely(self):
+        conn = self._open_migrated()
+        self._seed_org_fixture(conn, ORG_ID)
+        from opsledger.reporting.asset_import import import_assets
+
+        context = OrganizationContext(organization_id=ORG_ID)
+        site = conn.execute("SELECT * FROM sites LIMIT 1").fetchone()
+        header = "asset_tag,name,criticality,purchase_cost_cents"
+        oversized = header + "\n" + "\n".join(
+            "s" * 64 + "," + "x" * 200 + ",medium," + "9" * 55
+            for _ in range(201)
+        )
+        malicious_payloads = (
+            "asset_tag,name,criticality,cost\nbad-header,bad,high,1",
+            header + "\n" + "x" * 65 + ",long-tag,high,1",
+            header + "\n" + "tag-201," + "n" * 201 + ",high,1",
+            header + "\n" + "tag-cost,not-a-number,high,abc",
+            header + "\n" + ",empty-tag,high,1",
+            oversized,
+            header + "\ndup-1,first,high,1\ndup-1,second,high,2",
+            header + "\nthree-cells,x,high",
+        )
+        count = conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0]
+        for malicious in malicious_payloads:
+            with self.assertRaises((ValidationError, ConflictError)):
+                import_assets(
+                    conn, context, actor=_Actor("admin"),
+                    site_id=site["id"], csv_text=malicious,
+                )
+            refused = conn.execute(
+                "SELECT COUNT(*) FROM assets").fetchone()[0]
+            self.assertEqual(refused, count)
+        raw_name = '=HYPERLINK("http://evil","x")'
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(["asset_tag", "name", "criticality", "purchase_cost_cents"])
+        writer.writerow(["formula-tag", raw_name, "high", 1])
+        imported = import_assets(
+            conn, context, actor=_Actor("admin"), site_id=site["id"],
+            csv_text=buffer.getvalue(),
+        )
+        self.assertEqual(len(imported), 1)
+        stored = conn.execute(
+            "SELECT name FROM assets WHERE tag = 'formula-tag'"
+        ).fetchone()
+        self.assertEqual(stored["name"], raw_name)
+        self.assertEqual(
+            conn.execute("SELECT COUNT(*) FROM assets").fetchone()[0], count + 1)
+
 
 if __name__ == "__main__":
     unittest.main()
