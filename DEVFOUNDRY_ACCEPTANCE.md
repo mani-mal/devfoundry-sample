@@ -1,9 +1,20 @@
 # DEVFOUNDRY_ACCEPTANCE.md — platform case dispositions
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-12 (late) · Lab: `0.1.0-27d7b85`
+Campaign: `opsledger-run-001` · Updated: 2026-11-18 (evening: §19.2 deviation statement) · Lab: `0.1.0-ee6d309`
 Labels per spec §19.2: **live** (observed on the lab), **fixture** (verified
 by the platform's own tests), **manual** (source/bundle-verified, live
 render unavailable), **blocked** (prerequisite unavailable), **not-run**.
+
+> **§19.2 deviation (owner-authorized, 2026-11-18 evening).** The project
+> spec's completion criteria say "no task was approved by the driver".
+> From M7 onward (and for every M9 task), **the driver session executed
+> every `devfoundry approve` and every merge** under the owner's standing
+> method (administrator account; diffs read, sandbox-verified and bound to
+> their digest before each approve). **No independent human reviewed the
+> diffs before merge; the owner reviews the milestone reports, the defect
+> register and the diff digests after the fact.** Earlier M1-era
+> "approved by a human" statements applied only to T002–T006 and are not
+> affected.
 
 ## Core platform workflow — live observed (full sign-off basis)
 
