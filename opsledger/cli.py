@@ -40,6 +40,7 @@ DEFAULT_PORT = 8080
 DEFAULT_MIGRATIONS_DIR = "opsledger/migrations"
 
 _SIGNAL_SHUTDOWN_TIMEOUT_SECONDS = 5
+_DRAIN_TIMEOUT_SECONDS = 5
 
 
 def _run_migrations(database: str, migrations_dir: str) -> list[str]:
@@ -97,6 +98,7 @@ def _cmd_serve(ns: argparse.Namespace) -> int:
         signal.signal(signal.SIGTERM, previous_term)
 
     server.shutdown()
+    server.drain(_DRAIN_TIMEOUT_SECONDS)
     server.server_close()
     return 0
 

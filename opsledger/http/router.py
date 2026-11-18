@@ -335,6 +335,9 @@ class RouterServer(ThreadingHTTPServer):
     ``daemon_threads`` is enabled so a shutdown does not wait on hung client
     connections. Route dispatch is handled entirely by :class:`Router` and
     :class:`_AdapterHandler`.
+
+    ``drain(timeout)`` waits (bounded) for in-flight requests to finish
+    before close, so shutdown does not abandon an active request.
     """
 
     daemon_threads = True
@@ -357,3 +360,30 @@ class RouterServer(ThreadingHTTPServer):
             "_BoundAdapterHandler", (_AdapterHandler,), {"router": router}
         )
         super().__init__((host, int(port)), handler_class)
+        self._active_lock = threading.Lock()
+        self._active_requests = 0
+        self._drained = threading.Event()
+        self._drained.set()
+
+    def _request_started(self) -> None:
+        with self._active_lock:
+            self._active_requests += 1
+            self._drained.clear()
+
+    def _request_finished(self) -> None:
+        with self._active_lock:
+            self._active_requests -= 1
+            if self._active_requests == 0:
+                self._drained.set()
+
+    def drain(self, timeout: float = 5.0) -> int:
+        self._drained.wait(timeout)
+        with self._active_lock:
+            return self._active_requests
+
+    def process_request_thread(self, request, client_address):
+        self._request_started()
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._request_finished()
