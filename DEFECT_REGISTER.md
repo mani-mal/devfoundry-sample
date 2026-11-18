@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-13 (M4 in progress, eval-window observation C34 open) · Final commit: `c2e3fe1`
+Campaign: `opsledger-run-001` · Updated: 2026-11-18 (M1–M8 complete; C34 closed; backlog statuses refreshed) · Final commit: `c2e3fe1`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -63,7 +63,7 @@ All lab-verified; full evidence in `campaign/reports/bug-verification-*.md`.
 | C31 | Application defect (caught by review, run rejected) | medium | T022a first attempt raised NameError on every `record_event` | `tsk-bcaeff3f…` (diff `9df35f5d…`): the module used `transaction(conn)` but never imported it from `opsledger.core.db` (the request explicitly required the import) — `NameError: name 'transaction' is not defined` on the first hands-on call | **CLOSED**: rejected; resubmission added the import; landed through PR #29 (`540c2bc`), hands-on verified (record_event / record_event_in_tx / events_for_entity) |
 | C32 | Application defect (caught by review, run rejected) | medium | T022b first attempt raised NameError on the no-row path | `tsk-3073bf14…` (diff `cbbe5077…`): the no-rowcount path raised an undefined module-level sentinel `raise _NoRowError()` — `NameError` hands-on; the try/except around the transaction referenced the same undefined name | **CLOSED**: rejected; resubmission's request added an explicit structure note (define any sentinel at module level, or record rowcount in a local and raise ConflictError after the tx block); landed through PR #30 (`df010ff`); core T022 acceptance verified hands-on (forced audit failure rolls back the business mutation) |
 | C33 | Platform/tooling observation (transient) | low | `gh pr ready` first attempt failed with "network is unreachable" | PR #20: `gh pr ready 20` failed (`Post https://api.github.com/graphql: dial tcp 140.82.114.5:443: connect: network is unreachable`) when only `NO_PROXY` was set; setting BOTH `NO_PROXY` and lowercase `no_proxy` before every `gh` command fixed it (all later PRs #21–#35 first attempt) | **CLOSED (workaround established)**: export both variables; the merge itself then succeeded; left PR #20 in draft for ~10 min before the retry (outcome poller still recorded the merge 8 min after — within bounds) |
-| C34 | Platform observation (worker output integrity, M4) — **root-caused 2026-11-14** | medium | glm-5.3-flash long-context repetition runaway; DevFoundry last-turn-only cutoff check (BUG-135) lets mid-run runaways reach review | 14 consecutive T025 module failures 2026-11-13 19:07 → 2026-11-14 02:24 across every request shape (3-file; 2-file; minimal; two-small-writes; verbatim-copy; overnight hourly resubmit): 4× `timed out after 1800 s` (4 tasks looped 195–266 model calls), 5× cut off at the output-token limit (32000-token cap; some recorded `finish_reason` `tool_calls` instead of `length`), 1× completely wrong content — a mid-run 32000-token runaway written into a file (`tsk-fb4d4705…`, hallucinated `openclosed` imports, `PENDING_IMPL` tails) which PASSED validation because unused files do not break the gate, 4× empty patch; meanwhile 1-line probes and small SQL/edits tasks passed normally. **Root cause (RouteForge/DevFoundry reply 2026-11-14)**: model-side, not lab load — the model server was unchanged, almost no load; ~0.3–0.4% runaway rate on every app since 11-11, M4 module requests trigger it more often per task; waiting for the B109 window to end will not fix it | **OPEN — linked to F-913** (review-packet warning naming the runaway turn and the files written after it — the fix for the BUG-135 gap that let the corrupted packet reach review); hands-on full-file review caught it before landing (zero defects landed); all 12 same-request resubmits 11-13/11-14 reclassified as MODEL FAILURES, not request-quality failures; hourly large-request resubmit stopped; module work resumed only in the split form (one service function per task, named reads) |
+| C34 | Platform observation (worker output integrity, M4) — **root-caused 2026-11-14** | medium | glm-5.3-flash long-context repetition runaway; DevFoundry last-turn-only cutoff check (BUG-135) lets mid-run runaways reach review | 14 consecutive T025 module failures 2026-11-13 19:07 → 2026-11-14 02:24 across every request shape (3-file; 2-file; minimal; two-small-writes; verbatim-copy; overnight hourly resubmit): 4× `timed out after 1800 s` (4 tasks looped 195–266 model calls), 5× cut off at the output-token limit (32000-token cap; some recorded `finish_reason` `tool_calls` instead of `length`), 1× completely wrong content — a mid-run 32000-token runaway written into a file (`tsk-fb4d4705…`, hallucinated `openclosed` imports, `PENDING_IMPL` tails) which PASSED validation because unused files do not break the gate, 4× empty patch; meanwhile 1-line probes and small SQL/edits tasks passed normally. **Root cause (RouteForge/DevFoundry reply 2026-11-14)**: model-side, not lab load — the model server was unchanged, almost no load; ~0.3–0.4% runaway rate on every app since 11-11, M4 module requests trigger it more often per task; waiting for the B109 window to end will not fix it | **CLOSED 2026-11-18 (owner decision)** — addressed by BUG-135 (a last-turn runaway fails with an accurate reason) and F-913 (a mid-run runaway is warned on the packet; F-913 deployed 2026-11-14). Campaign record: hands-on full-file review caught the one corrupted packet before landing (zero defects landed); all 12 same-request resubmits 11-13/11-14 reclassified as MODEL FAILURES, not request-quality failures; hourly large-request resubmit stopped; module work resumed only in the split form (one service function per task, named reads). M8 added the 305-attempt scale sample; post-campaign analysis (2026-11-18) showed that loop was request framing, not pure model instability — see the backlog status table below |
 
 **Correction to C8:** BUG-127's verification (2026-11-11) observed B's attempt
 starting while A was still running — at that lab image the fix was NOT yet
@@ -71,6 +71,18 @@ deployed and the overlap was the **pre-fix reproduction**; the fix commit
 landed later the same day. Post-fix non-overlap was not separately re-tested
 (no second pair was run); treat BUG-127's fix as **fix deployed,
 reproduction observed, post-fix behavior NOT re-tested**.
+
+### Backlog status (owner-provided, 2026-11-18)
+
+| Item | Status |
+| --- | --- |
+| F-913 (runaway-turn warning) | deployed 2026-11-14 |
+| BUG-139 (CLI accepts newer packet versions) | deployed 2026-11-17 |
+| BUG-140 (`exit None` now names its cause) | deployed 2026-11-17 |
+| F-915 (failed task shows the agent's last message) | deployed 2026-11-17 |
+| F-916 (model-turn budget, plus a note when the agent says it has no task) | deployed 2026-11-17 |
+| F-914 (resubmit carries the rejection) | open |
+| F-917 (warn before resubmitting a request that keeps failing) | new |
 
 ## D. Human/Git handoff (explicit waiting states)
 
@@ -106,7 +118,8 @@ reproduction observed, post-fix behavior NOT re-tested**.
 - Platform: 30 items — all previous 29 plus C34 (M4 worker output integrity,
   root-caused 2026-11-14 to glm-5.3-flash long-context repetition runaways:
   14 consecutive module failures, one corrupted packet caught hands-on
-  before landing — OPEN, linked to F-913),
+  before landing — **CLOSED 2026-11-18**, addressed by BUG-135 + F-913;
+  see the C34 row and the backlog status table),
   1 by-design wording note (C22), 1 not triggered (BUG-128), 1 fix
   deployed but not re-tested (C8 correction), 1 registry-resolved,
   2 closed owner decisions (C17 live, C18 closed), 3 platform
