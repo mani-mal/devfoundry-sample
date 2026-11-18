@@ -91,3 +91,65 @@ def _build_fixture(conn, tick, include_purchasing=True):
         receipt, _record2, _replayed2 = receive_order(conn, ctx, purchase_order_id=order["id"], stock_location_id=loc["id"], lines=[{"part_id": part["id"], "quantity": 6}], expected_version=order["version"], actor_id="user-111", clock=tick(), idempotency_key="rcpt-m8")
         result.update({"vendor": vendor, "prq": prq, "order": order, "receipt": receipt})
     return result
+
+
+class ReportingRegressionTests(unittest.TestCase):
+    def test_dashboard_reconciles_with_independent_sql_counts(self):
+        conn = _fresh_db()
+        _build_fixture(conn, _tick_factory())
+        admin = ReportingContext(organization_id="org-aaa", actor_id="user-111", role="admin")
+        ctx = OrganizationContext(organization_id="org-aaa", actor_id="user-111")
+        d = dashboard(conn, ctx, actor=admin)
+        wo = d["work_orders"]
+        self.assertEqual(3, wo["total"])
+        self.assertEqual(1, wo["by_status"]["open"])
+        self.assertEqual(1, wo["by_status"]["completed"])
+        self.assertEqual(1, wo["by_status"]["cancelled"])
+        self.assertEqual(0, wo["by_status"]["assigned"])
+        self.assertEqual(0, wo["by_status"]["in_progress"])
+        self.assertEqual(0, wo["by_status"]["blocked"])
+        self.assertEqual(0, wo["by_status"]["closed"])
+        self.assertEqual(2, d["assets"]["total"])
+        self.assertEqual(46, d["stock"]["on_hand"])
+        self.assertEqual(0, d["stock"]["reserved"])
+        self.assertEqual(25333, d["labor_cost_cents"])
+        direct_total = conn.execute("SELECT COUNT(*) AS c FROM work_orders WHERE organization_id = 'org-aaa'").fetchone()["c"]
+        direct_labor = conn.execute("SELECT COALESCE(SUM(cost_cents), 0) AS s FROM labor_entries WHERE organization_id = 'org-aaa'").fetchone()["s"]
+        direct_assets = conn.execute("SELECT COUNT(*) AS c FROM assets WHERE organization_id = 'org-aaa' AND archived_at IS NULL").fetchone()["c"]
+        self.assertEqual(direct_total, wo["total"])
+        self.assertEqual(direct_labor, d["labor_cost_cents"])
+        self.assertEqual(direct_assets, d["assets"]["total"])
+
+    def test_cost_report_reconciles_with_ledger(self):
+        conn = _fresh_db()
+        _build_fixture(conn, _tick_factory())
+        admin = ReportingContext(organization_id="org-aaa", actor_id="user-111", role="admin")
+        ctx = OrganizationContext(organization_id="org-aaa", actor_id="user-111")
+        rows = {row["tag"]: row for row in asset_cost_report(conn, ctx, actor=admin)}
+        self.assertEqual(25333, rows["pump-001"]["labor_cost_cents"])
+        self.assertEqual(2500, rows["pump-001"]["consumed_part_cost_cents"])
+        self.assertEqual(27833, rows["pump-001"]["total_cost_cents"])
+        self.assertEqual((0, 0, 0), (rows["pump-002"]["labor_cost_cents"], rows["pump-002"]["consumed_part_cost_cents"], rows["pump-002"]["total_cost_cents"]))
+        direct_labor = conn.execute("SELECT COALESCE(SUM(cost_cents), 0) AS s FROM labor_entries WHERE organization_id = 'org-aaa'").fetchone()["s"]
+        direct_consumed = conn.execute(
+            "SELECT COALESCE(SUM(sm.on_hand_delta * -1 * p.standard_cost_cents), 0) AS s"
+            " FROM stock_movements sm JOIN parts p ON p.id = sm.part_id"
+            " WHERE sm.organization_id = 'org-aaa' AND sm.operation = 'consume'"
+        ).fetchone()["s"]
+        self.assertEqual(direct_labor, rows["pump-001"]["labor_cost_cents"])
+        self.assertEqual(direct_consumed, rows["pump-001"]["consumed_part_cost_cents"])
+
+    def test_csv_export_round_trips_and_reconciles(self):
+        conn = _fresh_db()
+        _build_fixture(conn, _tick_factory())
+        auditor = ReportingContext(organization_id="org-aaa", actor_id="user-111", role="auditor")
+        ctx = OrganizationContext(organization_id="org-aaa", actor_id="user-111")
+        text = export_work_orders(conn, ctx, actor=auditor)
+        rows = list(csv.reader(io.StringIO(text)))
+        self.assertEqual(4, len(rows))
+        self.assertEqual(CSV_HEADER, rows[0])
+        self.assertEqual(["WO-0001", "WO-0002", "WO-0003"], [r[1] for r in rows[1:]])
+        statuses = [r[3] for r in rows[1:]]
+        self.assertEqual(1, statuses.count("open"))
+        self.assertEqual(1, statuses.count("completed"))
+        self.assertEqual(1, statuses.count("cancelled"))
