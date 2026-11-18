@@ -28,7 +28,9 @@ import json
 import threading
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
 
+from opsledger.core.clock import RealClock
 from opsledger.core.errors import ApplicationError
 
 from .envelope import InputError, build_error_body, error_response_for, new_request_id
@@ -95,11 +97,23 @@ class _Route:
 
 
 class Router:
-    """Exact-path router with allowed-method sets per route."""
+    """Exact-path router with allowed-method sets per route.
 
-    def __init__(self, *, body_limit_bytes: int = DEFAULT_BODY_LIMIT_BYTES) -> None:
+    An optional logger (a ``JsonLogger``) records one structured line per
+    request carrying the same request id the error envelopes use.
+    """
+
+    def __init__(
+        self,
+        *,
+        body_limit_bytes: int = DEFAULT_BODY_LIMIT_BYTES,
+        logger: Any | None = None,
+        clock: Any | None = None,
+    ) -> None:
         self._routes: dict[str, _Route] = {}
         self._body_limit_bytes = int(body_limit_bytes)
+        self._logger = logger
+        self._clock = RealClock() if clock is None else clock
         self._lock = threading.Lock()
 
     def add(self, path: str, methods: str | list[str], handler) -> None:
@@ -225,20 +239,21 @@ class _AdapterHandler(BaseHTTPRequestHandler):
 
     def _handle_one(self) -> None:
         try:
+            request_id = new_request_id()
             body = self._read_body()
             allow_header, route = self.router.dispatch(self.command, self.path)
             extra_headers = None
             if route is None:
                 status = 404
                 body_dict = build_error_body(
-                    "not_found", "route not found", new_request_id()
+                    "not_found", "route not found", request_id
                 )
             elif allow_header is not None:
                 status = 405
                 body_dict = build_error_body(
                     "method_not_allowed",
                     "method is not allowed for this route",
-                    new_request_id(),
+                    request_id,
                 )
                 extra_headers = {"Allow": allow_header}
             else:
@@ -247,23 +262,25 @@ class _AdapterHandler(BaseHTTPRequestHandler):
                     request.json_or_error()
                 except InputError as exc:
                     status = exc.status
-                    body_dict = build_error_body(exc.code, exc.message, new_request_id())
+                    body_dict = build_error_body(exc.code, exc.message, request_id)
                 else:
                     try:
                         status, body_dict = route.handler(request)
                         body_dict = dict(body_dict)
                     except ApplicationError as error:
-                        status, body_dict = error_response_for(error, new_request_id())
+                        status, body_dict = error_response_for(error, request_id)
                     except Exception as error:
-                        status, body_dict = error_response_for(error, new_request_id())
+                        status, body_dict = error_response_for(error, request_id)
             self._send_json(status, body_dict, extra_headers)
+            self._log_request(request_id, status)
         except _BodyTooLarge:
             self._send_json(
                 413,
                 build_error_body(
-                    "body_too_large", "request body is too large", new_request_id()
+                    "body_too_large", "request body is too large", request_id
                 ),
             )
+            self._log_request(request_id, 413)
         except Exception:
             try:
                 self._send_json(
@@ -271,11 +288,24 @@ class _AdapterHandler(BaseHTTPRequestHandler):
                     build_error_body(
                         "internal_error",
                         "internal server error",
-                        new_request_id(),
+                        request_id,
                     ),
                 )
             except Exception:
                 pass
+            self._log_request(request_id, 500)
+
+    def _log_request(self, request_id: str, status: int) -> None:
+        logger = self.router._logger
+        if logger is None:
+            return
+        try:
+            logger.log_request(
+                request_id, self.command, self.path, status,
+                clock=self.router._clock,
+            )
+        except Exception:
+            return
 
     def do_GET(self):
         self._handle_one()
