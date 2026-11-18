@@ -67,7 +67,7 @@ class BackupRestoreTest(unittest.TestCase):
         restore_path = self._tmp_path()
         restored = restore_database(backup_path, restore_path)
         self.addCleanup(restored.close)
-        self.assertEqual(23, restored.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0])
+        self.assertEqual(24, restored.execute("SELECT COUNT(*) FROM schema_migrations").fetchone()[0])
         row = restored.execute("SELECT slug FROM organizations WHERE id = 'org-aaa'").fetchone()
         self.assertEqual("org-aaa", row[0])
         self.assertEqual(1, restored.execute("SELECT COUNT(*) FROM parts").fetchone()[0])
