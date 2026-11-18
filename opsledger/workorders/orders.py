@@ -22,6 +22,7 @@ from opsledger.core.clock import Clock, format_rfc3339
 from opsledger.core.context import require_context, require_owned
 from opsledger.core.db import transaction
 from opsledger.core.errors import ConflictError, NotFoundError, ValidationError
+from opsledger.core.validation import reject_nul
 
 __all__ = [
     "DUPLICATE_WORK_ORDER_NUMBER_MESSAGE",
@@ -44,6 +45,9 @@ def create_work_order(conn, context, *, site_id, asset_id, number, title, descri
     title = title.strip()
     if not number or not title:
         raise ValidationError("number and title are required")
+    reject_nul(number, label="work order number")
+    reject_nul(title, label="work order title")
+    reject_nul(description, label="work order description")
     if priority not in WORK_ORDER_PRIORITIES:
         raise ValidationError("priority must be one of: low, medium, high")
     site = conn.execute("SELECT * FROM sites WHERE id = ?", (site_id,)).fetchone()

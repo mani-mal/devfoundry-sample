@@ -18,6 +18,7 @@ from opsledger.core.clock import RealClock, format_rfc3339
 from opsledger.core.context import require_context, require_owned, scoped_first
 from opsledger.core.db import transaction
 from opsledger.core.errors import ConflictError, PermissionDeniedError, ValidationError
+from opsledger.core.validation import reject_nul
 
 __all__ = ["IMPORT_LIMITS_MESSAGE", "import_assets"]
 
@@ -66,8 +67,14 @@ def _validate_row(cells: list[str], *, row_number: int) -> dict:
     tag, name, criticality, cost_text = cells
     if not tag.strip() or len(tag) > _TAG_LIMIT:
         raise ValidationError(f"row {row_number}: asset_tag must be 1-64 characters")
+    if not all(char in "abcdefghijklmnopqrstuvwxyz0123456789-" for char in tag.strip()):
+        raise ValidationError(
+            f"row {row_number}: asset_tag must contain only lowercase letters, digits and hyphens"
+        )
+    reject_nul(tag, label="asset_tag")
     if not name.strip() or len(name) > _NAME_LIMIT:
         raise ValidationError(f"row {row_number}: name must be 1-200 characters")
+    reject_nul(name, label="name")
     if criticality not in ("low", "medium", "high"):
         raise ValidationError(f"row {row_number}: criticality must be low, medium, or high")
     if not cost_text or any(character not in "0123456789" for character in cost_text):

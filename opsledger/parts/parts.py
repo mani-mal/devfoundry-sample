@@ -20,6 +20,7 @@ from opsledger.core.clock import Clock, format_rfc3339
 from opsledger.core.context import require_context, require_owned, scoped_all
 from opsledger.core.db import transaction
 from opsledger.core.errors import ConflictError, NotFoundError, ValidationError
+from opsledger.core.validation import reject_nul
 
 __all__ = [
     "DUPLICATE_PART_SKU_MESSAGE",
@@ -52,6 +53,8 @@ def create_part(conn, context, *, sku, name, unit_of_measure, standard_cost_cent
     name = name.strip()
     if not sku or not name:
         raise ValidationError("sku and name are required")
+    reject_nul(sku, label="part sku")
+    reject_nul(name, label="part name")
     if unit_of_measure not in UNIT_OF_MEASURE:
         raise ValidationError("unit_of_measure must be one of: unit, kg, liter, meter")
     if not isinstance(standard_cost_cents, int) or isinstance(standard_cost_cents, bool) or standard_cost_cents < 0:
