@@ -7,6 +7,7 @@ different seed diverges; restart after partial state converges; balances
 reconcile with movement replay; medium integrity is clean.
 """
 
+import os
 import tempfile
 import unittest
 
@@ -18,6 +19,7 @@ from opsledger.core.seeding import build_manifest, logical_checksum, seed_profil
 class SeedingTests(unittest.TestCase):
     def _open_migrated(self):
         tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.addCleanup(os.unlink, tmp.name)
         self.addCleanup(lambda: connect(tmp.name).close())
         conn = connect(tmp.name)
         self.addCleanup(conn.close)
