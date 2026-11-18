@@ -1,6 +1,6 @@
 # DEFECT_REGISTER.md — OpsLedger / DevFoundry campaign
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-18 (M1–M8 complete; C34 closed; backlog statuses refreshed) · Final commit: `c2e3fe1`
+Campaign: `opsledger-run-001` · Updated: 2026-11-18 (evening: M9 defect rows A6/A7, C35 BUG-141, backlog refreshed) · Final commit: `08f9af8`
 Classes follow spec §18.2. Severity: high = corrupts data or breaks the
 workflow; medium = wrong behavior with a workaround; low = cosmetic or
 conformance gap. Every item was reproduced on this machine; nothing is
@@ -15,6 +15,8 @@ speculative.
 | A3 | Task/request defect | medium | `campaign/requests/T006.md` attempts 1–2 | The agent read 20+ files, ran the gate, and **stopped without writing files** — two consecutive `agent_error` failures (`tsk-97283bf6…`, `tsk-68152d5f…`) | attempt streams: 9–23 tool calls, final step reason `stop`, patch `e3b0c442…` | **RESOLVED by request correction** (spec §18.2 action): compressed the request and put an explicit "implement now, in this order; start writing opsledger/cli.py first" instruction at the top — attempt 3 (`tsk-a820b98b…`) implemented fully, 0 findings. Both failed runs remain in evidence on the lab |
 | A4 | Task/request defect (operator error) | low | T002 first submission | Submitted without `--base` when the registered default branch was the `checked` seed → refusal | preserved on the lab (NEW-001) | **RESOLVED**: F-121 shipped branch changing; the registry default is `main` now; all later submissions omit `--base` |
 | A5 | Campaign planning defect (landing) | low | Part-1 cleanup landing (`623bb44`) | The working-tree changes were stashed before the CI probe and not restored, so the landing commit captured only `.env.example` + README; 55 root deletions stayed unlanded until the completion commit | `git show --stat 623bb44` (1 file) vs the reviewed 57-file patch; recovered via `git stash pop` → completion commit `a42019c`, gate green | **RESOLVED** — `a42019c` completes the reviewed patch exactly; lesson: never stash across a landing |
+| A6 | Test-hygiene defect (resource leak, M9) — **root cause of the BUG-141 evictions** | high (fills the pod's volume) | 47 test files using `tempfile.NamedTemporaryFile(suffix=".db", delete=False)` (48 sites; `test_backup_restore.py` has 2) — cleanup lambdas close connections but never unlink; the pre-existing `connect(tmp.name).close()` lambda **recreates** the file at teardown under LIFO | Measured 2026-11-18 evening: one `bash check.sh` run leaks **+357 files / +178 MB** then **+289 files / +155 MB** (283 × 556 KB SQLite temps per run); per-module leak 2–14 DBs; 47 files lack `addCleanup(os.unlink, …)` (only `test_seeding.py` was fixed in #197). 12 GiB local tmpfs filled to 100% (21,305 files) the same day; **12 lab-pod evictions (M9 `out_unreadable`) = 512 MiB EmptyDir exceeded** | Journal 2026-11-18T20:01:55Z (measurement + cause); M9 report ADDENDUM (BUG-141 re-count); lab eviction reason `Usage of EmptyDir volume "tmp" exceeds the limit "512Mi"` (BUG-141, lab 0.1.0-ee6d309) | **Fix in flight (T072c, M10)**: mechanical sweep — guarded `addCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))` registered FIRST (LIFO runs it last) in all 47 files; prototype verified 0 leaks on 3 representative modules |
+| A7 | Test-hygiene defect (resource leak, M9) | medium | `tests/integration/test_upgrade_fixtures.py` `_tmp_path` — `tempfile.mkdtemp(prefix="upgrade-fixture-tests-")` directory never removed (cleanup unlinks only `fixture.db` inside) | 57 leaked `upgrade-fixture-tests-*` dirs in /tmp after the day's runs | Journal 2026-11-18T20:01:55Z | **Fix in flight (T072c, M10)**: `shutil.rmtree` the dir in a first-registered cleanup |
 
 ## B. Repository issues (owner decisions, open)
 
@@ -83,6 +85,7 @@ reproduction observed, post-fix behavior NOT re-tested**.
 | F-916 (model-turn budget, plus a note when the agent says it has no task) | deployed 2026-11-17 |
 | F-914 (resubmit carries the rejection) | open |
 | F-917 (warn before resubmitting a request that keeps failing) | new |
+| BUG-141 (out_unreadable mislabeled own-limit /tmp evictions) | **deployed 2026-11-18T18:54Z** (lab `0.1.0-ee6d309`): eviction tasks now report category `environment` with the storage-limit reason; widened lost-task note deployed alongside. Driver-side re-count: the 12 M9 `out_unreadable` (§5 A+B) re-classified as environment/evictions (M9 report ADDENDUM); the 47-file test leak (A6) is the in-repo root cause, fix in flight (T072c) |
 
 ## D. Human/Git handoff (explicit waiting states)
 
