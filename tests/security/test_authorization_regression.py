@@ -135,6 +135,58 @@ class AuthorizationRegressionTests(unittest.TestCase):
             self.assertEqual(str(str(raised.exception)), "malformed authorization context")
             self.assertNotIsInstance(raised.exception, PermissionDeniedError)
 
+    def test_org_scoping_no_cross_organization_leak(self):
+        from opsledger.assets.updates import update_asset_audited
+
+        conn = self._migrated_conn()
+        self._seed_org_fixture(conn, "org-a")
+        self._seed_org_fixture(conn, "org-b")
+        site_a = conn.execute("SELECT id FROM sites WHERE organization_id = ?", ("org-a",)).fetchone()["id"]
+        site_b = conn.execute("SELECT id FROM sites WHERE organization_id = ?", ("org-b",)).fetchone()["id"]
+        context_a = OrganizationContext(organization_id="org-a")
+        context_b = OrganizationContext(organization_id="org-b")
+        asset_a2 = create_asset(conn, context_a, site_id=site_a, tag="pump-a", name="Pump A",
+                                criticality="low", purchase_cost_cents=3000, clock=self._tick_clock())
+        asset_b2 = create_asset(conn, context_b, site_id=site_b, tag="pump-b", name="Pump B",
+                                criticality="low", purchase_cost_cents=3000, clock=self._tick_clock())
+        pump1_a = conn.execute("SELECT id FROM assets WHERE organization_id = ? AND tag = 'pump-1'", ("org-a",)).fetchone()["id"]
+        pump1_b = conn.execute("SELECT id FROM assets WHERE organization_id = ? AND tag = 'pump-1'", ("org-b",)).fetchone()["id"]
+        update_asset_audited(conn, context_a, asset_id=pump1_a, expected_version=1, name="Pump One", clock=self._tick_clock())
+        update_asset_audited(conn, context_b, asset_id=pump1_b, expected_version=1, name="Pump One B", clock=self._tick_clock())
+        actor_a = _Actor("auditor", actor_id="ua-1")
+        actor_b = _Actor("auditor", actor_id="ub-1")
+        ids_a = {row["id"] for row in search(conn, context_a, actor=actor_a, query="pump")["assets"]}
+        ids_b = {row["id"] for row in search(conn, context_b, actor=actor_b, query="pump")["assets"]}
+        self.assertEqual(len(ids_a), 2)
+        self.assertEqual(len(ids_b), 2)
+        report_ids_a = {row["asset_id"] for row in asset_cost_report(conn, context_a, actor=actor_a)}
+        report_ids_b = {row["asset_id"] for row in asset_cost_report(conn, context_b, actor=actor_b)}
+        self.assertEqual(len(report_ids_a), 2)
+        self.assertEqual(len(report_ids_b), 2)
+        self.assertTrue(report_ids_a.isdisjoint(ids_b))
+        self.assertTrue(report_ids_b.isdisjoint(ids_a))
+        search_ids_a = {row["id"] for row in search(conn, context_a, actor=actor_a, query="pump")["assets"]}
+        search_ids_b = {row["id"] for row in search(conn, context_b, actor=actor_b, query="pump")["assets"]}
+        self.assertTrue(search_ids_a.isdisjoint(ids_b))
+        self.assertTrue(search_ids_b.isdisjoint(ids_a))
+        export_a = export_work_orders(conn, context_a, actor=actor_a)
+        export_b = export_work_orders(conn, context_b, actor=actor_b)
+        self.assertNotIn("pump-b", export_a)
+        self.assertNotIn("Pump B", export_a)
+        self.assertNotIn("pump-a", export_b)
+        self.assertNotIn("Pump A", export_b)
+        events_a = query_events(conn, context_a, actor=actor_a)
+        events_b = query_events(conn, context_b, actor=actor_b)
+        self.assertEqual(len(events_a), 1)
+        self.assertEqual(len(events_b), 1)
+        self.assertEqual(events_a[0]["entity_id"], pump1_a)
+        self.assertEqual(events_b[0]["entity_id"], pump1_b)
+        self.assertNotIn("organization_id", events_a[0])
+        self.assertEqual(count_events(conn, context_a, actor=actor_a), 1)
+        self.assertEqual(count_events(conn, context_b, actor=actor_b), 1)
+        self.assertEqual(dashboard(conn, context_a, actor=actor_a)["assets"]["total"], 2)
+        self.assertEqual(dashboard(conn, context_b, actor=actor_b)["assets"]["total"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
