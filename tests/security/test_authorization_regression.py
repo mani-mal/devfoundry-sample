@@ -187,6 +187,82 @@ class AuthorizationRegressionTests(unittest.TestCase):
         self.assertEqual(dashboard(conn, context_a, actor=actor_a)["assets"]["total"], 2)
         self.assertEqual(dashboard(conn, context_b, actor=actor_b)["assets"]["total"], 2)
 
+    def test_purchasing_approver_path_and_site_access(self):
+        from opsledger.identity.sites import has_site_access, require_site_access
+        from opsledger.parts import create_part
+        from opsledger.purchasing import (
+            approve_purchase_request,
+            create_purchase_request,
+            create_vendor,
+            submit_purchase_request,
+        )
+
+        class _SiteContext:
+            def __init__(self, organization_id, site_id):
+                self.organization_id = organization_id
+                self.site_id = site_id
+
+        conn = self._migrated_conn()
+        self._seed_org_fixture(conn, "org-a")
+        org_ctx = OrganizationContext(organization_id="org-a")
+        vendor = create_vendor(conn, org_ctx, name="Vendor 1", contact_email="v@example.test", clock=self._tick_clock())
+        part = create_part(conn, org_ctx, sku="P-1", name="Part 1", unit_of_measure="unit",
+                           standard_cost_cents=500, clock=self._tick_clock())
+        ctx_requester = OrganizationContext(organization_id="org-a", actor_id="user-req")
+        request = create_purchase_request(
+            conn, ctx_requester, vendor_id=vendor["id"],
+            lines=[{"part_id": part["id"], "quantity": 2, "unit_cost_cents": 500}],
+            clock=self._tick_clock(),
+        )
+        self.assertEqual(request["status"], "draft")
+        self.assertEqual(request["version"], 1)
+        submit_purchase_request(conn, ctx_requester, purchase_request_id=request["id"], expected_version=1, clock=self._tick_clock())
+        with self.assertRaises(PermissionDeniedError) as denied:
+            approve_purchase_request(conn, ctx_requester, purchase_request_id=request["id"],
+                                     expected_version=2, clock=self._tick_clock())
+        self.assertEqual(str(denied.exception), "the requester cannot approve their own purchase request")
+        ctx_nobody = OrganizationContext(organization_id="org-a", actor_id="user-nobody")
+        with self.assertRaises(PermissionDeniedError) as denied:
+            approve_purchase_request(conn, ctx_nobody, purchase_request_id=request["id"],
+                                     expected_version=2, clock=self._tick_clock())
+        self.assertEqual(str(denied.exception), "purchase.approve permission required")
+        with transaction(conn) as tx:
+            tx.execute(
+                "INSERT OR IGNORE INTO users (id, email, display_name, created_at)"
+                " VALUES ('user-appr', 'appr@example.test', 'Approver', '2026-11-06T12:00:00Z')"
+            )
+            tx.execute(
+                "INSERT OR IGNORE INTO memberships (organization_id, user_id, role, created_at)"
+                " VALUES ('org-a', 'user-appr', 'approver', '2026-11-06T12:00:00Z')"
+            )
+        ctx_approver = OrganizationContext(organization_id="org-a", actor_id="user-appr")
+        approved = approve_purchase_request(conn, ctx_approver, purchase_request_id=request["id"],
+                                            expected_version=2, clock=self._tick_clock())
+        self.assertEqual(approved["status"], "approved")
+        site_id = conn.execute("SELECT id FROM sites WHERE organization_id = ?", ("org-a",)).fetchone()["id"]
+        grants = [
+            {"organization_id": "org-a", "site_id": site_id, "user_id": "user-req",
+             "granted_at": "2026-11-06T12:00:00Z", "revoked_at": None},
+            {"organization_id": "org-a", "site_id": "site-other", "user_id": "user-req",
+             "granted_at": "2026-11-06T12:00:00Z", "revoked_at": None},
+            {"organization_id": "org-a", "site_id": site_id, "user_id": "user-req",
+             "granted_at": "2026-11-06T12:00:00Z", "revoked_at": "2026-11-06T13:00:00Z"},
+        ]
+        site_ctx = _SiteContext("org-a", site_id)
+        require_site_access(site_ctx, [grants[0]])
+        self.assertTrue(has_site_access(site_ctx, [grants[0]]))
+        with self.assertRaises(PermissionDeniedError) as denied:
+            require_site_access(site_ctx, [grants[2]])
+        self.assertEqual(str(denied.exception), "no access to this site")
+        self.assertFalse(has_site_access(site_ctx, [grants[2]]))
+        with self.assertRaises(PermissionDeniedError) as denied:
+            require_site_access(site_ctx, [grants[1]])
+        self.assertEqual(str(denied.exception), "no access to this site")
+        self.assertFalse(has_site_access(site_ctx, [grants[1]]))
+        with self.assertRaises(ValidationError) as raised:
+            require_site_access(org_ctx, [grants[0]])
+        self.assertEqual(str(raised.exception), "valid site membership context required")
+
 
 if __name__ == "__main__":
     unittest.main()
