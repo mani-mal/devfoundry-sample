@@ -290,7 +290,8 @@ test("renderWorkOrderDetail: conflict shows an actionable alert with a Refresh b
     );
     assert.notEqual(conflictRegion, undefined);
     assert.equal(conflictRegion.attributes.role, "alert");
-    const refresh = conflictRegion.children.find((child) => child.tagName === "BUTTON");
+    assert.equal(conflictRegion.children.length, 0);
+    const refresh = section.children.find((child) => child.tagName === "BUTTON" && child.textContent === "Refresh");
     assert.equal(refresh.textContent, "Refresh");
     refresh.listeners.click();
     assert.equal(refreshed, 1);
