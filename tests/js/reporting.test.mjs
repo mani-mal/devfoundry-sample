@@ -7,9 +7,13 @@ function el(tag) {
     tagName: tag,
     children: [],
     textContent: null,
+    attributes: {},
     appendChild(c) {
       this.children.push(c);
       return c;
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = value;
     },
   };
 }
@@ -95,6 +99,17 @@ test("renderDashboard with data: by_status LIs before totals, zero statuses omit
   }
   assert.ok(!texts.some((t) => t.startsWith("assigned:") || t.startsWith("blocked:") || t.startsWith("closed:") || t.startsWith("cancelled:")));
   assert.equal(allTexts(container)[0], "open: 1");
+});
+
+test("renderDashboard error paragraph is an assertive live region", () => {
+  const state = setReportingError(createReportingState(), "Dashboard failed to load.");
+  const container = el("div");
+  globalThis.document = { createElement: (tag) => el(tag) };
+  renderDashboard(container, state);
+  assert.equal(container.children.length, 1);
+  assert.equal(container.children[0].textContent, "Dashboard failed to load.");
+  assert.equal(container.children[0].attributes.role, "alert");
+  assert.equal(container.children[0].attributes["aria-live"], "assertive");
 });
 
 test("renderDashboard with dashboard === null appends P No dashboard loaded yet", () => {

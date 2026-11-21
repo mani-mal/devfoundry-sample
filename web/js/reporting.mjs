@@ -49,6 +49,8 @@ export function formatWorkOrderLine(wo) {
 export function renderDashboard(container, state, handlers = {}) {
   if (state.error) {
     const p = document.createElement("p");
+    p.setAttribute("role", "alert");
+    p.setAttribute("aria-live", "assertive");
     p.textContent = state.error;
     container.appendChild(p);
     return;
