@@ -56,6 +56,7 @@ def _fresh_db():
     tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     unittest.addModuleCleanup(lambda p=tmp.name: os.path.exists(p) and os.unlink(p))
     conn = connect(tmp.name)
+    unittest.addModuleCleanup(lambda c=conn: c.close())
     migrate(conn, "opsledger/migrations")
     _seed_identities(conn)
     return conn

@@ -177,8 +177,10 @@ class RaceReserveLastUnitTest(unittest.TestCase):
             ),
         )
         self.assertEqual(1, self._count_active_reservations(conn))
+        independent = connect(self._db_path)
+        self.addCleanup(independent.close)
         reconciled = reconcile_balance(
-            connect(self._db_path), context, part_id=part["id"],
+            independent, context, part_id=part["id"],
             location_id=location["id"], clock=self._tick_clock(),
         )
         self.assertTrue(reconciled["matches"])
