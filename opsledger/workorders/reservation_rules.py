@@ -39,6 +39,7 @@ __all__ = [
 COMPLETION_OUTSTANDING_RESERVATION_MESSAGE = (
     "work order has outstanding reservations; release or consume them first"
 )
+CHECKLIST_INCOMPLETE_MESSAGE = "work order has incomplete mandatory checklist items"
 
 _SELECT_WORK_ORDER_SQL = "SELECT * FROM work_orders WHERE id = ?"
 
@@ -113,6 +114,13 @@ def transition_work_order_with_reservations(conn, context, *, work_order_id, to_
     if to_status not in WORK_ORDER_TRANSITIONS.get(current_status, ()):
         raise ConflictError(INVALID_TRANSITION_MESSAGE)
     if to_status == "completed":
+        blocked = conn.execute(
+            "SELECT label FROM checklist_items"
+            " WHERE organization_id = ? AND work_order_id = ? AND mandatory = 1 AND completed_at IS NULL",
+            (context.organization_id, work_order["id"]),
+        ).fetchall()
+        if blocked:
+            raise ConflictError(CHECKLIST_INCOMPLETE_MESSAGE)
         outstanding = conn.execute(
             _SELECT_OUTSTANDING_SQL,
             (context.organization_id, work_order["id"]),
