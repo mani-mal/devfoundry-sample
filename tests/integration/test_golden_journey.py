@@ -345,6 +345,168 @@ class GoldenJourneyTests(unittest.TestCase):
         )
         self.assertEqual(("closed", 5), (closed["status"], closed["version"]))
 
+    def test_steps_9_to_12_dashboard_isolation_backup_and_reopen(self):
+        from opsledger.core.context import require_owned
+        from opsledger.core.errors import NotFoundError
+        from opsledger.inventory import (
+            consume_reservation,
+            reconcile_balance,
+            release_reservation,
+        )
+        from opsledger.purchasing import outstanding_quantity
+        from opsledger.reporting.csv_export import export_work_orders
+        from opsledger.reporting.dashboard import dashboard
+        from opsledger.reporting.search import search
+        from opsledger.workorders import (
+            add_checklist_item,
+            complete_checklist_item,
+            record_labor,
+        )
+
+        conn = self._open_migrated()
+        seeded = self._seed_steps_1_to_4(conn)
+        sup = seeded["sup"]
+        wo = seeded["wo"]
+        part = create_part(
+            conn, sup, sku="bolt-m8", name="M8 bolt", unit_of_measure="unit",
+            standard_cost_cents=2500, clock=_at(21),
+        )
+        loc = create_stock_location(conn, sup, code="main", name="Main", clock=_at(22))
+        adjust_stock(
+            conn, sup, part_id=part["id"], location_id=loc["id"], quantity_delta=1,
+            reason="opening", expected_version=1, actor_id="usr-sup", clock=_at(23),
+        )
+        purch = OrganizationContext(organization_id="org-a", actor_id="usr-purch")
+        appr = OrganizationContext(organization_id="org-a", actor_id="usr-appr")
+        vendor = create_vendor(conn, purch, name="Acme", contact_email=None, clock=_at(24))
+        req = create_purchase_request(
+            conn, purch, vendor_id=vendor["id"],
+            lines=[{"part_id": part["id"], "quantity": 10, "unit_cost_cents": 2500}],
+            clock=_at(25),
+        )
+        sub = submit_purchase_request(
+            conn, purch, purchase_request_id=req["id"],
+            expected_version=req["version"], clock=_at(26),
+        )
+        approved = approve_purchase_request(
+            conn, appr, purchase_request_id=req["id"],
+            expected_version=sub["version"], clock=_at(27),
+        )
+        order, _, issue_replayed = issue_order(
+            conn, appr, purchase_request_id=req["id"],
+            expected_version=approved["version"], actor_id="usr-appr",
+            clock=_at(28), idempotency_key="issue-golden",
+        )
+        _, _, receive_replayed = receive_order(
+            conn, purch, purchase_order_id=order["id"], stock_location_id=loc["id"],
+            lines=[{"part_id": part["id"], "quantity": 4}],
+            expected_version=order["version"], actor_id="usr-purch",
+            clock=_at(29), idempotency_key="rcpt-golden",
+        )
+        _, _, replay_replayed = receive_order(
+            conn, purch, purchase_order_id=order["id"], stock_location_id=loc["id"],
+            lines=[{"part_id": part["id"], "quantity": 4}],
+            expected_version=999, actor_id="usr-purch",
+            clock=_at(30), idempotency_key="rcpt-golden",
+        )
+        assign_technician(
+            conn, sup, work_order_id=wo["id"], technician_id="usr-tech",
+            assigned_by_id="usr-sup", clock=_at(31),
+        )
+        transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="in_progress",
+            expected_version=2, reason=None, actor_id="usr-sup", clock=_at(31),
+        )
+        res = reserve_stock(
+            conn, sup, part_id=part["id"], location_id=loc["id"],
+            work_order_id=wo["id"], quantity=2, expected_version=3,
+            actor_id="usr-tech", clock=_at(31),
+        )
+        self.assertEqual(("active", 2), (res["status"], res["remaining_quantity"]))
+        consume_reservation(
+            conn, sup, reservation_id=res["id"], quantity=1, expected_version=4,
+            actor_id="usr-tech", clock=_at(32),
+        )
+        release_reservation(
+            conn, sup, reservation_id=res["id"], quantity=1, expected_version=5,
+            actor_id="usr-tech", clock=_at(33),
+        )
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((4, 0, 6), (balance["on_hand"], balance["reserved"], balance["version"]))
+        labor = record_labor(
+            conn, sup, work_order_id=wo["id"], technician_id="usr-tech",
+            minutes=90, rate_cents_per_hour=8000, clock=_at(34),
+        )
+        self.assertEqual(12000, labor["cost_cents"])
+        item = add_checklist_item(
+            conn, sup, work_order_id=wo["id"], label="Pressure test",
+            mandatory=True, clock=_at(35),
+        )
+        complete_checklist_item(conn, sup, item_id=item["id"], clock=_at(36))
+        completed = transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="completed",
+            expected_version=3, reason=None, actor_id="usr-sup", clock=_at(36),
+        )
+        self.assertEqual(("completed", 4), (completed["status"], completed["version"]))
+        closed = transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="closed",
+            expected_version=4, reason=None, actor_id="usr-sup", clock=_at(37),
+        )
+        self.assertEqual(("closed", 5), (closed["status"], closed["version"]))
+
+        class _Actor:
+            def __init__(self, role, actor_id):
+                self.role = role
+                self.actor_id = actor_id
+
+        d = dashboard(conn, sup, actor=_Actor("supervisor", "usr-sup"))
+        self.assertEqual((1, 1, 12000), (
+            d["work_orders"]["total"], d["work_orders"]["by_status"]["closed"],
+            d["labor_cost_cents"],
+        ))
+        self.assertEqual((4, 0), (d["stock"]["on_hand"], d["stock"]["reserved"]))
+        rec = reconcile_balance(
+            conn, sup, part_id=part["id"], location_id=loc["id"], clock=_at(38),
+        )
+        self.assertEqual((True, 4), (rec["matches"], rec["on_hand_sum"]))
+        ordered, received, outstanding = outstanding_quantity(
+            conn, sup, order_id=order["id"], part_id=part["id"],
+        )
+        self.assertEqual((10, 4, 6), (ordered, received, outstanding))
+        orgb = OrganizationContext(organization_id="org-b", actor_id="usr-orgb")
+        d_b = dashboard(conn, orgb, actor=_Actor("auditor", "usr-orgb"))
+        s_b = search(conn, orgb, actor=_Actor("auditor", "usr-orgb"), query="pump")
+        ex_b = export_work_orders(conn, orgb, actor=_Actor("auditor", "usr-orgb"))
+        self.assertEqual((0, 0, 0, False), (
+            d_b["work_orders"]["total"], len(s_b["assets"]), len(s_b["work_orders"]),
+            "pump-001" in ex_b,
+        ))
+        row = conn.execute("SELECT * FROM work_orders WHERE id = ?", (wo["id"],)).fetchone()
+        with self.assertRaises(NotFoundError):
+            require_owned(orgb, row, label="work order")
+        reopened = transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="open",
+            expected_version=5, reason="follow-up found", actor_id="usr-sup", clock=_at(39),
+        )
+        self.assertEqual(("open", 6), (reopened["status"], reopened["version"]))
+        self.assertEqual([
+            ("assigned", "in_progress", None),
+            ("in_progress", "completed", None),
+            ("completed", "closed", None),
+            ("closed", "open", "follow-up found"),
+        ], [
+            (event["from_status"], event["to_status"], event["reason"])
+            for event in conn.execute(
+                "SELECT from_status, to_status, reason FROM work_order_events"
+                " WHERE work_order_id = ? ORDER BY created_at, id",
+                (wo["id"],),
+            )
+        ])
+
 
 if __name__ == "__main__":
     unittest.main()
