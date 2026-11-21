@@ -507,6 +507,107 @@ class GoldenJourneyTests(unittest.TestCase):
             )
         ])
 
+    def test_steps_11_backup_and_restore_reproduce_records(self):
+        import shutil
+        from opsledger.core.backup import backup_database, restore_database
+        from opsledger.inventory import consume_reservation, release_reservation
+        from opsledger.workorders import (
+            add_checklist_item,
+            complete_checklist_item,
+            record_labor,
+        )
+
+        bak_dir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, bak_dir, True)
+        conn = self._open_migrated()
+        seeded = self._seed_steps_1_to_4(conn)
+        sup = seeded["sup"]
+        wo = seeded["wo"]
+        part = create_part(
+            conn, sup, sku="bolt-m8", name="M8 bolt", unit_of_measure="unit",
+            standard_cost_cents=2500, clock=_at(21),
+        )
+        loc = create_stock_location(conn, sup, code="main", name="Main", clock=_at(22))
+        adjust_stock(
+            conn, sup, part_id=part["id"], location_id=loc["id"], quantity_delta=5,
+            reason="opening", expected_version=1, actor_id="usr-sup", clock=_at(23),
+        )
+        assign_technician(
+            conn, sup, work_order_id=wo["id"], technician_id="usr-tech",
+            assigned_by_id="usr-sup", clock=_at(23),
+        )
+        transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="in_progress",
+            expected_version=2, reason=None, actor_id="usr-sup", clock=_at(23),
+        )
+        res = reserve_stock(
+            conn, sup, part_id=part["id"], location_id=loc["id"],
+            work_order_id=wo["id"], quantity=2, expected_version=2,
+            actor_id="usr-tech", clock=_at(24),
+        )
+        self.assertEqual(("active", 2), (res["status"], res["remaining_quantity"]))
+        consume_reservation(
+            conn, sup, reservation_id=res["id"], quantity=1, expected_version=3,
+            actor_id="usr-tech", clock=_at(25),
+        )
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((4, 1, 4), (balance["on_hand"], balance["reserved"], balance["version"]))
+        release_reservation(
+            conn, sup, reservation_id=res["id"], quantity=1, expected_version=4,
+            actor_id="usr-tech", clock=_at(26),
+        )
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((4, 0, 5), (balance["on_hand"], balance["reserved"], balance["version"]))
+        labor = record_labor(
+            conn, sup, work_order_id=wo["id"], technician_id="usr-tech",
+            minutes=90, rate_cents_per_hour=8000, clock=_at(27),
+        )
+        self.assertEqual(12000, labor["cost_cents"])
+        item = add_checklist_item(
+            conn, sup, work_order_id=wo["id"], label="Pressure test",
+            mandatory=True, clock=_at(28),
+        )
+        complete_checklist_item(conn, sup, item_id=item["id"], clock=_at(30))
+        completed = transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="completed",
+            expected_version=3, reason=None, actor_id="usr-sup", clock=_at(30),
+        )
+        self.assertEqual(("completed", 4), (completed["status"], completed["version"]))
+        closed = transition_work_order(
+            conn, sup, work_order_id=wo["id"], to_status="closed",
+            expected_version=4, reason=None, actor_id="usr-sup", clock=_at(31),
+        )
+        self.assertEqual(("closed", 5), (closed["status"], closed["version"]))
+
+        bak_path = os.path.join(bak_dir, "golden.bak")
+        backup_database(conn, bak_path)
+        restored = restore_database(bak_path, os.path.join(bak_dir, "golden.restored"))
+        r_wo = restored.execute(
+            "SELECT status, version FROM work_orders WHERE id = ?", (wo["id"],)
+        ).fetchone()
+        r_labor = restored.execute(
+            "SELECT COALESCE(SUM(cost_cents), 0) FROM labor_entries WHERE work_order_id = ?",
+            (wo["id"],),
+        ).fetchone()[0]
+        r_events = restored.execute(
+            "SELECT COUNT(*) FROM work_order_events WHERE work_order_id = ?",
+            (wo["id"],),
+        ).fetchone()[0]
+        self.assertEqual(("closed", 5, 12000, 3), (
+            r_wo["status"], r_wo["version"], r_labor, r_events,
+        ))
+        r_bal = restored.execute("SELECT on_hand, reserved FROM stock_balances").fetchone()
+        self.assertEqual((4, 0), tuple(r_bal))
+        restored.close()
+
 
 if __name__ == "__main__":
     unittest.main()
