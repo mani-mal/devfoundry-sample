@@ -1,6 +1,6 @@
 # DEVFOUNDRY_ACCEPTANCE.md — platform case dispositions
 
-Campaign: `opsledger-run-001` · Updated: 2026-11-18 (evening: §19.2 deviation statement) · Lab: `0.1.0-ee6d309`
+Campaign: `opsledger-run-001` · Updated: 2026-11-21 (M10 rows appended) · Lab: `0.1.0-ee6d309`
 Labels per spec §19.2: **live** (observed on the lab), **fixture** (verified
 by the platform's own tests), **manual** (source/bundle-verified, live
 render unavailable), **blocked** (prerequisite unavailable), **not-run**.
@@ -105,6 +105,15 @@ render unavailable), **blocked** (prerequisite unavailable), **not-run**.
 | T023 part A (site/asset UI modules + JS tests) | request `../campaign-opsledger-run-001/requests/T023a.md` → `tsk-9863b8a2…` | `f23fecfa…` | accept (human) | `fd23897` (merge of Draft PR #32, merged on GitHub) |
 | T023 part B (index.html sites mount section) | request `../campaign-opsledger-run-001/requests/T023b.md` → `tsk-5b43a7af…` | `5d11beed…` | accept (human) | `1b3dae7` (merge of Draft PR #35, merged on GitHub) |
 | T024 (search/filter JS modules + node tests) | request `../campaign-opsledger-run-001/requests/T024.md` → `tsk-7d86665f…` | `37fb2014…` | accept (human) | `43d6777` (merge of Draft PR #33, merged on GitHub) |
+| A8/A9 repair (NUL rejection + import tag charset) | requests `T073a/T073b/T073c1/T073c2.md` → PRs #205/#206 | see `DEFECT_REGISTER.md` A8/A9 | accept (driver, owner's standing method) | `9e0aee4` + `28c267a` |
+| T072c sweep (temp-file leak fix, 47 files) | requests `T072c*.md` → PRs #199/#200 | see `DEFECT_REGISTER.md` A6/A7 | accept (driver, owner's standing method) | `2f624d1` + `2a77e94` |
+| A10 repair (checklist completion gate, both paths) | requests `T076m/T076t.md` era → PRs #213/#214 | see `DEFECT_REGISTER.md` A10 | accept (driver, owner's standing method) | `a3dc728` + `991bca1` |
+| T073 (injection regression, 5 methods) | requests `T073*.md` → PRs #202/#203/#204 | see M10 report | accept (driver, owner's standing method) | mains #202/#203/#204 |
+| T074 (authorization regression) | requests `T074a/T074b.md` → PRs #207/#208/#209 | see M10 report | accept (driver, owner's standing method) | `d9d2d9c`→`0e962e3` |
+| T075 (session/CSRF/deactivation regression) | requests `T075a/T075b.md` → PRs #210/#211 | see M10 report | accept (driver, owner's standing method) | `6b3437b` + `ede3ce8` |
+| T076 (reporting UI markup + web markup tests) | request `T076.md` → PR #212 | see M10 report | accept (driver, owner's standing method) | `af59203` |
+| T077 golden journey (5 parts) | requests `T077a/T077b/T077c1/T077c2a/T077c2b/T077c3a/T077c3b.md` → PRs #215–#219 | oracle `acceptance/oracle_t077.py` 31/31 | accept (driver, owner's standing method) | `c3004b0` `399f994` `242cc7d` `8f2ab07` `e79cfb4` |
+| T079 (re-export + Refresh sibling + tmp leak) | requests `T079a/T079b.md` → PRs #220/#221 | see `DEFECT_REGISTER.md` | accept (driver, owner's standing method) | `24412d0` + `1592f2f` |
 
 Intentional failures and failed successors remain in evidence: T005's two
 empty-patch runs (`tsk-8626278c…`, `tsk-587b3b17…`, rejected), T006's two
