@@ -172,8 +172,8 @@ export function renderWorkOrderDetail(container, state, handlers) {
     refresh.addEventListener("click", () => {
       handlers.onRefresh();
     });
-    conflictRegion.appendChild(refresh);
     section.appendChild(conflictRegion);
+    section.appendChild(refresh);
   }
 
   const errorRegion = document.createElement("p");

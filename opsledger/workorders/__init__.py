@@ -28,6 +28,7 @@ from opsledger.workorders.labor import (
 from opsledger.workorders.reservation_rules import (
     transition_work_order_with_reservations,
 )
+from opsledger.workorders.transitions import transition_work_order
 from opsledger.workorders.comments import (
     add_comment,
     list_comments,
