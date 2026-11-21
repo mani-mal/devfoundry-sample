@@ -47,6 +47,7 @@ WORK_ORDER_TRANSITIONS = {
 }
 
 TRANSITION_REASON_REQUIRED_MESSAGE = "a reason is required for this transition"
+CHECKLIST_INCOMPLETE_MESSAGE = "work order has incomplete mandatory checklist items"
 INVALID_TRANSITION_MESSAGE = "transition is not allowed from the current state"
 STALE_WORK_ORDER_VERSION_MESSAGE = "work order version conflict; refresh and retry"
 
@@ -73,6 +74,14 @@ def transition_work_order(conn, context, *, work_order_id, to_status, expected_v
     if to_status not in WORK_ORDER_TRANSITIONS.get(current_status, ()):
         raise ConflictError(INVALID_TRANSITION_MESSAGE)
     work_order_id_val = work_order["id"]
+    if to_status == "completed":
+        blocked = conn.execute(
+            "SELECT label FROM checklist_items"
+            " WHERE organization_id = ? AND work_order_id = ? AND mandatory = 1 AND completed_at IS NULL",
+            (context.organization_id, work_order_id_val),
+        ).fetchall()
+        if blocked:
+            raise ConflictError(CHECKLIST_INCOMPLETE_MESSAGE)
     timestamp_text = format_rfc3339(clock.now())
     event_id = "woe-" + uuid4().hex
     try:
