@@ -20,6 +20,14 @@ from opsledger.core.errors import ConflictError, PermissionDeniedError
 from opsledger.core.migrations import migrate
 from opsledger.inventory import adjust_stock, reserve_stock
 from opsledger.parts import create_part, create_stock_location
+from opsledger.purchasing import (
+    approve_purchase_request,
+    create_purchase_request,
+    create_vendor,
+    issue_order,
+    receive_order,
+    submit_purchase_request,
+)
 from opsledger.workorders import assign_technician, create_work_order
 from opsledger.workorders.transitions import transition_work_order
 
@@ -176,6 +184,77 @@ class GoldenJourneyTests(unittest.TestCase):
             ("org-a", part["id"], loc["id"]),
         ).fetchone()
         self.assertEqual((1, 0, 2), (balance["on_hand"], balance["reserved"], balance["version"]))
+
+    def test_steps_5_and_6_purchase_lifecycle_and_receipt_replay(self):
+        conn = self._open_migrated()
+        seeded = self._seed_steps_1_to_4(conn)
+        sup = seeded["sup"]
+        part = create_part(
+            conn, sup, sku="bolt-m8", name="M8 bolt", unit_of_measure="unit",
+            standard_cost_cents=2500, clock=_at(21),
+        )
+        loc = create_stock_location(conn, sup, code="main", name="Main", clock=_at(22))
+        adjust_stock(
+            conn, sup, part_id=part["id"], location_id=loc["id"], quantity_delta=1,
+            reason="opening", expected_version=1, actor_id="usr-sup", clock=_at(23),
+        )
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((1, 0, 2), (balance["on_hand"], balance["reserved"], balance["version"]))
+        purch = OrganizationContext(organization_id="org-a", actor_id="usr-purch")
+        appr = OrganizationContext(organization_id="org-a", actor_id="usr-appr")
+        vendor = create_vendor(conn, purch, name="Acme", contact_email=None, clock=_at(24))
+        req = create_purchase_request(
+            conn, purch, vendor_id=vendor["id"],
+            lines=[{"part_id": part["id"], "quantity": 10, "unit_cost_cents": 2500}],
+            clock=_at(25),
+        )
+        sub = submit_purchase_request(
+            conn, purch, purchase_request_id=req["id"],
+            expected_version=req["version"], clock=_at(26),
+        )
+        approved = approve_purchase_request(
+            conn, appr, purchase_request_id=req["id"],
+            expected_version=sub["version"], clock=_at(27),
+        )
+        self.assertEqual(("approved", 3, 25000), (
+            approved["status"], approved["version"], approved["total_cents"],
+        ))
+        order, _, issue_replayed = issue_order(
+            conn, appr, purchase_request_id=req["id"],
+            expected_version=approved["version"], actor_id="usr-appr",
+            clock=_at(28), idempotency_key="issue-golden",
+        )
+        self.assertFalse(issue_replayed)
+        _, _, receive_replayed = receive_order(
+            conn, purch, purchase_order_id=order["id"], stock_location_id=loc["id"],
+            lines=[{"part_id": part["id"], "quantity": 4}],
+            expected_version=order["version"], actor_id="usr-purch",
+            clock=_at(29), idempotency_key="rcpt-golden",
+        )
+        self.assertFalse(receive_replayed)
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((5, 0, 3), (balance["on_hand"], balance["reserved"], balance["version"]))
+        _, _, replay_replayed = receive_order(
+            conn, purch, purchase_order_id=order["id"], stock_location_id=loc["id"],
+            lines=[{"part_id": part["id"], "quantity": 4}],
+            expected_version=999, actor_id="usr-purch",
+            clock=_at(30), idempotency_key="rcpt-golden",
+        )
+        self.assertTrue(replay_replayed)
+        balance = conn.execute(
+            "SELECT on_hand, reserved, version FROM stock_balances"
+            " WHERE organization_id = ? AND part_id = ? AND stock_location_id = ?",
+            ("org-a", part["id"], loc["id"]),
+        ).fetchone()
+        self.assertEqual((5, 0, 3), (balance["on_hand"], balance["reserved"], balance["version"]))
 
 
 if __name__ == "__main__":
